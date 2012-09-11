@@ -1,0 +1,10 @@
+@charset "utf-8";
+
+div.popup{
+  .aui_inner { background:transparent; border:none 0; }
+  .aui_nw, .aui_n, .aui_ne, .aui_w, .aui_e, .aui_sw, .aui_s, .aui_se { width:0; height:0; visibility:hidden; border:none 0;}
+  td.aui_header,td.aui_footer{display:none;}
+  table.aui_dialog{box-shadow:none;}
+  .aui_outer, .aui_inner{border:none 0;box-shadow:none;}
+  .aui_content{padding:0!important;display:block;}
+}

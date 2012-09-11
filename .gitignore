@@ -1,0 +1,14 @@
+.sass-cache
+CssGaga.exe.config
+
+# Windows image file caches
+Thumbs.db 
+
+# Folder config file
+Desktop.ini
+
+# mstest test results
+TestResults
+
+/support/compiler
+/resource/extjs
