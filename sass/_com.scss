@@ -45,6 +45,12 @@ ins,a {text-decoration:none;}
 @import "solutions/force-wrap";
 @import "solutions/float-center";
 
+<<<<<<< HEAD
+// Bootstrap
+.icon-red {background-image: url($iconRedSpritePath);}
+
+=======
+>>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
 /*#region commen */
 .fn-hide{visibility:hidden;}
 .fn-hide-im{visibility:hidden!important;}
@@ -91,13 +97,20 @@ a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
 
 .min_h100{min-height:100px; _height:100px; overflow:visible;}
 .min_w100{min-width:100px; _width:100px; overflow:visible;}
+<<<<<<< HEAD
+.max_h100{max-height:100px;_height:100px; overflow:visible;}
+=======
+>>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
 .max_w120{max-width:120px;_width:120px; overflow:visible;}
 .max_w160{max-width:160px;_width:160px; overflow:visible;}
 .max_w320{max-width:320px;_width:320px; overflow:visible;}
 .max_320{max-width:320px;max-height:320px;_width:320px; _height:320px; overflow:visible;}
 .max_680{max-width:680px;max-height:680px;_width:680px; _height:680px; overflow:visible;}
 
+<<<<<<< HEAD
+=======
 .m0{margin:0!important;}
+>>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
 .m20{margin:20px;}
 .ml10{margin-left:10px;}
 .ml40{margin-left:40px;}
@@ -109,7 +122,10 @@ a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
 .mt15{margin-top:15px;}
 .mt20{margin-top:20px;}
 .mt40{margin-top:40px;}
+<<<<<<< HEAD
+=======
 .mb0{margin-bottom:0!important;}
+>>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
 .mb5{margin-bottom:5px;}
 .mb10{margin-bottom:10px;}
 .mb15{margin-bottom:15px;}
