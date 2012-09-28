@@ -45,12 +45,6 @@ ins,a {text-decoration:none;}
 @import "solutions/force-wrap";
 @import "solutions/float-center";
 
-<<<<<<< HEAD
-// Bootstrap
-.icon-red {background-image: url($iconRedSpritePath);}
-
-=======
->>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
 /*#region commen */
 .fn-hide{visibility:hidden;}
 .fn-hide-im{visibility:hidden!important;}
@@ -97,54 +91,55 @@ a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
 
 .min_h100{min-height:100px; _height:100px; overflow:visible;}
 .min_w100{min-width:100px; _width:100px; overflow:visible;}
-<<<<<<< HEAD
 .max_h100{max-height:100px;_height:100px; overflow:visible;}
-=======
->>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
 .max_w120{max-width:120px;_width:120px; overflow:visible;}
 .max_w160{max-width:160px;_width:160px; overflow:visible;}
 .max_w320{max-width:320px;_width:320px; overflow:visible;}
 .max_320{max-width:320px;max-height:320px;_width:320px; _height:320px; overflow:visible;}
 .max_680{max-width:680px;max-height:680px;_width:680px; _height:680px; overflow:visible;}
 
-<<<<<<< HEAD
-=======
+
 .m0{margin:0!important;}
->>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
 .m20{margin:20px;}
+
+.ml5{margin-left:5px;}
 .ml10{margin-left:10px;}
+.ml20{margin-left:20px;}
 .ml40{margin-left:40px;}
+
 .mr10{margin-right:10px;}
 .mr15{margin-right:15px;}
 .mr20{margin-right:20px;}
+
 .mt5{margin-top:5px;}
 .mt10{margin-top:10px;}
 .mt15{margin-top:15px;}
 .mt20{margin-top:20px;}
 .mt40{margin-top:40px;}
-<<<<<<< HEAD
-=======
-.mb0{margin-bottom:0!important;}
->>>>>>> 54b6a782e80c952fb3ad66dc4ed4c15274ac26a8
+
+.mb0{margin-bottom:0;}
+.mb0i{margin-bottom:0!important;}
 .mb5{margin-bottom:5px;}
 .mb10{margin-bottom:10px;}
 .mb15{margin-bottom:15px;}
 .mb20{margin-bottom:20px;}
-.mr5{margin-right:5px;}
-.ml5{margin-left:5px;}
-.ml20{margin-left:20px;}
+
 .p10{padding:10px;}
 .p20{padding:20px;}
+
 .pl10{padding-left:10px;}
 .pl20{padding-left:20px;}
 .pl40{padding-left:40px;}
+
 .pr100{padding-right:100px;}
 .pr10{padding-right:10px;}
 .pr20{padding-right:20px;}
 .pr20{padding-right:20px;}
+
 .pb10{padding-bottom:10px;}
 .pb20{padding-bottom:20px;}
 .pb5{padding-bottom:5px;}
+
 .pt5{padding-top:5px;}
 .pt10{padding-top:10px;}
 .pt20{padding-top:20px;}
