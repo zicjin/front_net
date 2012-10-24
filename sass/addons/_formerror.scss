@@ -10,15 +10,15 @@ $color-black:#393939;
 .inputContainer {position: relative;float: left;}
 
 .formError {position: absolute;top: 300px;left: 300px;display: block;z-index: 5000;cursor: pointer;
-	.formErrorContent {@include border-radius(2px);@include box-shadow(0 0 3px #000);
+	.formErrorContent {border-radius: 2px;box-shadow:0 0 3px #000;
 		width: 100%;background: $color-red;position:relative;z-index:5001;color: #fff;font-size:12px;border: 1px solid $color-red-b;padding: 4px 10px;}
 	.formErrorArrow {width: 15px;margin: -2px 0 0 5px;position:relative;z-index: 5006; _margin-top:-4px;}
-	.formErrorArrowBottom {box-shadow: none;-moz-box-shadow: none;-webkit-box-shadow: none;margin: 0px 0 0 12px;top:2px;}
-	.formErrorArrow div {@include box-shadow(0 2px 3px #444);
+	.formErrorArrowBottom {box-shadow: none;margin: 0px 0 0 12px;top:2px;}
+	.formErrorArrow div {box-shadow:0 2px 3px #444;
 		border-left: 1px solid $color-red-b;border-right: 1px solid $color-red-b;font-size: 0px;height: 1px;background: $color-red;
 		margin: 0 auto;line-height: 0;font-size: 0;display: block;
 	}
-	.formErrorArrowBottom div {box-shadow: none;-moz-box-shadow: none;-webkit-box-shadow: none;}
+	.formErrorArrowBottom div {box-shadow: none;}
 	.formErrorArrow .line10 {width: 15px;border: none;}
 	.formErrorArrow .line9 {width: 13px;border: none;}
 	.formErrorArrow .line8 {width: 11px;}

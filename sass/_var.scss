@@ -16,6 +16,10 @@ $iconSpritePath:          $front_net_path + "bootstrap/img/glyphicons-halflings.
 $iconWhiteSpritePath:     $front_net_path + "bootstrap/img/glyphicons-halflings-white.png";
 $iconRedSpritePath:       $front_net_path + "bootstrap/img/glyphicons-halflings-red.png";
 
+$textColor:        #111 !default;
+$linkColor:        #4D5731 !default;
+$linkColorHover:   #B82E39 !default;
+
 $bodyBackground: #FFF !default;
 $sansFontFamily:        "微软雅黑", "Helvetica Neue", Helvetica, Arial, sans-serif !default;
 $serifFontFamily:       "黑体", Georgia, "Times New Roman", Times, serif !default;
