@@ -2,9 +2,9 @@
 
 /* Styles for validation helpers
 -----------------------------------------------------------*/
-.field-validation-error {color: $c-error-red;}
+.field-validation-error {color: $red;}
 .field-validation-valid {display: none;}
-.input-validation-error {border: 1px solid $c-error-red-b;background-color: #ffeeee;}
+.input-validation-error {border: 1px solid darken($red, 15);background-color: #ffeeee;}
 .validation-summary-valid {display: none;}
 
 /* Styles for editor and display helpers

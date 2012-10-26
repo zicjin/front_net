@@ -1,68 +1,16 @@
 ﻿@charset "utf-8";
-/* Improve normalize.css v1.0.1 */
 
-html{color:$textColor;background:$bodyBackground;font-family:$sansFontFamily;font-size: 100%;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;}
-body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,textarea,p,blockquote,th,td,hr,button,article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section {
-    margin:0;padding:0;}
-/* 重设 HTML5 标签, IE 需要在 js 中 createElement(TAG) */
-article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary { display:block;}
-/* HTML5 媒体文件跟 img 保持一致 */
-audio,canvas,video {display: inline-block;*display: inline;*zoom: 1;}
-audio:not([controls]) {display: none;height: 0;} /* normalize: 防止现代浏览器中显示的"音频"无法控制。在iOS 5设备清除多余的高度。*/
-[hidden] {display: none;} /* normalize: `hidden` attribute not present in IE 7/8/9, Firefox 3, and Safari 4. no IE 6 support. */
-/* 要注意表单元素并不继承父级 font */
-button,input,select,textarea{font-family:$sansFontFamily;font-size:100%;}
-/* 去掉各Table  cell 的边距并让其边重合 */
-table{border-collapse:collapse;border-spacing:0;}
-/* IE bug fixed: th 不继承 text-align*/
-th{text-align:inherit;}
-/* 去除默认边框 */
-fieldset,img{border:0;-ms-interpolation-mode: bicubic;} /* Improves image quality when scaled in IE 7. */
-/* ie6 7 8(q) bug 显示为行内表现 */
-iframe{display:block;}
-/* 去掉 firefox 下此元素的边框 */
-abbr,acronym{border:0;font-variant:normal;}
-/* 一致的 del 样式 */
-del {text-decoration:line-through;}
-address,caption,cite,code,dfn,em,th,var {font-style:normal;font-weight:normal;}
-/* 去掉列表前的标识, li 会继承 */
-ol,ul {list-style:none;}
-/* 对齐是排版最重要的因素, 别让什么都居中 */
-caption,th {text-align:left;}
-/*  normalize:font sizes 会被指定到 `section` and `article` 标签 in Firefox 4+, Safari 5,and Chrome. */
-h1,h2,h3,h4,h5,h6 {font-weight:normal;}
-h1 {font-size: 2em;margin: 0.67em 0;}
-h2 {font-size: 1.5em;margin: 0.83em 0;}
-h3 {font-size: 1.17em;margin: 1em 0;}
-h4 {font-size: 1em;margin: 1.33em 0;}
-h5 {font-size: 0.83em;margin: 1.67em 0;}
-h6 {font-size: 0.75em;margin: 2.33em 0;}
-q:before,q:after {content:'';}
-/* normalize:Addresses styling not present in IE 7/8/9 */
-abbr[title] {border-bottom: 1px dotted;}
-/* 统一上标和下标 */
-sub, sup {font-size: 75%; line-height: 0; position: relative; vertical-align: baseline;}
-sup {top: -0.5em;}
-sub {bottom: -0.25em;}
-/* 让链接在 hover 状态下显示下划线 */
-a:hover {text-decoration:underline;}
-a:focus {outline: thin dotted;}  /* normalize: Chrome and other browsers 的`outline`特性不一致 */
-a:active, a:hover {outline: 0;} /* normalize: 改善阅读体验 */
-/* 默认不显示下划线，保持页面简洁 */
-ins,a {text-decoration:none;}
-svg:not(:root) {overflow: hidden;} /* normalize:纠正溢出奇怪显示 in IE 9. */
-
+@import "var";
 @import "solutions/select-mask";
 @import "solutions/remove-outline";
 @import "solutions/position-fixed";
 @import "solutions/force-wrap";
 @import "solutions/float-center";
 
-/*#region commen */
+// Commen -------------------------
 .fn-hide{visibility:hidden;}
 .fn-hide-im{visibility:hidden!important;}
-/* 设置内联, 减少浮动带来的bug */
-.fn-left,.fn-right,.fn-left-im,.fn-right-im {display:inline;}
+.fn-left,.fn-right,.fn-left-im,.fn-right-im {display:inline;} /* 设置内联, 减少浮动带来的bug */
 .fn-left {float:left;}
 .fn-left-im{float:left!important;}
 .fn-right {float:right;}
@@ -83,16 +31,19 @@ svg:not(:root) {overflow: hidden;} /* normalize:纠正溢出奇怪显示 in IE 9
 .fn-vam{vertical-align:middle;}
 .fn-f12{font-size:12px}
 .fn-f14{font-size:14px}
-/*f14时，单复选框对齐良好，可选使用vaip14；f12时，使用.vaip*/
-.fn-f14va input[type='radio'], .fn-f14va input[type='checkbox']{vertical-align:-1px\9;}
+.fn-f14va input[type='radio'], .fn-f14va input[type='checkbox']{vertical-align:-1px\9;} /*font-size:14时，单复选框对齐良好*/
 .fn-f12va input[type='radio'], .fn-f12va input[type='checkbox']{vertical-align:-3px;}
 .fn-zmax{z-index:999;}
 .fn-clear { @include clearfix; }
 .fn-ellipsis {@include ellipsis;}
 a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
-/*#endregion commen */
 
-/*#region Vector */
+// Color -------------------------
+.c_gray{color:$gray;}
+.c_green{color:$green;}
+.c_red{color:$red;}
+
+// CubeSize -------------------------
 .w80{width:80px;}
 .w100{width:100px;}
 .w120{width:120px;}
@@ -102,16 +53,16 @@ a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
 .wh64{width:64px;height:64px;}
 .wh128{width:128px;height:128px;}
 
-.min_h100{min-height:100px; _height:100px; overflow:visible;}
-.min_w100{min-width:100px; _width:100px; overflow:visible;}
 .max_h100{max-height:100px;_height:100px; overflow:visible;}
 .max_w120{max-width:120px;_width:120px; overflow:visible;}
 .max_w160{max-width:160px;_width:160px; overflow:visible;}
 .max_w320{max-width:320px;_width:320px; overflow:visible;}
+.max_200{max-width:200px;max-height:200px;_width:200px; _height:200px; overflow:visible;}
 .max_320{max-width:320px;max-height:320px;_width:320px; _height:320px; overflow:visible;}
 .max_680{max-width:680px;max-height:680px;_width:680px; _height:680px; overflow:visible;}
 
-
+.min_h100{min-height:100px; _height:100px; overflow:visible;}
+// Margin -------------------------
 .m0{margin:0!important;}
 .m20{margin:20px;}
 
@@ -157,4 +108,3 @@ a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
 .pt10{padding-top:10px;}
 .pt20{padding-top:20px;}
 .pt30{padding-top:30px;}
-/*#endregion Vector */
