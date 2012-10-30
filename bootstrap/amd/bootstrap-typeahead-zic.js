@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+define(function (require, exports, module) { return function (jQuery) {
 /* =============================================================
- * bootstrap-typeahead.js v2.1.1
+ * bootstrap-typeahead.js v2.1.0
  * http://twitter.github.com/bootstrap/javascript.html#typeahead
  * =============================================================
  * Copyright 2012 Twitter, Inc.
@@ -173,16 +173,21 @@
       this.$element
         .on('blur',     $.proxy(this.blur, this))
         .on('keypress', $.proxy(this.keypress, this))
-        .on('keyup',    $.proxy(this.keyup, this))
+        .on('keyup', $.proxy(this.keyup, this))
+        .on('showAll', $.proxy(this.showAll, this)); //from zic's hack
 
-      if ($.browser.chrome || $.browser.webkit || $.browser.msie) {
+      if ($.browser.webkit || $.browser.msie) {
         this.$element.on('keydown', $.proxy(this.keydown, this))
       }
 
       this.$menu
         .on('click', $.proxy(this.click, this))
         .on('mouseenter', 'li', $.proxy(this.mouseenter, this))
-    }
+  }
+
+  , showAll: function () { //from zic's hack
+      this.render(this.source).show();
+  }
 
   , move: function (e) {
       if (!this.shown) return
