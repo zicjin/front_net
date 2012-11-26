@@ -1,0 +1,28 @@
+﻿a#returnTop {
+	_display: none;
+	position: fixed;
+	_position: absolute;
+	z-index: 999;
+	right: 15px;
+	bottom: -200px;
+	_bottom: auto;
+
+	width: 40px;
+	height: 40px;
+	text-indent: -999px;
+	overflow: hidden;
+	background: #ddd url(#{$front_net_path}sass/images/up-arrow.png) no-repeat center center;
+
+	transition: bottom .9s;
+	-webkit-transition: bottom .9s;
+	-moz-transition: bottom .9s;
+	-o-transition: bottom .9s;
+	-webkit-border-radius: 50px;
+	-moz-border-radius: 50px;
+	-o-border-radius: 50px;
+	border-radius: 50px;
+
+	&:hover{
+		background-color: #ccc;
+	}
+}

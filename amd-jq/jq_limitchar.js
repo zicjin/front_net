@@ -1,5 +1,5 @@
 define(function (require, exports, module) {
-    return function () {
+    return function ($) {
         $.fn.limitChar = function (options) {
             var opts = $.extend({
                 numobj: "limit",

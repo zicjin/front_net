@@ -1,0 +1,6 @@
+{
+    charset: 'utf-8',
+    timeout: 5000,
+    debug: true,
+    map: [[/^(.*\/app\/xxx\/.*\.(?:css|js))(?:.*)$/i, '$1?20121115']]    
+}

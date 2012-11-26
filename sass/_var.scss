@@ -1,6 +1,7 @@
 @charset "utf-8";
 
 $front_net_path: '/front_net/' !default;
+$fontAwesomePath: $front_net_path + 'bootstrap/fortawesome/font/fontawesome-webfont';
 
 // MIXIN -------------------------
 @mixin clearfix {*zoom: 1;
@@ -11,6 +12,34 @@ $front_net_path: '/front_net/' !default;
 @mixin in_bk {display:inline-block;zoom:1;*display:inline;position:relative;}
 @mixin ellipsis{overflow: hidden; white-space: nowrap; width: 360px; text-overflow:ellipsis;}
 @mixin onelineh($size) {line-height:$size;height:$size;}
+@mixin hide-text {font: 0/0 a;color: transparent;text-shadow: none;background-color: transparent;border: 0;}
+@mixin gradient-v($startColor: #555, $startColorPos: 0, $endColor: #333, $endColorPos: 100%) {
+background-color: mix($startColor, $endColor, 62.5%);
+background-image: -moz-linear-gradient(top, $startColor $startColorPos, $endColor $endColorPos); // FF 3.6+
+background-image: -webkit-gradient(linear, 0 $startColorPos, 0 $endColorPos, from($startColor), to($endColor)); // Safari 4+, Chrome 2+
+background-image: -webkit-linear-gradient(top, $startColor $startColorPos, $endColor $endColorPos); // Safari 5.1+, Chrome 10+
+background-image: -o-linear-gradient(top, $startColor $startColorPos, $endColor $endColorPos); // Opera 11.10
+background-image: linear-gradient(to bottom, $startColor $startColorPos, $endColor $endColorPos); // Standard, IE10
+background-repeat: repeat-x;
+filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#{ie-hex-str($startColor)}', endColorstr='#{ie-hex-str($endColor)}', GradientType=0); // IE9 and down
+}
+@mixin gradient-h($startColor: #555, $startColorPos: 0, $endColor: #333, $endColorPos: 100%) {
+background-color: $endColor;
+background-image: -moz-linear-gradient(left, $startColor, $endColor); // FF 3.6+
+background-image: -webkit-gradient(linear, $startColorPos 0, $endColorPos 0, from($startColor), to($endColor)); // Safari 4+, Chrome 2+
+background-image: -webkit-linear-gradient(left, $startColor, $endColor); // Safari 5.1+, Chrome 10+
+background-image: -o-linear-gradient(left, $startColor, $endColor); // Opera 11.10
+background-image: linear-gradient(to right, $startColor, $endColor); // Standard, IE10
+background-repeat: repeat-x;
+filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#{ie-hex-str($startColor)}', endColorstr='#{ie-hex-str($endColor)}', GradientType=1); // IE9 and down
+}
+@mixin dib(){
+    font-size: 12px;
+    letter-spacing: normal;
+    word-spacing: normal;
+    vertical-align: top;
+    @include in_bk;
+}
 
 // Bootstrap Var -------------------------
 $iconSpritePath:          $front_net_path + "bootstrap/img/glyphicons-halflings.png";

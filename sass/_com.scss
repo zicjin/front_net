@@ -26,7 +26,6 @@
 .fn-tal{text-align:left!important;}
 .fn-tar{text-align:right!important;}
 .fn-tac{text-align:center!important;}
-.fn-inbk{@include in_bk;}
 .fn-nowrap{white-space:nowrap;}
 .fn-vam{vertical-align:middle;}
 .fn-f12{font-size:12px}
@@ -36,12 +35,16 @@
 .fn-zmax{z-index:999;}
 .fn-clear { @include clearfix; }
 .fn-ellipsis {@include ellipsis;}
-a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
+.fn-inbk, a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
+.fn-dibwrap {font-size:0;/* 所有浏览器 */ *word-spacing:-1px;/* IE6、7 */}
+@media screen and (-webkit-min-device-pixel-ratio:0){ /* firefox 中 letter-spacing 会导致脱离普通流的元素水平位移 */
+    .fn-dibwrap{letter-spacing:-5px;/* Safari 等不支持字体大小为 0 的浏览器, N 根据父级字体调节*/}
+}
 
 // Color -------------------------
-.c_gray{color:$gray;}
-.c_green{color:$green;}
-.c_red{color:$red;}
+.gray{color:$gray;}
+.green{color:$green;}
+.red{color:$red;}
 
 // CubeSize -------------------------
 .w80{width:80px;}
@@ -71,6 +74,7 @@ a.fn-ellipsis, span.fn-ellipsis {@include in_bk;}
 .ml20{margin-left:20px;}
 .ml40{margin-left:40px;}
 
+.mr5{margin-right:5px;}
 .mr10{margin-right:10px;}
 .mr15{margin-right:15px;}
 .mr20{margin-right:20px;}

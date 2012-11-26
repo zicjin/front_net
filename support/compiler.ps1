@@ -1,4 +1,4 @@
 Param($Path)
 Get-ChildItem -Path $Path -Include *.js -Recurse | % { 
-	.\compiler\compiler.exe --js $_.FullName --js_output_file ($_.FullName -replace "\\" + $Path + \\", "\\" + $Path + "\\__build") --charset=UTF-8
+	.\closure-compiler\compiler.exe --js $_.FullName --js_output_file $_.FullName --charset=UTF-8
 }

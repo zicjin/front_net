@@ -1,5 +1,6 @@
 define(function (require, exports, module) {
-return function($){
+var $ = require("jquery")
+
 /*! Copyright (c) 2010 Brandon Aaron (http://brandonaaron.net)
  * Licensed under the MIT License (LICENSE.txt).
  *
@@ -8,7 +9,6 @@ return function($){
  * Contributions by:
  *   - Neil Monroe (neil.monroe[at]gmail.com)
  */
-
 $.fn.extend({
     countable: function(givenOptions) {
         return this.each(function() {
@@ -101,7 +101,5 @@ $.fn.extend({
         });
     }
 });
-
-}
 
 });
