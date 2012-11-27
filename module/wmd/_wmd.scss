@@ -5,7 +5,7 @@
 #wmd-output {background-color: Pink;}
 #wmd-button-row {position: relative; margin: 5px 0;padding: 0px;  height: 20px;}
 .wmd-button{width: 20px; height: 20px;margin-right: 5px;position: absolute;display: inline-block;
-	background: url(#{$front_net_path}resource/wmd/wmd-buttons.png) no-repeat scroll 0 0;
+	background: url(#{$front_net_path}module/wmd/wmd-buttons.png) no-repeat scroll 0 0;
 }
 #wmd-button-bar{
 	#wmd-bold-button    {left: 0px;   background-position: 0px 0;}
