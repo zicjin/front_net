@@ -1,5 +1,5 @@
 define(function (require, exports) {
-    //var target = require('./jqplus/jq_target');
+    //var target = require('./module-zic/target');
     //exports.ld_target = target.Loader;
     //exports.fix_target = target.fixui;
     //target.Init($, "#head ,#main, #foot");

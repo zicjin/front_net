@@ -1,4 +1,6 @@
-define(function (require, exports, module) { return function (jQuery) {
+define(function (require, exports, module) {
+var jQuery = require('jquery').sub();
+
 /**
  * jQuery Masonry v2.1.03
  * A dynamic layout plugin for jQuery
@@ -500,4 +502,6 @@ define(function (require, exports, module) { return function (jQuery) {
 
 })( window, jQuery );
 
-}});
+module.exports = jQuery;
+
+});

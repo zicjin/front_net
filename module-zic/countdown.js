@@ -1,6 +1,6 @@
 define(function (require, exports, module) {
     return function ($) {
-        require('./jq_timers')($);
+        require('../module/timers')($);
         $.fn.countdown = function (options) {
             var opts = $.extend({
                 btnDom: '.timebtn',

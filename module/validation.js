@@ -246,7 +246,7 @@
                     field.filter('.vali_delay').bind(options.eventTrigger, methods._delay_onFieldEvent);
                     if(options.uneventTrigger)
                         field.not('[type=checkbox]').bind(options.uneventTrigger, methods._unFieldEvent);
-                    form.find('input[type=submit], a.submit').bind("click", methods._onSubmitEvent);
+                    form.find('input[type=submit], button[type=submit], a.submit').bind("click", methods._onSubmitEvent);
                     //when without jq_vali:
                     //$('a.submit', box).on "click", ->
                     //    $(this).closest('form').submit()
@@ -267,7 +267,7 @@
                 field.filter('.vali_delay').unbind(options.eventTrigger, methods._delay_onFieldEvent);
                 if(options.uneventTrigger)
                     field.not('[type=checkbox]').unbind(options.uneventTrigger, methods._unFieldEvent);
-                form.find('input[type=submit], a.submit').unbind("click", methods._onSubmitEvent);
+                form.find('input[type=submit], button[type=submit], a.submit').unbind("click", methods._onSubmitEvent);
 
                 form.removeData('jqv');
                 if (options.autoPositionUpdate) {

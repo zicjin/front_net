@@ -1,6 +1,6 @@
 define('gallery/jquery/1.8.3/jquery-debug', [], function(require) {
 
-/*!
+  /*!
  * jQuery JavaScript Library v1.8.3
  * http://jquery.com/
  *
@@ -9473,5 +9473,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 })( window );
 
-return $.noConflict(true);
+
+  return $.noConflict(true);
 });

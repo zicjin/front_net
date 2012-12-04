@@ -1,4 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
+
+var $ = require('jquery').sub();
 
 /*!
 * artDialog 5.0.1
@@ -9,8 +11,6 @@
 * This is licensed under the GNU LGPL, version 2.1 or later.
 * For details, see: http://creativecommons.org/licenses/LGPL/2.1/
 */
-
-;(function ($, window, undefined) {
 
 // artDialog 只支持 xhtml 1.0 或者以上的 DOCTYPE 声明
 if (document.compatMode === 'BackCompat') {
@@ -927,7 +927,6 @@ artDialog.defaults = {
 };
 
 this.artDialog = $.dialog = $.artDialog = artDialog;
-}(jQuery, this));
 
 
 /* 更新记录
@@ -967,4 +966,6 @@ this.artDialog = $.dialog = $.artDialog = artDialog;
 
 */
 
-}});
+module.exports = $;
+
+});

@@ -1,3 +1,4 @@
+﻿define(function (require, exports, module) { return function (jQuery) {
 //test("module without setup/teardown (default)", function() {
 //	expect(1);
 //	ok(true);
@@ -266,3 +267,4 @@
 //test("reset runs assertions2", function() {
 //	QUnit.reset = reset;
 //});
+}});

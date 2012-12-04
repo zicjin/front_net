@@ -1,12 +1,13 @@
-define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) { return function (jQuery) {
 /*!
- * jQuery UI Slider @VERSION
+ * jQuery UI Slider 1.9.2
+ * http://jqueryui.com
  *
- * Copyright 2012, AUTHORS.txt (http://jqueryui.com/about)
- * Dual licensed under the MIT or GPL Version 2 licenses.
+ * Copyright 2012 jQuery Foundation and other contributors
+ * Released under the MIT license.
  * http://jquery.org/license
  *
- * http://docs.jquery.com/UI/Slider
+ * http://api.jqueryui.com/slider/
  *
  * Depends:
  *	jquery.ui.core.js
@@ -20,7 +21,7 @@ define(function (require, exports, module) { return function (jQuery) {
 var numPages = 5;
 
 $.widget( "ui.slider", $.ui.mouse, {
-	version: "@VERSION",
+	version: "1.9.2",
 	widgetEventPrefix: "slide",
 
 	options: {
@@ -36,11 +37,10 @@ $.widget( "ui.slider", $.ui.mouse, {
 	},
 
 	_create: function() {
-		var i,
+		var i, handleCount,
 			o = this.options,
 			existingHandles = this.element.find( ".ui-slider-handle" ).addClass( "ui-state-default ui-corner-all" ),
 			handle = "<a class='ui-slider-handle ui-state-default ui-corner-all' href='#'></a>",
-			handleCount = ( o.values && o.values.length ) || 1,
 			handles = [];
 
 		this._keySliding = false;
@@ -78,6 +78,8 @@ $.widget( "ui.slider", $.ui.mouse, {
 				" ui-widget-header" +
 				( ( o.range === "min" || o.range === "max" ) ? " ui-slider-range-" + o.range : "" ) );
 		}
+
+		handleCount = ( o.values && o.values.length ) || 1;
 
 		for ( i = existingHandles.length; i < handleCount; i++ ) {
 			handles.push( handle );
@@ -277,7 +279,7 @@ $.widget( "ui.slider", $.ui.mouse, {
 		return true;
 	},
 
-	_mouseStart: function( event ) {
+	_mouseStart: function() {
 		return true;
 	},
 
@@ -509,6 +511,12 @@ $.widget( "ui.slider", $.ui.mouse, {
 				}
 				this._animateOff = false;
 				break;
+			case "min":
+			case "max":
+				this._animateOff = true;
+				this._refreshValue();
+				this._animateOff = false;
+				break;
 		}
 	},
 
@@ -584,7 +592,7 @@ $.widget( "ui.slider", $.ui.mouse, {
 			_set = {};
 
 		if ( this.options.values && this.options.values.length ) {
-			this.handles.each(function( i, j ) {
+			this.handles.each(function( i ) {
 				valPercent = ( that.values(i) - that._valueMin() ) / ( that._valueMax() - that._valueMin() ) * 100;
 				_set[ that.orientation === "horizontal" ? "left" : "bottom" ] = valPercent + "%";
 				$( this ).stop( 1, 1 )[ animate ? "animate" : "css" ]( _set, o.animate );

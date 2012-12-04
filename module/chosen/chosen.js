@@ -1,4 +1,5 @@
-define(function (require, exports, module) { return function (jQuery) {
+define(function (require, exports, module) {
+var jQuery = require('jquery').sub();
 
 // Chosen, a Select Box Enhancer for jQuery and Protoype
 // by Patrick Filler for Harvest, http://getharvest.com
@@ -321,7 +322,7 @@ Copyright (c) 2011 by Harvest
       this.f_width = this.form_field_jq.outerWidth();
       container_div = $("<div />", {
         id: this.container_id,
-        "class": "chzn-container" + (this.is_rtl ? ' chzn-rtl' : ''),
+        "class": "chzn-container fn-vam " + (this.is_rtl ? ' chzn-rtl' : ''), //zic add 'fn-vam'
         style: 'width: ' + this.f_width + 'px;'
       });
       if (this.is_multiple) {
@@ -1004,4 +1005,6 @@ Copyright (c) 2011 by Harvest
 
 }).call(this);
 
-} });
+module.exports = jQuery;
+
+});

@@ -1,42 +1,45 @@
 define(function (require, exports, module) {
-    function hasPlaceholderSupport() {
-        var input = document.createElement('input');
-        return ('placeholder' in input);
-    }
+var $ = require('jquery').sub();
 
-    return function ($) {
-        $.fn.placeholder = function (options) {
-            if (hasPlaceholderSupport()) return;
+var hasPlaceholderSupport = function() {
+    var input = document.createElement('input');
+    return ('placeholder' in input);
+}
 
-            var opts = $.extend({
-                holdClass: "txtholding"
-            }, options);
+$.fn.placeholder = function (options) {
+    if (hasPlaceholderSupport()) return;
 
-            this.each(function () {
-                var o = $(this);
-                if (o.attr("type") == "password") return;
+    var opts = $.extend({
+        holdClass: "txtholding"
+    }, options);
 
-                o.data("text", $.trim(o.attr("placeholder")));
+    this.each(function () {
+        var o = $(this);
+        if (o.attr("type") == "password") return;
 
-                if ($.trim(o.val()) == "") {
-                    o.val(o.data("text"));
-                    o.addClass(opts.holdClass);
-                } else if ($.trim(o.val()) == o.data("text")) {
-                    o.addClass(opts.holdClass);
-                }
+        o.data("text", $.trim(o.attr("placeholder")));
 
-                o.focus(function () {
-                    o.removeClass(opts.holdClass);
-                    if ($.trim(o.val()) == o.data("text")) o.val("");
-                }).blur(function () {
-                    if ($.trim(o.val()) == "") {
-                        o.val(o.data("text"));
-                        o.addClass(opts.holdClass);
-                    } else if ($.trim(o.val()) == o.data("text")) {
-                        o.addClass(opts.holdClass);
-                    }
-                });
-            });
+        if ($.trim(o.val()) == "") {
+            o.val(o.data("text"));
+            o.addClass(opts.holdClass);
+        } else if ($.trim(o.val()) == o.data("text")) {
+            o.addClass(opts.holdClass);
         }
-    }
+
+        o.focus(function () {
+            o.removeClass(opts.holdClass);
+            if ($.trim(o.val()) == o.data("text")) o.val("");
+        }).blur(function () {
+            if ($.trim(o.val()) == "") {
+                o.val(o.data("text"));
+                o.addClass(opts.holdClass);
+            } else if ($.trim(o.val()) == o.data("text")) {
+                o.addClass(opts.holdClass);
+            }
+        });
+    });
+}
+
+module.exports = $;
+
 });

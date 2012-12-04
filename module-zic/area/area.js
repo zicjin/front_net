@@ -3,7 +3,7 @@
     var loc;
 
     exports.init = function () {
-        loc = require("./jq_areaData");
+        loc = require("./areaData");
         $.fn.jChinaArea = function (o) {
             o = $.extend({
                 aspnet: false,

@@ -1,4 +1,5 @@
-define(function (require, exports, module) { return function (jQuery) {
+define(function (require, exports, module) {
+var jQuery = require('jquery').sub();
 
 // jQuery RoyalSlider plugin. Custom build. Copyright 2011-2012 Dmitry Semenov http://dimsemenov.com 
 // jquery.royalslider v9.2.5
@@ -110,4 +111,6 @@ b.ev.on("rsAfterSlideChange",function(){d&&clearTimeout(d);e&&clearTimeout(e);e=
 e!==m&&(location.href=location.href.replace(/#.*/,"")+e);k=setTimeout(n,a.fn.hashchange.delay)},c={},k,m=d(),p=f=function(a){return a},q=f;c.start=function(){k||n()};c.stop=function(){k&&clearTimeout(k);k=g};if(a.browser.msie&&!h){var i,l;c.start=function(){i||(l=(l=a.fn.hashchange.src)&&l+d(),i=a('<iframe tabindex="-1" title="empty"/>').hide().one("load",function(){l||p(d());n()}).attr("src",l||"javascript:0").insertAfter("body")[0].contentWindow,e.onpropertychange=function(){try{"title"===event.propertyName&&
 (i.document.title=e.title)}catch(a){}})};c.stop=f;q=function(){return d(i.location.href)};p=function(b,c){var d=i.document,f=a.fn.hashchange.domain;b!==c&&(d.title=e.title,d.open(),f&&d.write('<script>document.domain="'+f+'"<\/script>'),d.close(),i.location.hash=b)}}j=c})(jQuery,this);
 
-}});
+module.exports = jQuery;
+
+});

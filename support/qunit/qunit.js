@@ -1,3 +1,4 @@
+﻿define(function (require, exports, module) { return function (jQuery) {
 /**
  * QUnit - A JavaScript Unit Testing Framework
  * 
@@ -1440,3 +1441,4 @@ QUnit.diff = (function() {
 })();
 
 })(this);
+}});
