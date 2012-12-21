@@ -3,20 +3,20 @@ a.area2{background:url(#{$front_net_path}sass/images/new_window.gif) no-repeat r
   cursor: pointer;padding-right:15px;
   &:hover{border-color:#ccc;}
 }
-div.provhint{width:400px;background:#fff; font-size:12px; padding:10px;
-  dl {line-height:22px;_line-height: 20px;}
+div.provhint{width:400px;background:#fff; font-size:12px; padding:10px;line-height:22px;_line-height: 20px;
   dt{display: inline-block; float: left; font-weight: bold; padding-right: 8px;text-align: right;width: 40px; color:#4d4d4d;}
-  span.prov{display: inline-block;height: 22px;line-height: 22px;_height: 20px;_line-height: 20px;outline: medium none;
-    padding: 0 6px; text-decoration: none; white-space: nowrap;cursor: pointer;}
-  span.prov.hover,span.current{background:#42719f;color: #fff;text-decoration: none; line-height:22px; _line-height:20px;}
-  span.close_prov{background:url(#{$front_net_path}sass/images/close.png) no-repeat; width:16px; height:16px; 
+  a.prov{display:inline-block;outline: medium none;
+    padding: 0 6px; text-decoration: none; white-space: nowrap;cursor: pointer;
+    &:hover,&.current{background:#42719f;color: #fff;text-decoration: none;}
+  }
+  a.close_prov{background:url(#{$front_net_path}sass/images/close.png) no-repeat; width:16px; height:16px; 
     display:block; position: absolute; top:10px; right:10px; cursor: pointer;}
 }
-ul.cityhint{z-index:101;max-width:300px;_width:300px;overflow:visible;line-height:22px;background:#fff;
+ul.cityhint{line-height:22px;background:#fff;border-top:1px solid #ddd;
   *zoom: 1;&:before,&:after {display: table;content: "";}&:after {clear: both;}
   li{float:left;}
-  a.city{display: inline-block;height: 22px;line-height: 22px;_height: 20px;_line-height: 20px;outline: medium none;
-    padding: 0 6px; text-decoration: none; white-space: nowrap;cursor: pointer; color:#33587A;}
-  a.city:hover{background:#42719f;color:#fff;text-decoration: none; line-height:22px; _line-height:20px;}
+  a.city{display: inline-block;height: 22px;line-height: 22px;outline:medium none;
+    padding: 0 6px; text-decoration: none; white-space: nowrap;cursor:pointer; color:#33587A;}
+  a.city:hover{background:#42719f;color:#fff;text-decoration: none;}
 }
 /*#endregion areaWData */

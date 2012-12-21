@@ -1969,6 +1969,1285 @@ if ( $.uiBackCompat !== false ) {
 })( jQuery );
 }});
 
+define("product/guoqude/1.0.0/front_net/module/jquery-ui/amd/jquery.ui.effect-debug", [], function (require, exports, module) { return function (jQuery) {
+/*!
+ * jQuery UI Effects 1.9.2
+ * http://jqueryui.com
+ *
+ * Copyright 2012 jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://api.jqueryui.com/category/effects-core/
+ */
+;(jQuery.effects || (function($, undefined) {
+
+var backCompat = $.uiBackCompat !== false,
+	// prefix used for storing data on .data()
+	dataSpace = "ui-effects-";
+
+$.effects = {
+	effect: {}
+};
+
+/*!
+ * jQuery Color Animations v2.0.0
+ * http://jquery.com/
+ *
+ * Copyright 2012 jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * Date: Mon Aug 13 13:41:02 2012 -0500
+ */
+(function( jQuery, undefined ) {
+
+	var stepHooks = "backgroundColor borderBottomColor borderLeftColor borderRightColor borderTopColor color columnRuleColor outlineColor textDecorationColor textEmphasisColor".split(" "),
+
+	// plusequals test for += 100 -= 100
+	rplusequals = /^([\-+])=\s*(\d+\.?\d*)/,
+	// a set of RE's that can match strings and generate color tuples.
+	stringParsers = [{
+			re: /rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(\d+(?:\.\d+)?)\s*)?\)/,
+			parse: function( execResult ) {
+				return [
+					execResult[ 1 ],
+					execResult[ 2 ],
+					execResult[ 3 ],
+					execResult[ 4 ]
+				];
+			}
+		}, {
+			re: /rgba?\(\s*(\d+(?:\.\d+)?)\%\s*,\s*(\d+(?:\.\d+)?)\%\s*,\s*(\d+(?:\.\d+)?)\%\s*(?:,\s*(\d+(?:\.\d+)?)\s*)?\)/,
+			parse: function( execResult ) {
+				return [
+					execResult[ 1 ] * 2.55,
+					execResult[ 2 ] * 2.55,
+					execResult[ 3 ] * 2.55,
+					execResult[ 4 ]
+				];
+			}
+		}, {
+			// this regex ignores A-F because it's compared against an already lowercased string
+			re: /#([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})/,
+			parse: function( execResult ) {
+				return [
+					parseInt( execResult[ 1 ], 16 ),
+					parseInt( execResult[ 2 ], 16 ),
+					parseInt( execResult[ 3 ], 16 )
+				];
+			}
+		}, {
+			// this regex ignores A-F because it's compared against an already lowercased string
+			re: /#([a-f0-9])([a-f0-9])([a-f0-9])/,
+			parse: function( execResult ) {
+				return [
+					parseInt( execResult[ 1 ] + execResult[ 1 ], 16 ),
+					parseInt( execResult[ 2 ] + execResult[ 2 ], 16 ),
+					parseInt( execResult[ 3 ] + execResult[ 3 ], 16 )
+				];
+			}
+		}, {
+			re: /hsla?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\%\s*,\s*(\d+(?:\.\d+)?)\%\s*(?:,\s*(\d+(?:\.\d+)?)\s*)?\)/,
+			space: "hsla",
+			parse: function( execResult ) {
+				return [
+					execResult[ 1 ],
+					execResult[ 2 ] / 100,
+					execResult[ 3 ] / 100,
+					execResult[ 4 ]
+				];
+			}
+		}],
+
+	// jQuery.Color( )
+	color = jQuery.Color = function( color, green, blue, alpha ) {
+		return new jQuery.Color.fn.parse( color, green, blue, alpha );
+	},
+	spaces = {
+		rgba: {
+			props: {
+				red: {
+					idx: 0,
+					type: "byte"
+				},
+				green: {
+					idx: 1,
+					type: "byte"
+				},
+				blue: {
+					idx: 2,
+					type: "byte"
+				}
+			}
+		},
+
+		hsla: {
+			props: {
+				hue: {
+					idx: 0,
+					type: "degrees"
+				},
+				saturation: {
+					idx: 1,
+					type: "percent"
+				},
+				lightness: {
+					idx: 2,
+					type: "percent"
+				}
+			}
+		}
+	},
+	propTypes = {
+		"byte": {
+			floor: true,
+			max: 255
+		},
+		"percent": {
+			max: 1
+		},
+		"degrees": {
+			mod: 360,
+			floor: true
+		}
+	},
+	support = color.support = {},
+
+	// element for support tests
+	supportElem = jQuery( "<p>" )[ 0 ],
+
+	// colors = jQuery.Color.names
+	colors,
+
+	// local aliases of functions called often
+	each = jQuery.each;
+
+// determine rgba support immediately
+supportElem.style.cssText = "background-color:rgba(1,1,1,.5)";
+support.rgba = supportElem.style.backgroundColor.indexOf( "rgba" ) > -1;
+
+// define cache name and alpha properties
+// for rgba and hsla spaces
+each( spaces, function( spaceName, space ) {
+	space.cache = "_" + spaceName;
+	space.props.alpha = {
+		idx: 3,
+		type: "percent",
+		def: 1
+	};
+});
+
+function clamp( value, prop, allowEmpty ) {
+	var type = propTypes[ prop.type ] || {};
+
+	if ( value == null ) {
+		return (allowEmpty || !prop.def) ? null : prop.def;
+	}
+
+	// ~~ is an short way of doing floor for positive numbers
+	value = type.floor ? ~~value : parseFloat( value );
+
+	// IE will pass in empty strings as value for alpha,
+	// which will hit this case
+	if ( isNaN( value ) ) {
+		return prop.def;
+	}
+
+	if ( type.mod ) {
+		// we add mod before modding to make sure that negatives values
+		// get converted properly: -10 -> 350
+		return (value + type.mod) % type.mod;
+	}
+
+	// for now all property types without mod have min and max
+	return 0 > value ? 0 : type.max < value ? type.max : value;
+}
+
+function stringParse( string ) {
+	var inst = color(),
+		rgba = inst._rgba = [];
+
+	string = string.toLowerCase();
+
+	each( stringParsers, function( i, parser ) {
+		var parsed,
+			match = parser.re.exec( string ),
+			values = match && parser.parse( match ),
+			spaceName = parser.space || "rgba";
+
+		if ( values ) {
+			parsed = inst[ spaceName ]( values );
+
+			// if this was an rgba parse the assignment might happen twice
+			// oh well....
+			inst[ spaces[ spaceName ].cache ] = parsed[ spaces[ spaceName ].cache ];
+			rgba = inst._rgba = parsed._rgba;
+
+			// exit each( stringParsers ) here because we matched
+			return false;
+		}
+	});
+
+	// Found a stringParser that handled it
+	if ( rgba.length ) {
+
+		// if this came from a parsed string, force "transparent" when alpha is 0
+		// chrome, (and maybe others) return "transparent" as rgba(0,0,0,0)
+		if ( rgba.join() === "0,0,0,0" ) {
+			jQuery.extend( rgba, colors.transparent );
+		}
+		return inst;
+	}
+
+	// named colors
+	return colors[ string ];
+}
+
+color.fn = jQuery.extend( color.prototype, {
+	parse: function( red, green, blue, alpha ) {
+		if ( red === undefined ) {
+			this._rgba = [ null, null, null, null ];
+			return this;
+		}
+		if ( red.jquery || red.nodeType ) {
+			red = jQuery( red ).css( green );
+			green = undefined;
+		}
+
+		var inst = this,
+			type = jQuery.type( red ),
+			rgba = this._rgba = [];
+
+		// more than 1 argument specified - assume ( red, green, blue, alpha )
+		if ( green !== undefined ) {
+			red = [ red, green, blue, alpha ];
+			type = "array";
+		}
+
+		if ( type === "string" ) {
+			return this.parse( stringParse( red ) || colors._default );
+		}
+
+		if ( type === "array" ) {
+			each( spaces.rgba.props, function( key, prop ) {
+				rgba[ prop.idx ] = clamp( red[ prop.idx ], prop );
+			});
+			return this;
+		}
+
+		if ( type === "object" ) {
+			if ( red instanceof color ) {
+				each( spaces, function( spaceName, space ) {
+					if ( red[ space.cache ] ) {
+						inst[ space.cache ] = red[ space.cache ].slice();
+					}
+				});
+			} else {
+				each( spaces, function( spaceName, space ) {
+					var cache = space.cache;
+					each( space.props, function( key, prop ) {
+
+						// if the cache doesn't exist, and we know how to convert
+						if ( !inst[ cache ] && space.to ) {
+
+							// if the value was null, we don't need to copy it
+							// if the key was alpha, we don't need to copy it either
+							if ( key === "alpha" || red[ key ] == null ) {
+								return;
+							}
+							inst[ cache ] = space.to( inst._rgba );
+						}
+
+						// this is the only case where we allow nulls for ALL properties.
+						// call clamp with alwaysAllowEmpty
+						inst[ cache ][ prop.idx ] = clamp( red[ key ], prop, true );
+					});
+
+					// everything defined but alpha?
+					if ( inst[ cache ] && $.inArray( null, inst[ cache ].slice( 0, 3 ) ) < 0 ) {
+						// use the default of 1
+						inst[ cache ][ 3 ] = 1;
+						if ( space.from ) {
+							inst._rgba = space.from( inst[ cache ] );
+						}
+					}
+				});
+			}
+			return this;
+		}
+	},
+	is: function( compare ) {
+		var is = color( compare ),
+			same = true,
+			inst = this;
+
+		each( spaces, function( _, space ) {
+			var localCache,
+				isCache = is[ space.cache ];
+			if (isCache) {
+				localCache = inst[ space.cache ] || space.to && space.to( inst._rgba ) || [];
+				each( space.props, function( _, prop ) {
+					if ( isCache[ prop.idx ] != null ) {
+						same = ( isCache[ prop.idx ] === localCache[ prop.idx ] );
+						return same;
+					}
+				});
+			}
+			return same;
+		});
+		return same;
+	},
+	_space: function() {
+		var used = [],
+			inst = this;
+		each( spaces, function( spaceName, space ) {
+			if ( inst[ space.cache ] ) {
+				used.push( spaceName );
+			}
+		});
+		return used.pop();
+	},
+	transition: function( other, distance ) {
+		var end = color( other ),
+			spaceName = end._space(),
+			space = spaces[ spaceName ],
+			startColor = this.alpha() === 0 ? color( "transparent" ) : this,
+			start = startColor[ space.cache ] || space.to( startColor._rgba ),
+			result = start.slice();
+
+		end = end[ space.cache ];
+		each( space.props, function( key, prop ) {
+			var index = prop.idx,
+				startValue = start[ index ],
+				endValue = end[ index ],
+				type = propTypes[ prop.type ] || {};
+
+			// if null, don't override start value
+			if ( endValue === null ) {
+				return;
+			}
+			// if null - use end
+			if ( startValue === null ) {
+				result[ index ] = endValue;
+			} else {
+				if ( type.mod ) {
+					if ( endValue - startValue > type.mod / 2 ) {
+						startValue += type.mod;
+					} else if ( startValue - endValue > type.mod / 2 ) {
+						startValue -= type.mod;
+					}
+				}
+				result[ index ] = clamp( ( endValue - startValue ) * distance + startValue, prop );
+			}
+		});
+		return this[ spaceName ]( result );
+	},
+	blend: function( opaque ) {
+		// if we are already opaque - return ourself
+		if ( this._rgba[ 3 ] === 1 ) {
+			return this;
+		}
+
+		var rgb = this._rgba.slice(),
+			a = rgb.pop(),
+			blend = color( opaque )._rgba;
+
+		return color( jQuery.map( rgb, function( v, i ) {
+			return ( 1 - a ) * blend[ i ] + a * v;
+		}));
+	},
+	toRgbaString: function() {
+		var prefix = "rgba(",
+			rgba = jQuery.map( this._rgba, function( v, i ) {
+				return v == null ? ( i > 2 ? 1 : 0 ) : v;
+			});
+
+		if ( rgba[ 3 ] === 1 ) {
+			rgba.pop();
+			prefix = "rgb(";
+		}
+
+		return prefix + rgba.join() + ")";
+	},
+	toHslaString: function() {
+		var prefix = "hsla(",
+			hsla = jQuery.map( this.hsla(), function( v, i ) {
+				if ( v == null ) {
+					v = i > 2 ? 1 : 0;
+				}
+
+				// catch 1 and 2
+				if ( i && i < 3 ) {
+					v = Math.round( v * 100 ) + "%";
+				}
+				return v;
+			});
+
+		if ( hsla[ 3 ] === 1 ) {
+			hsla.pop();
+			prefix = "hsl(";
+		}
+		return prefix + hsla.join() + ")";
+	},
+	toHexString: function( includeAlpha ) {
+		var rgba = this._rgba.slice(),
+			alpha = rgba.pop();
+
+		if ( includeAlpha ) {
+			rgba.push( ~~( alpha * 255 ) );
+		}
+
+		return "#" + jQuery.map( rgba, function( v ) {
+
+			// default to 0 when nulls exist
+			v = ( v || 0 ).toString( 16 );
+			return v.length === 1 ? "0" + v : v;
+		}).join("");
+	},
+	toString: function() {
+		return this._rgba[ 3 ] === 0 ? "transparent" : this.toRgbaString();
+	}
+});
+color.fn.parse.prototype = color.fn;
+
+// hsla conversions adapted from:
+// https://code.google.com/p/maashaack/source/browse/packages/graphics/trunk/src/graphics/colors/HUE2RGB.as?r=5021
+
+function hue2rgb( p, q, h ) {
+	h = ( h + 1 ) % 1;
+	if ( h * 6 < 1 ) {
+		return p + (q - p) * h * 6;
+	}
+	if ( h * 2 < 1) {
+		return q;
+	}
+	if ( h * 3 < 2 ) {
+		return p + (q - p) * ((2/3) - h) * 6;
+	}
+	return p;
+}
+
+spaces.hsla.to = function ( rgba ) {
+	if ( rgba[ 0 ] == null || rgba[ 1 ] == null || rgba[ 2 ] == null ) {
+		return [ null, null, null, rgba[ 3 ] ];
+	}
+	var r = rgba[ 0 ] / 255,
+		g = rgba[ 1 ] / 255,
+		b = rgba[ 2 ] / 255,
+		a = rgba[ 3 ],
+		max = Math.max( r, g, b ),
+		min = Math.min( r, g, b ),
+		diff = max - min,
+		add = max + min,
+		l = add * 0.5,
+		h, s;
+
+	if ( min === max ) {
+		h = 0;
+	} else if ( r === max ) {
+		h = ( 60 * ( g - b ) / diff ) + 360;
+	} else if ( g === max ) {
+		h = ( 60 * ( b - r ) / diff ) + 120;
+	} else {
+		h = ( 60 * ( r - g ) / diff ) + 240;
+	}
+
+	if ( l === 0 || l === 1 ) {
+		s = l;
+	} else if ( l <= 0.5 ) {
+		s = diff / add;
+	} else {
+		s = diff / ( 2 - add );
+	}
+	return [ Math.round(h) % 360, s, l, a == null ? 1 : a ];
+};
+
+spaces.hsla.from = function ( hsla ) {
+	if ( hsla[ 0 ] == null || hsla[ 1 ] == null || hsla[ 2 ] == null ) {
+		return [ null, null, null, hsla[ 3 ] ];
+	}
+	var h = hsla[ 0 ] / 360,
+		s = hsla[ 1 ],
+		l = hsla[ 2 ],
+		a = hsla[ 3 ],
+		q = l <= 0.5 ? l * ( 1 + s ) : l + s - l * s,
+		p = 2 * l - q;
+
+	return [
+		Math.round( hue2rgb( p, q, h + ( 1 / 3 ) ) * 255 ),
+		Math.round( hue2rgb( p, q, h ) * 255 ),
+		Math.round( hue2rgb( p, q, h - ( 1 / 3 ) ) * 255 ),
+		a
+	];
+};
+
+
+each( spaces, function( spaceName, space ) {
+	var props = space.props,
+		cache = space.cache,
+		to = space.to,
+		from = space.from;
+
+	// makes rgba() and hsla()
+	color.fn[ spaceName ] = function( value ) {
+
+		// generate a cache for this space if it doesn't exist
+		if ( to && !this[ cache ] ) {
+			this[ cache ] = to( this._rgba );
+		}
+		if ( value === undefined ) {
+			return this[ cache ].slice();
+		}
+
+		var ret,
+			type = jQuery.type( value ),
+			arr = ( type === "array" || type === "object" ) ? value : arguments,
+			local = this[ cache ].slice();
+
+		each( props, function( key, prop ) {
+			var val = arr[ type === "object" ? key : prop.idx ];
+			if ( val == null ) {
+				val = local[ prop.idx ];
+			}
+			local[ prop.idx ] = clamp( val, prop );
+		});
+
+		if ( from ) {
+			ret = color( from( local ) );
+			ret[ cache ] = local;
+			return ret;
+		} else {
+			return color( local );
+		}
+	};
+
+	// makes red() green() blue() alpha() hue() saturation() lightness()
+	each( props, function( key, prop ) {
+		// alpha is included in more than one space
+		if ( color.fn[ key ] ) {
+			return;
+		}
+		color.fn[ key ] = function( value ) {
+			var vtype = jQuery.type( value ),
+				fn = ( key === "alpha" ? ( this._hsla ? "hsla" : "rgba" ) : spaceName ),
+				local = this[ fn ](),
+				cur = local[ prop.idx ],
+				match;
+
+			if ( vtype === "undefined" ) {
+				return cur;
+			}
+
+			if ( vtype === "function" ) {
+				value = value.call( this, cur );
+				vtype = jQuery.type( value );
+			}
+			if ( value == null && prop.empty ) {
+				return this;
+			}
+			if ( vtype === "string" ) {
+				match = rplusequals.exec( value );
+				if ( match ) {
+					value = cur + parseFloat( match[ 2 ] ) * ( match[ 1 ] === "+" ? 1 : -1 );
+				}
+			}
+			local[ prop.idx ] = value;
+			return this[ fn ]( local );
+		};
+	});
+});
+
+// add .fx.step functions
+each( stepHooks, function( i, hook ) {
+	jQuery.cssHooks[ hook ] = {
+		set: function( elem, value ) {
+			var parsed, curElem,
+				backgroundColor = "";
+
+			if ( jQuery.type( value ) !== "string" || ( parsed = stringParse( value ) ) ) {
+				value = color( parsed || value );
+				if ( !support.rgba && value._rgba[ 3 ] !== 1 ) {
+					curElem = hook === "backgroundColor" ? elem.parentNode : elem;
+					while (
+						(backgroundColor === "" || backgroundColor === "transparent") &&
+						curElem && curElem.style
+					) {
+						try {
+							backgroundColor = jQuery.css( curElem, "backgroundColor" );
+							curElem = curElem.parentNode;
+						} catch ( e ) {
+						}
+					}
+
+					value = value.blend( backgroundColor && backgroundColor !== "transparent" ?
+						backgroundColor :
+						"_default" );
+				}
+
+				value = value.toRgbaString();
+			}
+			try {
+				elem.style[ hook ] = value;
+			} catch( error ) {
+				// wrapped to prevent IE from throwing errors on "invalid" values like 'auto' or 'inherit'
+			}
+		}
+	};
+	jQuery.fx.step[ hook ] = function( fx ) {
+		if ( !fx.colorInit ) {
+			fx.start = color( fx.elem, hook );
+			fx.end = color( fx.end );
+			fx.colorInit = true;
+		}
+		jQuery.cssHooks[ hook ].set( fx.elem, fx.start.transition( fx.end, fx.pos ) );
+	};
+});
+
+jQuery.cssHooks.borderColor = {
+	expand: function( value ) {
+		var expanded = {};
+
+		each( [ "Top", "Right", "Bottom", "Left" ], function( i, part ) {
+			expanded[ "border" + part + "Color" ] = value;
+		});
+		return expanded;
+	}
+};
+
+// Basic color names only.
+// Usage of any of the other color names requires adding yourself or including
+// jquery.color.svg-names.js.
+colors = jQuery.Color.names = {
+	// 4.1. Basic color keywords
+	aqua: "#00ffff",
+	black: "#000000",
+	blue: "#0000ff",
+	fuchsia: "#ff00ff",
+	gray: "#808080",
+	green: "#008000",
+	lime: "#00ff00",
+	maroon: "#800000",
+	navy: "#000080",
+	olive: "#808000",
+	purple: "#800080",
+	red: "#ff0000",
+	silver: "#c0c0c0",
+	teal: "#008080",
+	white: "#ffffff",
+	yellow: "#ffff00",
+
+	// 4.2.3. "transparent" color keyword
+	transparent: [ null, null, null, 0 ],
+
+	_default: "#ffffff"
+};
+
+})( jQuery );
+
+
+
+/******************************************************************************/
+/****************************** CLASS ANIMATIONS ******************************/
+/******************************************************************************/
+(function() {
+
+var classAnimationActions = [ "add", "remove", "toggle" ],
+	shorthandStyles = {
+		border: 1,
+		borderBottom: 1,
+		borderColor: 1,
+		borderLeft: 1,
+		borderRight: 1,
+		borderTop: 1,
+		borderWidth: 1,
+		margin: 1,
+		padding: 1
+	};
+
+$.each([ "borderLeftStyle", "borderRightStyle", "borderBottomStyle", "borderTopStyle" ], function( _, prop ) {
+	$.fx.step[ prop ] = function( fx ) {
+		if ( fx.end !== "none" && !fx.setAttr || fx.pos === 1 && !fx.setAttr ) {
+			jQuery.style( fx.elem, prop, fx.end );
+			fx.setAttr = true;
+		}
+	};
+});
+
+function getElementStyles() {
+	var style = this.ownerDocument.defaultView ?
+			this.ownerDocument.defaultView.getComputedStyle( this, null ) :
+			this.currentStyle,
+		newStyle = {},
+		key,
+		len;
+
+	// webkit enumerates style porperties
+	if ( style && style.length && style[ 0 ] && style[ style[ 0 ] ] ) {
+		len = style.length;
+		while ( len-- ) {
+			key = style[ len ];
+			if ( typeof style[ key ] === "string" ) {
+				newStyle[ $.camelCase( key ) ] = style[ key ];
+			}
+		}
+	} else {
+		for ( key in style ) {
+			if ( typeof style[ key ] === "string" ) {
+				newStyle[ key ] = style[ key ];
+			}
+		}
+	}
+
+	return newStyle;
+}
+
+
+function styleDifference( oldStyle, newStyle ) {
+	var diff = {},
+		name, value;
+
+	for ( name in newStyle ) {
+		value = newStyle[ name ];
+		if ( oldStyle[ name ] !== value ) {
+			if ( !shorthandStyles[ name ] ) {
+				if ( $.fx.step[ name ] || !isNaN( parseFloat( value ) ) ) {
+					diff[ name ] = value;
+				}
+			}
+		}
+	}
+
+	return diff;
+}
+
+$.effects.animateClass = function( value, duration, easing, callback ) {
+	var o = $.speed( duration, easing, callback );
+
+	return this.queue( function() {
+		var animated = $( this ),
+			baseClass = animated.attr( "class" ) || "",
+			applyClassChange,
+			allAnimations = o.children ? animated.find( "*" ).andSelf() : animated;
+
+		// map the animated objects to store the original styles.
+		allAnimations = allAnimations.map(function() {
+			var el = $( this );
+			return {
+				el: el,
+				start: getElementStyles.call( this )
+			};
+		});
+
+		// apply class change
+		applyClassChange = function() {
+			$.each( classAnimationActions, function(i, action) {
+				if ( value[ action ] ) {
+					animated[ action + "Class" ]( value[ action ] );
+				}
+			});
+		};
+		applyClassChange();
+
+		// map all animated objects again - calculate new styles and diff
+		allAnimations = allAnimations.map(function() {
+			this.end = getElementStyles.call( this.el[ 0 ] );
+			this.diff = styleDifference( this.start, this.end );
+			return this;
+		});
+
+		// apply original class
+		animated.attr( "class", baseClass );
+
+		// map all animated objects again - this time collecting a promise
+		allAnimations = allAnimations.map(function() {
+			var styleInfo = this,
+				dfd = $.Deferred(),
+				opts = jQuery.extend({}, o, {
+					queue: false,
+					complete: function() {
+						dfd.resolve( styleInfo );
+					}
+				});
+
+			this.el.animate( this.diff, opts );
+			return dfd.promise();
+		});
+
+		// once all animations have completed:
+		$.when.apply( $, allAnimations.get() ).done(function() {
+
+			// set the final class
+			applyClassChange();
+
+			// for each animated element,
+			// clear all css properties that were animated
+			$.each( arguments, function() {
+				var el = this.el;
+				$.each( this.diff, function(key) {
+					el.css( key, '' );
+				});
+			});
+
+			// this is guarnteed to be there if you use jQuery.speed()
+			// it also handles dequeuing the next anim...
+			o.complete.call( animated[ 0 ] );
+		});
+	});
+};
+
+$.fn.extend({
+	_addClass: $.fn.addClass,
+	addClass: function( classNames, speed, easing, callback ) {
+		return speed ?
+			$.effects.animateClass.call( this,
+				{ add: classNames }, speed, easing, callback ) :
+			this._addClass( classNames );
+	},
+
+	_removeClass: $.fn.removeClass,
+	removeClass: function( classNames, speed, easing, callback ) {
+		return speed ?
+			$.effects.animateClass.call( this,
+				{ remove: classNames }, speed, easing, callback ) :
+			this._removeClass( classNames );
+	},
+
+	_toggleClass: $.fn.toggleClass,
+	toggleClass: function( classNames, force, speed, easing, callback ) {
+		if ( typeof force === "boolean" || force === undefined ) {
+			if ( !speed ) {
+				// without speed parameter
+				return this._toggleClass( classNames, force );
+			} else {
+				return $.effects.animateClass.call( this,
+					(force ? { add: classNames } : { remove: classNames }),
+					speed, easing, callback );
+			}
+		} else {
+			// without force parameter
+			return $.effects.animateClass.call( this,
+				{ toggle: classNames }, force, speed, easing );
+		}
+	},
+
+	switchClass: function( remove, add, speed, easing, callback) {
+		return $.effects.animateClass.call( this, {
+			add: add,
+			remove: remove
+		}, speed, easing, callback );
+	}
+});
+
+})();
+
+/******************************************************************************/
+/*********************************** EFFECTS **********************************/
+/******************************************************************************/
+
+(function() {
+
+$.extend( $.effects, {
+	version: "1.9.2",
+
+	// Saves a set of properties in a data storage
+	save: function( element, set ) {
+		for( var i=0; i < set.length; i++ ) {
+			if ( set[ i ] !== null ) {
+				element.data( dataSpace + set[ i ], element[ 0 ].style[ set[ i ] ] );
+			}
+		}
+	},
+
+	// Restores a set of previously saved properties from a data storage
+	restore: function( element, set ) {
+		var val, i;
+		for( i=0; i < set.length; i++ ) {
+			if ( set[ i ] !== null ) {
+				val = element.data( dataSpace + set[ i ] );
+				// support: jQuery 1.6.2
+				// http://bugs.jquery.com/ticket/9917
+				// jQuery 1.6.2 incorrectly returns undefined for any falsy value.
+				// We can't differentiate between "" and 0 here, so we just assume
+				// empty string since it's likely to be a more common value...
+				if ( val === undefined ) {
+					val = "";
+				}
+				element.css( set[ i ], val );
+			}
+		}
+	},
+
+	setMode: function( el, mode ) {
+		if (mode === "toggle") {
+			mode = el.is( ":hidden" ) ? "show" : "hide";
+		}
+		return mode;
+	},
+
+	// Translates a [top,left] array into a baseline value
+	// this should be a little more flexible in the future to handle a string & hash
+	getBaseline: function( origin, original ) {
+		var y, x;
+		switch ( origin[ 0 ] ) {
+			case "top": y = 0; break;
+			case "middle": y = 0.5; break;
+			case "bottom": y = 1; break;
+			default: y = origin[ 0 ] / original.height;
+		}
+		switch ( origin[ 1 ] ) {
+			case "left": x = 0; break;
+			case "center": x = 0.5; break;
+			case "right": x = 1; break;
+			default: x = origin[ 1 ] / original.width;
+		}
+		return {
+			x: x,
+			y: y
+		};
+	},
+
+	// Wraps the element around a wrapper that copies position properties
+	createWrapper: function( element ) {
+
+		// if the element is already wrapped, return it
+		if ( element.parent().is( ".ui-effects-wrapper" )) {
+			return element.parent();
+		}
+
+		// wrap the element
+		var props = {
+				width: element.outerWidth(true),
+				height: element.outerHeight(true),
+				"float": element.css( "float" )
+			},
+			wrapper = $( "<div></div>" )
+				.addClass( "ui-effects-wrapper" )
+				.css({
+					fontSize: "100%",
+					background: "transparent",
+					border: "none",
+					margin: 0,
+					padding: 0
+				}),
+			// Store the size in case width/height are defined in % - Fixes #5245
+			size = {
+				width: element.width(),
+				height: element.height()
+			},
+			active = document.activeElement;
+
+		// support: Firefox
+		// Firefox incorrectly exposes anonymous content
+		// https://bugzilla.mozilla.org/show_bug.cgi?id=561664
+		try {
+			active.id;
+		} catch( e ) {
+			active = document.body;
+		}
+
+		element.wrap( wrapper );
+
+		// Fixes #7595 - Elements lose focus when wrapped.
+		if ( element[ 0 ] === active || $.contains( element[ 0 ], active ) ) {
+			$( active ).focus();
+		}
+
+		wrapper = element.parent(); //Hotfix for jQuery 1.4 since some change in wrap() seems to actually lose the reference to the wrapped element
+
+		// transfer positioning properties to the wrapper
+		if ( element.css( "position" ) === "static" ) {
+			wrapper.css({ position: "relative" });
+			element.css({ position: "relative" });
+		} else {
+			$.extend( props, {
+				position: element.css( "position" ),
+				zIndex: element.css( "z-index" )
+			});
+			$.each([ "top", "left", "bottom", "right" ], function(i, pos) {
+				props[ pos ] = element.css( pos );
+				if ( isNaN( parseInt( props[ pos ], 10 ) ) ) {
+					props[ pos ] = "auto";
+				}
+			});
+			element.css({
+				position: "relative",
+				top: 0,
+				left: 0,
+				right: "auto",
+				bottom: "auto"
+			});
+		}
+		element.css(size);
+
+		return wrapper.css( props ).show();
+	},
+
+	removeWrapper: function( element ) {
+		var active = document.activeElement;
+
+		if ( element.parent().is( ".ui-effects-wrapper" ) ) {
+			element.parent().replaceWith( element );
+
+			// Fixes #7595 - Elements lose focus when wrapped.
+			if ( element[ 0 ] === active || $.contains( element[ 0 ], active ) ) {
+				$( active ).focus();
+			}
+		}
+
+
+		return element;
+	},
+
+	setTransition: function( element, list, factor, value ) {
+		value = value || {};
+		$.each( list, function( i, x ) {
+			var unit = element.cssUnit( x );
+			if ( unit[ 0 ] > 0 ) {
+				value[ x ] = unit[ 0 ] * factor + unit[ 1 ];
+			}
+		});
+		return value;
+	}
+});
+
+// return an effect options object for the given parameters:
+function _normalizeArguments( effect, options, speed, callback ) {
+
+	// allow passing all options as the first parameter
+	if ( $.isPlainObject( effect ) ) {
+		options = effect;
+		effect = effect.effect;
+	}
+
+	// convert to an object
+	effect = { effect: effect };
+
+	// catch (effect, null, ...)
+	if ( options == null ) {
+		options = {};
+	}
+
+	// catch (effect, callback)
+	if ( $.isFunction( options ) ) {
+		callback = options;
+		speed = null;
+		options = {};
+	}
+
+	// catch (effect, speed, ?)
+	if ( typeof options === "number" || $.fx.speeds[ options ] ) {
+		callback = speed;
+		speed = options;
+		options = {};
+	}
+
+	// catch (effect, options, callback)
+	if ( $.isFunction( speed ) ) {
+		callback = speed;
+		speed = null;
+	}
+
+	// add options to effect
+	if ( options ) {
+		$.extend( effect, options );
+	}
+
+	speed = speed || options.duration;
+	effect.duration = $.fx.off ? 0 :
+		typeof speed === "number" ? speed :
+		speed in $.fx.speeds ? $.fx.speeds[ speed ] :
+		$.fx.speeds._default;
+
+	effect.complete = callback || options.complete;
+
+	return effect;
+}
+
+function standardSpeed( speed ) {
+	// valid standard speeds
+	if ( !speed || typeof speed === "number" || $.fx.speeds[ speed ] ) {
+		return true;
+	}
+
+	// invalid strings - treat as "normal" speed
+	if ( typeof speed === "string" && !$.effects.effect[ speed ] ) {
+		// TODO: remove in 2.0 (#7115)
+		if ( backCompat && $.effects[ speed ] ) {
+			return false;
+		}
+		return true;
+	}
+
+	return false;
+}
+
+$.fn.extend({
+	effect: function( /* effect, options, speed, callback */ ) {
+		var args = _normalizeArguments.apply( this, arguments ),
+			mode = args.mode,
+			queue = args.queue,
+			effectMethod = $.effects.effect[ args.effect ],
+
+			// DEPRECATED: remove in 2.0 (#7115)
+			oldEffectMethod = !effectMethod && backCompat && $.effects[ args.effect ];
+
+		if ( $.fx.off || !( effectMethod || oldEffectMethod ) ) {
+			// delegate to the original method (e.g., .show()) if possible
+			if ( mode ) {
+				return this[ mode ]( args.duration, args.complete );
+			} else {
+				return this.each( function() {
+					if ( args.complete ) {
+						args.complete.call( this );
+					}
+				});
+			}
+		}
+
+		function run( next ) {
+			var elem = $( this ),
+				complete = args.complete,
+				mode = args.mode;
+
+			function done() {
+				if ( $.isFunction( complete ) ) {
+					complete.call( elem[0] );
+				}
+				if ( $.isFunction( next ) ) {
+					next();
+				}
+			}
+
+			// if the element is hiddden and mode is hide,
+			// or element is visible and mode is show
+			if ( elem.is( ":hidden" ) ? mode === "hide" : mode === "show" ) {
+				done();
+			} else {
+				effectMethod.call( elem[0], args, done );
+			}
+		}
+
+		// TODO: remove this check in 2.0, effectMethod will always be true
+		if ( effectMethod ) {
+			return queue === false ? this.each( run ) : this.queue( queue || "fx", run );
+		} else {
+			// DEPRECATED: remove in 2.0 (#7115)
+			return oldEffectMethod.call(this, {
+				options: args,
+				duration: args.duration,
+				callback: args.complete,
+				mode: args.mode
+			});
+		}
+	},
+
+	_show: $.fn.show,
+	show: function( speed ) {
+		if ( standardSpeed( speed ) ) {
+			return this._show.apply( this, arguments );
+		} else {
+			var args = _normalizeArguments.apply( this, arguments );
+			args.mode = "show";
+			return this.effect.call( this, args );
+		}
+	},
+
+	_hide: $.fn.hide,
+	hide: function( speed ) {
+		if ( standardSpeed( speed ) ) {
+			return this._hide.apply( this, arguments );
+		} else {
+			var args = _normalizeArguments.apply( this, arguments );
+			args.mode = "hide";
+			return this.effect.call( this, args );
+		}
+	},
+
+	// jQuery core overloads toggle and creates _toggle
+	__toggle: $.fn.toggle,
+	toggle: function( speed ) {
+		if ( standardSpeed( speed ) || typeof speed === "boolean" || $.isFunction( speed ) ) {
+			return this.__toggle.apply( this, arguments );
+		} else {
+			var args = _normalizeArguments.apply( this, arguments );
+			args.mode = "toggle";
+			return this.effect.call( this, args );
+		}
+	},
+
+	// helper functions
+	cssUnit: function(key) {
+		var style = this.css( key ),
+			val = [];
+
+		$.each( [ "em", "px", "%", "pt" ], function( i, unit ) {
+			if ( style.indexOf( unit ) > 0 ) {
+				val = [ parseFloat( style ), unit ];
+			}
+		});
+		return val;
+	}
+});
+
+})();
+
+/******************************************************************************/
+/*********************************** EASING ***********************************/
+/******************************************************************************/
+
+(function() {
+
+// based on easing equations from Robert Penner (http://www.robertpenner.com/easing)
+
+var baseEasings = {};
+
+$.each( [ "Quad", "Cubic", "Quart", "Quint", "Expo" ], function( i, name ) {
+	baseEasings[ name ] = function( p ) {
+		return Math.pow( p, i + 2 );
+	};
+});
+
+$.extend( baseEasings, {
+	Sine: function ( p ) {
+		return 1 - Math.cos( p * Math.PI / 2 );
+	},
+	Circ: function ( p ) {
+		return 1 - Math.sqrt( 1 - p * p );
+	},
+	Elastic: function( p ) {
+		return p === 0 || p === 1 ? p :
+			-Math.pow( 2, 8 * (p - 1) ) * Math.sin( ( (p - 1) * 80 - 7.5 ) * Math.PI / 15 );
+	},
+	Back: function( p ) {
+		return p * p * ( 3 * p - 2 );
+	},
+	Bounce: function ( p ) {
+		var pow2,
+			bounce = 4;
+
+		while ( p < ( ( pow2 = Math.pow( 2, --bounce ) ) - 1 ) / 11 ) {}
+		return 1 / Math.pow( 4, 3 - bounce ) - 7.5625 * Math.pow( ( pow2 * 3 - 2 ) / 22 - p, 2 );
+	}
+});
+
+$.each( baseEasings, function( name, easeIn ) {
+	$.easing[ "easeIn" + name ] = easeIn;
+	$.easing[ "easeOut" + name ] = function( p ) {
+		return 1 - easeIn( 1 - p );
+	};
+	$.easing[ "easeInOut" + name ] = function( p ) {
+		return p < 0.5 ?
+			easeIn( p * 2 ) / 2 :
+			1 - easeIn( p * -2 + 2 ) / 2;
+	};
+});
+
+})();
+
+})(jQuery));
+}});
+
 define("product/guoqude/1.0.0/front_net/module/jquery-ui/amd/jquery.ui.mouse-debug", [], function (require, exports, module) { return function (jQuery) {
 /*!
  * jQuery UI Mouse 1.9.2
@@ -3240,6 +4519,1217 @@ $.widget("ui.sortable", $.ui.mouse, {
 })(jQuery);
 }});
 
+define("product/guoqude/1.0.0/front_net/module/royalSlider/royalslider-debug", [], function (require, exports, module) { return function (jQuery) {
+// jQuery RoyalSlider plugin. Custom build. Copyright 2011-2012 Dmitry Semenov http://dimsemenov.com 
+// jquery.royalslider v9.2.5
+(function(k){function u(b,e){var c=navigator.userAgent.toLowerCase(),g=k.browser,a=this,f=g.webkit;c.indexOf("android");a.isIPAD=c.match(/(ipad)/);for(var d=document.createElement("div").style,i=["webkit","Moz","ms","O"],h="",j=0,m,c=0;c<i.length;c++)m=i[c],!h&&m+"Transform"in d&&(h=m),m=m.toLowerCase(),window.requestAnimationFrame||(window.requestAnimationFrame=window[m+"RequestAnimationFrame"],window.cancelAnimationFrame=window[m+"CancelAnimationFrame"]||window[m+"CancelRequestAnimationFrame"]);
+window.requestAnimationFrame||(window.requestAnimationFrame=function(a){var b=(new Date).getTime(),c=Math.max(0,16-(b-j)),d=window.setTimeout(function(){a(b+c)},c);j=b+c;return d});window.cancelAnimationFrame||(window.cancelAnimationFrame=function(a){clearTimeout(a)});a.slider=k(b);a.ev=k({});a._a=k(document);a.st=k.extend({},k.fn.royalSlider.defaults,e);a._b=a.st.transitionSpeed;if(a.st.allowCSS3&&(!f||a.st.allowCSS3OnWebkit))c=h+(h?"T":"t"),a._c=c+"ransform"in d&&c+"ransition"in d,a._c&&(a._d=h+
+(h?"P":"p")+"erspective"in d);h=h.toLowerCase();a._e="-"+h+"-";a._f="vertical"===a.st.slidesOrientation?!1:!0;a._g=a._f?"left":"top";a._h=a._f?"width":"height";a._i=-1;a._j="fade"===a.st.transitionType?!1:!0;a._j||(a.st.sliderDrag=!1,a._k=10);a._l=0;a._m=0;k.each(k.rsModules,function(b,c){c.call(a)});a.slides=[];a._n=0;(a.st.slides?k(a.st.slides):a.slider.children().detach()).each(function(){a._o(this,!0)});a.st.randomizeSlides&&a.slides.sort(function(){return 0.5-Math.random()});a.numSlides=a.slides.length;
+a._p();a.st.startSlideId>a.numSlides-1&&(a.st.startSlideId=a.numSlides-1);a.staticSlideId=a.currSlideId=a._q=a.st.startSlideId;a.currSlide=a.slides[a.currSlideId];a._r=0;a.slider.addClass((a._f?"rsHor":"rsVer")+(a._j?"":" rsFade"));d='<div class="rsOverflow"><div class="rsContainer">';a.slidesSpacing=a.st.slidesSpacing;a._s=(a._f?a.slider.width():a.slider.height())+a.st.slidesSpacing;a._t=Boolean(0<a._u);1>=a.numSlides&&(a._v=!1);a._w=a._v&&a._j?2===a.numSlides?1:2:0;a._x=6>a.numSlides?a.numSlides:
+6;a._y=0;a._z=0;a.slidesJQ=[];for(c=0;c<a.numSlides;c++)a.slidesJQ.push(k('<div style="'+(a._j?"":c!==a.currSlideId?"z-index: 0; display:none; opacity: 0; position: absolute;  left: 0; top: 0;":"z-index: 0;  position: absolute; left: 0; top: 0;")+'" class="rsSlide "></div>'));a.slider.html(d+"</div></div>");a._a1=a.slider.children(".rsOverflow");a._b1=a._a1.children(".rsContainer");a._c1=k('<div class="rsPreloader"></div>');c=a._b1.children(".rsSlide");a._d1=a.slidesJQ[a.currSlideId];a._e1=0;"ontouchstart"in
+window||"createTouch"in document?(a.hasTouch=!0,a._f1="touchstart.rs",a._g1="touchmove.rs",a._h1="touchend.rs",a._i1="touchcancel.rs",a._j1=0.5):(a.hasTouch=!1,a._j1=0.2,a.st.sliderDrag&&(g.msie||g.opera?a._k1=a._l1="move":g.mozilla?(a._k1="-moz-grab",a._l1="-moz-grabbing"):f&&-1!=navigator.platform.indexOf("Mac")&&(a._k1="-webkit-grab",a._l1="-webkit-grabbing"),a._m1()),a._f1="mousedown.rs",a._g1="mousemove.rs",a._h1="mouseup.rs",a._i1="mouseup.rs");a._c?(a._n1="transition-property",a._o1="transition-duration",
+a._p1="transition-timing-function",a._q1=a._r1=a._e+"transform",a._d?(f&&a.slider.addClass("rsWebkit3d"),a._s1="translate3d(",a._t1="px, ",a._u1="px, 0px)"):(a._s1="translate(",a._t1="px, ",a._u1="px)"),a._j?a._b1[a._e+a._n1]=a._e+"transform":(g={},g[a._e+a._n1]="opacity",g[a._e+a._o1]=a.st.transitionSpeed+"ms",g[a._e+a._p1]=a.st.css3easeInOut,c.css(g))):(a._r1="left",a._q1="top");var l;k(window).on("resize.rs",function(){l&&clearTimeout(l);l=setTimeout(function(){a.updateSliderSize()},50)});a.ev.trigger("rsAfterPropsSetup");
+a.updateSliderSize();a.st.keyboardNavEnabled&&a._v1();a.st.arrowsNavHideOnTouch&&a.hasTouch&&(a.st.arrowsNav=!1);a.st.arrowsNav&&(g=a.st.controlsInside?a._a1:a.slider,k('<div class="rsArrow rsArrowLeft"><div class="rsArrowIcn"></div></div><div class="rsArrow rsArrowRight"><div class="rsArrowIcn"></div></div>').appendTo(g),a._w1=g.children(".rsArrowLeft").click(function(b){b.preventDefault();a.prev()}),a._x1=g.children(".rsArrowRight").click(function(b){b.preventDefault();a.next()}),a.st.arrowsNavAutoHide&&
+!a.hasTouch&&(a._w1.addClass("rsHidden"),a._x1.addClass("rsHidden"),g.one("mousemove.arrowshover",function(){a._w1.removeClass("rsHidden");a._x1.removeClass("rsHidden")}),g.hover(function(){a._y1||(a._w1.removeClass("rsHidden"),a._x1.removeClass("rsHidden"))},function(){a._y1||(a._w1.addClass("rsHidden"),a._x1.addClass("rsHidden"))})),a.ev.on("rsOnUpdateNav",function(){a._z1()}),a._z1());a._a2=!a.hasTouch&&a.st.sliderDrag||a.hasTouch&&a.st.sliderTouch;if(a._a2)a._b1.on(a._f1,function(b){a._b2(b)});
+else a.dragSuccess=!1;var r=["rsPlayBtnIcon","rsPlayBtn","rsCloseVideoBtn","rsCloseVideoIcn"];a._b1.click(function(b){if(!a.dragSuccess){var c=k(b.target).attr("class");if(-1!==k.inArray(c,r)&&a.toggleVideo())return!1;if(a.st.navigateByClick&&!a._c2){if(k(b.target).closest(".rsNoDrag",a._d1).length)return!0;a._d2(b)}a.ev.trigger("rsSlideClick")}});a.ev.trigger("rsAfterInit")}k.rsModules||(k.rsModules={});u.prototype={_d2:function(b){0<b[this._f?"pageX":"pageY"]-this._e2?this.next():this.prev()},_p:function(){var b;
+b=this.st.numImagesToPreload;if(this._v=this.st.loop)2===this.numSlides?(this._v=!1,this.st.loopRewind=!0):2>this.numSlides&&(this.st.loopRewind=this._v=!1);this._v&&0<b&&(4>=this.numSlides?b=1:this.st.numImagesToPreload>(this.numSlides-1)/2&&(b=Math.floor((this.numSlides-1)/2)));this._u=b},_o:function(b,e){function c(b,c){a.image=b.attr(!c?"src":c);a.caption=!c?b.attr("alt"):b.contents();a.videoURL=b.attr("data-rsVideo")}var g,a={};this._f2=b=k(b);this.ev.trigger("rsBeforeParseNode",[b,a]);if(!a.stopParsing)return b=
+this._f2,a.id=this._n,a.contentAdded=!1,this._n++,a.hasCover||(b.hasClass("rsImg")?(tempEl=b,g=!0):(tempEl=b.find(".rsImg"),tempEl.length&&(g=!0)),g?(a.bigImage=tempEl.attr("data-rsBigImg"),tempEl.is("a")?c(tempEl,"href"):tempEl.is("img")&&c(tempEl)):b.is("img")&&(b.addClass("rsImg"),c(b))),tempEl=b.find(".rsCaption"),tempEl.length&&(a.caption=tempEl.remove()),a.image||(a.isLoaded=!0,a.isRendered=!1,a.isLoading=!1),a.content=b,this.ev.trigger("rsAfterParseNode",[b,a]),e&&this.slides.push(a),a},_v1:function(){function b(a){37===
+a?e.prev():39===a&&e.next()}var e=this,c,g;e._a.on("keydown.rskb",function(a){if(!e._g2&&(g=a.keyCode,(37===g||39===g)&&!c))b(g),c=setInterval(function(){b(g)},700)}).on("keyup.rskb",function(){c&&(clearInterval(c),c=null)})},goTo:function(b,e){b!==this.currSlideId&&this._h2(b,this.st.transitionSpeed,!0,!e)},destroy:function(b){var e=this;e.ev.trigger("rsBeforeDestroy");e._a.off("keydown.rskb keyup.rskb "+e._g1+" "+e._h1);e._b1.on(e._f1,function(b){e._b2(b)});e.slider.data("royalSlider","");b&&e.slider.remove()},
+_i2:function(b,e){function c(c,e,f){c.isAdded?(g(e,c),a(e,c)):(f||(f=d.slidesJQ[e]),c.holder?f=c.holder:(f=d.slidesJQ[e]=k(f),c.holder=f),c.appendOnLoaded=!1,a(e,c,f),g(e,c),d._k2(c,f,b),appended=c.isAdded=!0)}function g(a,c){c.contentAdded||(d.setItemHtml(c,b),b||(c.contentAdded=!0))}function a(a,b,c){d._j&&(c||(c=d.slidesJQ[a]),c.css(d._g,(a+d._z+r)*d._s))}function f(a){if(j){if(a>m-1)return f(a-m);if(0>a)return f(m+a)}return a}var d=this,i,h,j=d._v,m=d.numSlides;if(!isNaN(e))return f(e);var l=
+d.currSlideId,r,n=b?Math.abs(d._j2-d.currSlideId)>=d.numSlides-1?0:1:d._u,p=Math.min(2,n),s=!1,t=!1,q;for(h=l;h<l+1+p;h++)if(q=f(h),(i=d.slides[q])&&(!i.isAdded||!i.positionSet)){s=!0;break}for(h=l-1;h>l-1-p;h--)if(q=f(h),(i=d.slides[q])&&(!i.isAdded||!i.positionSet)){t=!0;break}if(s)for(h=l;h<l+n+1;h++)q=f(h),r=Math.floor((d._q-(l-h))/d.numSlides)*d.numSlides,(i=d.slides[q])&&c(i,q);if(t)for(h=l-1;h>l-1-n;h--)q=f(h),r=Math.floor((d._q-(l-h))/m)*m,(i=d.slides[q])&&c(i,q);if(!b){p=f(l-n);l=f(l+n);
+n=p>l?0:p;for(h=0;h<m;h++)if(!(p>l&&h>p-1)&&(h<n||h>l))if((i=d.slides[h])&&i.holder)i.holder.detach(),i.isAdded=!1}},setItemHtml:function(b,e){function c(){a.isWaiting=!0;b.holder.html(g._c1.clone());a.slideId=-99}var g=this,a=b.holder,f=function(a){var b=a.sizeType;return function(d){var f=a.content,h=a.holder;if(d){var i=d.currentTarget;k(i).off("load error");if("error"===d.type){a.isLoaded=!0;a.image="";a.isLoading=!1;f.addClass("rsSlideError");h.html(f);a.holder.trigger("rsAfterContentSet");g.ev.trigger("rsAfterContentSet",
+a);return}}if(a.image){if(a.bigImage&&a.sizeType!==b){"med"===b?a.isMedLoading=!1:"big"===b?a.isBigLoading=!1:a.isMedLoading=a.isLoading=!1;return}if(a.isLoaded){if(!a.isRendered&&e){c();return}g._l2(a)}else{var j;f.hasClass("rsImg")?(j=!0,d=f):(j=!1,d=f.find(".rsImg"));d.length&&d.is("a")&&(j?f=k('<img class="rsImg" src="'+a.image+'" />'):f.find(".rsImg").replaceWith('<img class="rsImg" src="'+a.image+'" />'),a.content=f);a.iW=i.width;0<a.iW&&(a.iH=i.height,a.isLoaded=!0,a.isLoading=!1,g._l2(a))}}else{if(!g._t&&
+e&&!a.isRendered){a.isRendered=!0;c();return}a.isLoaded=!0;a.isLoading=!1}i=a.id-g._l;!e&&!a.appendOnLoaded&&g.st.fadeinLoadedSlide&&(0===i||(g._m2||g._g2)&&(-1===i||1===i))?(f.css(g._e+"transition","opacity 400ms ease-in-out").css({visibility:"visible",opacity:0}),h.html(f),setTimeout(function(){f.css("opacity",1)},6)):h.html(f);a.isRendered=!0;h.find("a").off("click.rs").on("click.rs",function(){if(g.dragSuccess)return!1;g._c2=!0;setTimeout(function(){g._c2=!1},3)});a.holder.trigger("rsAfterContentSet");
+g.ev.trigger("rsAfterContentSet",a);a.appendOnLoaded&&g._k2(a,f,e)}};if(b.isLoaded)f(b)();else if(e)c();else if(b.image)if(b.isLoading){var d=1,i=function(){if(b.isLoading)if(b.isLoaded)f(b)();else{if(0===d%50){var a=b.imageLoader;if(a.complete&&void 0!==a.naturalWidth&&0!==a.naturalWidth&&0!==a.naturalHeight){f(b)();return}}300<d||(setTimeout(i,400),d++)}};i(b.sizeType)}else{var h=k("<img/>"),j=b.image;e?c():b.isLoading||(j||(j=h.attr("src"),h=k("<img/>")),b.holder.html(g._c1.clone()),b.isLoading=
+!0,b.imageLoader=h,h.one("load error",f(b)).attr("src",j))}else f(b)()},_k2:function(b,e,c){var g=b.holder,a=b.id-this._l;this._j&&!c&&this.st.fadeinLoadedSlide&&(0===a||(this._m2||this._g2)&&(-1===a||1===a))?(e=b.content,e.css(this._e+"transition","opacity 400ms ease-in-out").css({visibility:"visible",opacity:0}),this._b1.append(g),setTimeout(function(){e.css("opacity",1)},6)):this._b1.append(g);b.appendOnLoaded=!1},_b2:function(b,e){var c=this,g;c.dragSuccess=!1;if(k(b.target).closest(".rsNoDrag",
+c._d1).length)return!0;e||c._m2&&c._n2();if(c._g2)c.hasTouch&&(c._o2=!0);else{c.hasTouch&&(c._o2=!1);c._p2();if(c.hasTouch){var a=b.originalEvent.touches;if(a&&0<a.length)g=a[0],1<a.length&&(c._o2=!0);else return}else g=b,b.preventDefault();c._g2=!0;c._a.on(c._g1,function(a){c._q2(a,e)}).on(c._h1,function(a){c._r2(a,e)});c._s2="";c._t2=!1;c._u2=g.pageX;c._v2=g.pageY;c._w2=c._r=(!e?c._f:c._x2)?g.pageX:g.pageY;c._y2=0;c._z2=0;c._a3=!e?c._m:c._b3;c._c3=(new Date).getTime();if(c.hasTouch)c._a1.on(c._i1,
+function(a){c._r2(a,e)})}},_d3:function(b,e){if(this._e3){var c=this._f3,g=b.pageX-this._u2,a=b.pageY-this._v2,f=this._a3+g,d=this._a3+a,i=!e?this._f:this._x2,f=i?f:d,h=this._s2;this._t2=!0;this._u2=b.pageX;this._v2=b.pageY;d=i?this._u2:this._v2;"x"===h&&0!==g?this._y2=0<g?1:-1:"y"===h&&0!==a&&(this._z2=0<a?1:-1);g=i?g:a;e?f>this._g3?f=this._a3+g*this._j1:f<this._h3&&(f=this._a3+g*this._j1):this._v||(0>=this.currSlideId&&0<d-this._w2&&(f=this._a3+g*this._j1),this.currSlideId>=this.numSlides-1&&0>
+d-this._w2&&(f=this._a3+g*this._j1));this._a3=f;200<c-this._c3&&(this._c3=c,this._r=d);e?this._j3(this._a3):this._j&&this._i3(this._a3)}},_q2:function(b,e){var c=this;if(c.hasTouch){if(c._k3)return;var g=b.originalEvent.touches;if(g){if(1<g.length)return;point=g[0]}else return}else point=b;c._t2||(c._c&&(!e?c._b1:c._l3).css(c._e+c._o1,"0s"),function d(){c._g2&&(c._m3=requestAnimationFrame(d),c._n3&&c._d3(c._n3,e))}());if(c._e3)b.preventDefault(),c._f3=(new Date).getTime(),c._n3=point;else{var g=!e?
+c._f:c._x2,a=Math.abs(point.pageX-c._u2)-Math.abs(point.pageY-c._v2)-(g?-7:7);if(7<a){if(g)b.preventDefault(),c._s2="x";else if(c.hasTouch){c._o3();return}c._e3=!0}else if(-7>a){if(g){if(c.hasTouch){c._o3();return}}else b.preventDefault(),c._s2="y";c._e3=!0}}},_o3:function(){this._k3=!0;this._t2=this._g2=!1;this._r2()},_r2:function(b,e){function c(a){return 100>a?100:500<a?500:a}function g(b,d){if(a._j||e)i=(-a._q-a._z)*a._s,h=Math.abs(a._m-i),a._b=h/d,b&&(a._b+=250),a._b=c(a._b),a._q3(i,!1)}var a=
+this,f,d,i,h;a.ev.trigger("rsDragRelease");a._n3=null;a._g2=!1;a._k3=!1;a._e3=!1;a._f3=0;cancelAnimationFrame(a._m3);a._t2&&(e?a._j3(a._a3):a._j&&a._i3(a._a3));a._a.off(a._g1).off(a._h1);a.hasTouch&&a._a1.off(a._i1);a._m1();if(!a._t2&&!a._o2&&e&&a._p3){var j=k(b.target).closest(".rsNavItem");j.length&&a.goTo(j.index())}else if(d=!e?a._f:a._x2,a._t2&&!("y"===a._s2&&d||"x"===a._s2&&!d)){a.dragSuccess=!0;a._s2="";var m=a.st.minSlideOffset;f=a.hasTouch?b.originalEvent.changedTouches[0]:b;var l=d?f.pageX:
+f.pageY,r=a._w2;f=a._r;var n=a.currSlideId,p=a.numSlides,s=d?a._y2:a._z2,t=a._v;Math.abs(l-r);f=l-f;d=(new Date).getTime()-a._c3;d=Math.abs(f)/d;if(0===s||1>=p)g(!0,d);else{if(!t&&!e)if(0>=n){if(0<s){g(!0,d);return}}else if(n>=p-1&&0>s){g(!0,d);return}if(e){i=a._b3;if(i>a._g3)i=a._g3;else if(i<a._h3)i=a._h3;else{m=d*d/0.006;j=-a._b3;l=a._r3-a._s3+a._b3;0<f&&m>j?(j+=a._s3/(15/(0.003*(m/d))),d=d*j/m,m=j):0>f&&m>l&&(l+=a._s3/(15/(0.003*(m/d))),d=d*l/m,m=l);j=Math.max(Math.round(d/0.003),50);i+=m*(0>
+f?-1:1);if(i>a._g3){a._t3(i,j,!0,a._g3,200);return}if(i<a._h3){a._t3(i,j,!0,a._h3,200);return}}a._t3(i,j,!0)}else r+m<l?0>s?g(!1,d):a._h2("prev",c(Math.abs(a._m-(-a._q-a._z+1)*a._s)/d),!1,!0,!0):r-m>l?0<s?g(!1,d):a._h2("next",c(Math.abs(a._m-(-a._q-a._z-1)*a._s)/d),!1,!0,!0):g(!1,d)}}},_i3:function(b){b=this._m=b;this._c?this._b1.css(this._r1,this._s1+(this._f?b+this._t1+0:0+this._t1+b)+this._u1):this._b1.css(this._f?this._r1:this._q1,b)},updateSliderSize:function(b){var e,c;this.st.beforeResize&&
+this.st.beforeResize.call(this);if(this.st.autoScaleSlider){var g=this.st.autoScaleSliderWidth,a=this.st.autoScaleSliderHeight;this.st.autoScaleHeight?(e=this.slider.width(),e!=this.width&&(this.slider.css("height",e*(a/g)),e=this.slider.width()),c=this.slider.height()):(c=this.slider.height(),c!=this.height&&(this.slider.css("width",c*(g/a)),c=this.slider.height()),e=this.slider.width())}else e=this.slider.width(),c=this.slider.height();this._e2=this.slider.offset();this._e2=this._e2[this._g];if(b||
+e!=this.width||c!=this.height){this.width=e;this.height=c;this._u3=e;this._v3=c;this.ev.trigger("rsBeforeSizeSet");this._a1.css({width:this._u3,height:this._v3});this._s=(this._f?this._u3:this._v3)+this.st.slidesSpacing;this._w3=this.st.imageScalePadding;for(e=0;e<this.slides.length;e++)b=this.slides[e],b.positionSet=!1,b&&(b.image&&b.isLoaded)&&(b.isRendered=!1,this._l2(b));if(this._x3)for(e=0;e<this._x3.length;e++)b=this._x3[e],b.holder.css(this._g,(b.id+this._z)*this._s);this._i2();this._j&&(this._c&&
+this._b1.css(this._e+"transition-duration","0s"),this._i3((-this._q-this._z)*this._s));this.ev.trigger("rsOnUpdateNav");this.st.afterResize&&this.st.afterResize.call(this)}},setSlidesOrientation:function(){},appendSlide:function(b,e){var c=this._o(b);if(isNaN(e)||e>this.numSlides)e=this.numSlides;this.slides.splice(e,0,c);this.slidesJQ.splice(e,0,'<div style="'+(this._j?"position: absolute;":"z-index: 0; display:none; opacity: 0; position: absolute;  left: 0; top: 0;")+'" class="rsSlide"></div>');
+e<this.currSlideId&&this.currSlideId++;this.ev.trigger("rsOnAppendSlide",[c,e]);this._z3(e);e===this.currSlideId&&this.ev.trigger("rsAfterSlideChange")},removeSlide:function(b){var e=this.slides[b];e&&(e.holder&&e.holder.remove(),b<this.currSlideId&&this.currSlideId++,this.slides.splice(b,1),this.slidesJQ.splice(b,1),this.ev.trigger("rsOnRemoveSlide",[b]),this._z3(b),b===this.currSlideId&&this.ev.trigger("rsAfterSlideChange"))},_z3:function(){var b=this,e=b.numSlides,e=0>=b._q?0:Math.floor(b._q/e);
+b.numSlides=b.slides.length;0===b.numSlides?(b.currSlideId=b._z=b._q=0,b.currSlide=b._a4=null):b._q=e*b.numSlides+b.currSlideId;for(e=0;e<b.numSlides;e++)b.slides[e].id=e;b.currSlide=b.slides[b.currSlideId];b._d1=b.slidesJQ[b.currSlideId];b.currSlideId>=b.numSlides?b.goTo(b.numSlides-1):0>b.currSlideId&&b.goTo(0);b._p();b._j&&b._v&&b._b1.css(b._e+b._o1,"0ms");b._b4&&clearTimeout(b._b4);b._b4=setTimeout(function(){b._j&&b._i3((-b._q-b._z)*b._s);b._i2();b._j||b._d1.css({display:"block",opacity:1})},
+14);b.ev.trigger("rsOnUpdateNav")},_m1:function(){!this.hasTouch&&this._j&&(this._k1?this._a1.css("cursor",this._k1):(this._a1.removeClass("grabbing-cursor"),this._a1.addClass("grab-cursor")))},_p2:function(){!this.hasTouch&&this._j&&(this._l1?this._a1.css("cursor",this._l1):(this._a1.removeClass("grab-cursor"),this._a1.addClass("grabbing-cursor")))},next:function(b){this._h2("next",this.st.transitionSpeed,!0,!b)},prev:function(b){this._h2("prev",this.st.transitionSpeed,!0,!b)},_h2:function(b,e,c,
+g,a){var f=this,d,i,h;f._d4&&f.stopVideo();f.ev.trigger("rsBeforeMove",[b,g]);newItemId="next"===b?f.currSlideId+1:"prev"===b?f.currSlideId-1:b=parseInt(b,10);if(!f._v){if(0>newItemId){f._e4("left",!g);return}if(newItemId>=f.numSlides){f._e4("right",!g);return}}f._m2&&(f._n2(),c=!1);i=newItemId-f.currSlideId;h=f._j2=f.currSlideId;var j=f.currSlideId+i,g=f._q,m;f._v?(j=f._i2(!1,j),g+=i):g=j;f._l=j;f._a4=f.slidesJQ[f.currSlideId];f._q=g;f.currSlideId=f._l;f.currSlide=f.slides[f.currSlideId];f._d1=f.slidesJQ[f.currSlideId];
+j=Boolean(0<i);i=Math.abs(i);var l=Math.floor(h/f._u),k=Math.floor((h+(j?2:-2))/f._u),l=(j?Math.max(l,k):Math.min(l,k))*f._u+(j?f._u-1:0);l>f.numSlides-1?l=f.numSlides-1:0>l&&(l=0);h=j?l-h:h-l;h>f._u&&(h=f._u);if(i>h+2){f._z+=(i-(h+2))*(j?-1:1);e*=1.4;for(h=0;h<f.numSlides;h++)f.slides[h].positionSet=!1}f._b=e;f._i2(!0);a||(m=!0);d=(-g-f._z)*f._s;m?setTimeout(function(){f._c4=!1;f._q3(d,b,!1,c);f.ev.trigger("rsOnUpdateNav")},0):(f._q3(d,b,!1,c),f.ev.trigger("rsOnUpdateNav"))},_z1:function(){this.st.arrowsNav&&
+(1>=this.numSlides?(this._w1.css("display","none"),this._x1.css("display","none")):(this._w1.css("display","block"),this._x1.css("display","block"),!this._v&&!this.st.loopRewind&&(0===this.currSlideId?this._w1.addClass("rsArrowDisabled"):this._w1.removeClass("rsArrowDisabled"),this.currSlideId===this.numSlides-1?this._x1.addClass("rsArrowDisabled"):this._x1.removeClass("rsArrowDisabled"))))},_q3:function(b,e,c,g,a){function f(){var a;if(i&&(a=i.data("rsTimeout")))i!==h&&i.css({opacity:0,display:"none",
+zIndex:0}),clearTimeout(a),i.data("rsTimeout","");if(a=h.data("rsTimeout"))clearTimeout(a),h.data("rsTimeout","")}var d=this,i,h,j={};isNaN(d._b)&&(d._b=400);d._m=d._a3=b;d.ev.trigger("rsBeforeAnimStart");d.st.beforeSlideChange&&d.st.beforeSlideChange.call(d);d._c?d._j?(j[d._e+d._o1]=d._b+"ms",j[d._e+d._p1]=g?k.rsCSS3Easing[d.st.easeInOut]:k.rsCSS3Easing[d.st.easeOut],d._b1.css(j),setTimeout(function(){d._i3(b)},d.hasTouch?5:0)):(d._b=d.st.transitionSpeed,i=d._a4,h=d._d1,h.data("rsTimeout")&&h.css("opacity",
+0),f(),i&&i.data("rsTimeout",setTimeout(function(){j[d._e+d._o1]="0ms";j.zIndex=0;j.display="none";i.data("rsTimeout","");i.css(j);setTimeout(function(){i.css("opacity",0)},16)},d._b+60)),j.display="block",j.zIndex=d._k,j.opacity=0,j[d._e+d._o1]="0ms",j[d._e+d._p1]=k.rsCSS3Easing[d.st.easeInOut],h.css(j),h.data("rsTimeout",setTimeout(function(){h.css(d._e+d._o1,d._b+"ms");h.data("rsTimeout",setTimeout(function(){h.css("opacity",1);h.data("rsTimeout","")},20))},20))):d._j?(j[d._f?d._r1:d._q1]=b+"px",
+d._b1.animate(j,d._b,g?d.st.easeInOut:d.st.easeOut)):(i=d._a4,h=d._d1,h.stop(!0,!0).css({opacity:0,display:"block",zIndex:d._k}),d._b=d.st.transitionSpeed,h.animate({opacity:1},d._b,d.st.easeInOut),f(),i&&i.data("rsTimeout",setTimeout(function(){i.stop(!0,!0).css({opacity:0,display:"none",zIndex:0})},d._b+60)));d._m2=!0;d.loadingTimeout&&clearTimeout(d.loadingTimeout);d.loadingTimeout=a?setTimeout(function(){d.loadingTimeout=null;a.call()},d._b+60):setTimeout(function(){d.loadingTimeout=null;d._f4(e)},
+d._b+60)},_n2:function(){this._m2=!1;clearTimeout(this.loadingTimeout);if(this._j)if(this._c){var b=this._m,e=this._a3=this._g4();this._b1.css(this._e+this._o1,"0ms");b!==e&&this._i3(e)}else this._b1.stop(!0),this._m=parseInt(this._b1.css(this._r1),10);else 20<this._k?this._k=10:this._k++},_g4:function(){var b=window.getComputedStyle(this._b1.get(0),null).getPropertyValue(this._e+"transform").replace(/^matrix\(/i,"").split(/, |\)$/g);return parseInt(b[this._f?4:5],10)},_h4:function(b,e){return this._c?
+this._s1+(e?b+this._t1+0:0+this._t1+b)+this._u1:b},_f4:function(){this._j||(this._d1.css("z-index",0),this._k=10);this._m2=!1;this.staticSlideId=this.currSlideId;this._i2();this._i4=!1;this.ev.trigger("rsAfterSlideChange");this.st.afterSlideChange&&this.st.afterSlideChange.call(this)},_e4:function(b,e){var c=this,g=(-c._q-c._z)*c._s;moveDist=30;if(0!==c.numSlides)if(c.st.loopRewind)"left"===b?c.goTo(c.numSlides-1,e):c.goTo(0,e);else if(!c._m2&&c._j&&0!==moveDist){c._b=200;var a=function(){c._m2=!1};
+c._q3(g+("left"===b?moveDist:-moveDist),"",!1,!0,function(){c._m2=!1;c._q3(g,"",!1,!0,a)})}},_l2:function(b){if(!b.isRendered){var e=b.content,c="rsImg",g,a=this.st.imageAlignCenter,f=this.st.imageScaleMode,d;b.videoURL&&(c="rsVideoContainer","fill"!==f?g=!0:(d=e,d.hasClass(c)||(d=d.find("."+c)),d.css({width:"100%",height:"100%"}),c="rsImg"));e.hasClass(c)||(e=e.find("."+c));var i=b.iW,c=b.iH;b.isRendered=!0;if("none"!==f||a){bMargin="fill"!==f?this._w3:0;b=this._u3-2*bMargin;d=this._v3-2*bMargin;
+var h,j,k={};if("fit-if-smaller"===f&&(i>b||c>d))f="fit";if("fill"===f||"fit"===f)h=b/i,j=d/c,h="fill"==f?h>j?h:j:"fit"==f?h<j?h:j:1,i=Math.ceil(i*h,10),c=Math.ceil(c*h,10);"none"!==f&&(k.width=i,k.height=c,g&&e.find(".rsImg").css({width:"100%",height:"100%"}));a&&(k.marginLeft=Math.floor((b-i)/2)+bMargin,k.marginTop=Math.floor((d-c)/2)+bMargin);e.css(k)}}}};k.rsProto=u.prototype;k.fn.royalSlider=function(b){var e=arguments;return this.each(function(){var c=k(this);if("object"===typeof b||!b)c.data("royalSlider")||
+c.data("royalSlider",new u(c,b));else if((c=c.data("royalSlider"))&&c[b])return c[b].apply(c,Array.prototype.slice.call(e,1))})};k.fn.royalSlider.defaults={slidesSpacing:8,startSlideId:0,loop:!1,loopRewind:!1,numImagesToPreload:4,fadeinLoadedSlide:!0,slidesOrientation:"horizontal",transitionType:"move",transitionSpeed:600,controlNavigation:"bullets",controlsInside:!0,arrowsNav:!0,arrowsNavAutoHide:!0,navigateByClick:!0,randomizeSlides:!1,sliderDrag:!0,sliderTouch:!0,keyboardNavEnabled:!1,fadeInAfterLoaded:!0,
+allowCSS3:!0,allowCSS3OnWebkit:!0,addActiveClass:!1,autoHeight:!1,easeOut:"easeOutSine",easeInOut:"easeInOutSine",minSlideOffset:10,imageScaleMode:"fit-if-smaller",imageAlignCenter:!0,imageScalePadding:4,autoScaleSlider:!1,autoScaleSliderWidth:800,autoScaleSliderHeight:400,autoScaleHeight:!0,arrowsNavHideOnTouch:!1,globalCaption:!1,beforeSlideChange:null,afterSlideChange:null,beforeResize:null,afterResize:null};k.rsCSS3Easing={easeOutSine:"cubic-bezier(0.390, 0.575, 0.565, 1.000)",easeInOutSine:"cubic-bezier(0.445, 0.050, 0.550, 0.950)"};
+k.extend(jQuery.easing,{easeInOutSine:function(b,e,c,g,a){return-g/2*(Math.cos(Math.PI*e/a)-1)+c},easeOutSine:function(b,e,c,g,a){return g*Math.sin(e/a*(Math.PI/2))+c},easeOutCubic:function(b,e,c,g,a){return g*((e=e/a-1)*e*e+1)+c}})})(jQuery,window);
+// jquery.rs.bullets v1.0
+(function(c){c.extend(c.rsProto,{_f5:function(){var a=this;"bullets"===a.st.controlNavigation&&(a.ev.one("rsAfterPropsSetup",function(){a._g5=!0;a.slider.addClass("rsWithBullets");for(var b='<div class="rsNav rsBullets">',e=0;e<a.numSlides;e++)b+='<div class="rsNavItem rsBullet"><span class=""></span></div>';b=c(b+"</div>");a._t4=b;a._h5=b.children();a.slider.append(b);a._t4.click(function(b){b=c(b.target).closest(".rsNavItem");b.length&&a.goTo(b.index())})}),a.ev.on("rsOnAppendSlide",function(b,
+c,d){d>=a.numSlides?a._t4.append('<div class="rsNavItem rsBullet"><span class=""></span></div>'):a._h5.eq(d).before('<div class="rsNavItem rsBullet"><span class=""></span></div>');a._h5=a._t4.children()}),a.ev.on("rsOnRemoveSlide",function(b,c){var d=a._h5.eq(c);d&&(d.remove(),a._h5=a._t4.children())}),a.ev.on("rsOnUpdateNav",function(){var b=a.currSlideId;a._i5&&a._i5.removeClass("rsNavSelected");b=c(a._h5[b]);b.addClass("rsNavSelected");a._i5=b}))}});c.rsModules.bullets=c.rsProto._f5})(jQuery);
+// jquery.rs.thumbnails v1.0.2
+(function(f){f.extend(f.rsProto,{_y5:function(){var a=this;"thumbnails"===a.st.controlNavigation&&(a._z5={drag:!0,touch:!0,orientation:"horizontal",navigation:!0,arrows:!0,arrowLeft:null,arrowRight:null,spacing:4,arrowsAutoHide:!1,appendSpan:!1,transitionSpeed:600,autoCenter:!0,fitInViewport:!0,firstMargin:!0},a.st.thumbs=f.extend({},a._z5,a.st.thumbs),a.ev.on("rsBeforeParseNode",function(a,b,c){b=f(b);c.thumbnail=b.find(".rsTmb").remove();c.thumbnail.length?c.thumbnail=f(document.createElement("div")).append(c.thumbnail).html():
+(c.thumbnail=b.attr("data-rsTmb"),c.thumbnail||(c.thumbnail=b.find(".rsImg").attr("data-rsTmb")),c.thumbnail=c.thumbnail?'<img src="'+c.thumbnail+'"/>':"")}),a.ev.one("rsAfterPropsSetup",function(){a._a6()}),a.ev.on("rsOnUpdateNav",function(){var e=a.currSlideId,b;a._i5&&a._i5.removeClass("rsNavSelected");b=f(a._h5[e]);b.addClass("rsNavSelected");a._b6&&a._c6(e);a._i5=b}),a.ev.on("rsOnAppendSlide",function(e,b,c){e="<div"+a._d6+' class="rsNavItem rsThumb">'+a._e6+b.thumbnail+"</div>";c>=a.numSlides?
+a._l3.append(e):a._h5.eq(c).before(e);a._h5=a._l3.children();a.updateThumbsSize()}),a.ev.on("rsOnRemoveSlide",function(e,b){var c=a._h5.eq(b);c&&(c.remove(),a._h5=a._l3.children(),a.updateThumbsSize())}))},_a6:function(){var a=this,e="rsThumbs",b="",c,g,d=a.st.thumbs.spacing;a._g5=!0;0<d?(c=d+"px ",c=' style="margin: 0 '+c+c+'0;"'):c="";a._d6=c;a._x2="vertical"===a.st.thumbs.orientation?!1:!0;a._b3=0;a._f6=!1;a._g6=!1;a._b6=!1;a._h6=a.st.thumbs.arrows&&a.st.thumbs.navigation;g=a._x2?"Hor":"Ver";a.slider.addClass("rsWithThumbs rsWithThumbs"+
+g);b+='<div class="rsNav rsThumbs rsThumbs'+g+'"><div class="'+e+'Container">';a._e6=a.st.thumbs.appendSpan?'<span class="thumbIco"></span>':"";for(var h=0;h<a.numSlides;h++)g=a.slides[h],b+="<div"+c+' class="rsNavItem rsThumb">'+a._e6+g.thumbnail+"</div>";b=f(b+"</div></div>");a._l3=f(b).find("."+e+"Container");a._h6&&(e+="Arrow",a.st.thumbs.arrowLeft?a._i6=a.st.thumbs.arrowLeft:(a._i6=f('<div class="'+e+" "+e+'Left"><div class="'+e+'Icn"></div></div>'),b.append(a._i6)),a.st.thumbs.arrowRight?a._j6=
+a.st.thumbs.arrowRight:(a._j6=f('<div class="'+e+" "+e+'Right"><div class="'+e+'Icn"></div></div>'),b.append(a._j6)),a._i6.click(function(){var b=(Math.floor(a._b3/a._k6)+a._l6)*a._k6;a._t3(b>a._g3?a._g3:b)}),a._j6.click(function(){var b=(Math.floor(a._b3/a._k6)-a._l6)*a._k6;a._t3(b<a._h3?a._h3:b)}),a.st.thumbs.arrowsAutoHide&&!a.hasTouch&&(a._i6.css("opacity",0),a._j6.css("opacity",0),b.one("mousemove.rsarrowshover",function(){a._b6&&(a._i6.css("opacity",1),a._j6.css("opacity",1))}),b.hover(function(){a._b6&&
+(a._i6.css("opacity",1),a._j6.css("opacity",1))},function(){a._b6&&(a._i6.css("opacity",0),a._j6.css("opacity",0))})));a._t4=b;a._h5=a._l3.children();a.slider.append(b);a._p3=!0;a._m6=d;a.st.thumbs.navigation&&a._c&&a._l3.css(a._e+"transition-property",a._e+"transform");a._t4.click(function(b){a._g6||(b=f(b.target).closest(".rsNavItem"),b.length&&a.goTo(b.index()))});a.ev.off("rsBeforeSizeSet.thumbs").on("rsBeforeSizeSet.thumbs",function(){a._n6=a._x2?a._v3:a._u3;a.updateThumbsSize()})},updateThumbsSize:function(){var a=
+this,e=a._h5.first(),b={},c=a._h5.length;a._k6=(a._x2?e.outerWidth():e.outerHeight())+a._m6;a._r3=c*a._k6-a._m6;b[a._x2?"width":"height"]=a._r3+a._m6;a._s3=a._x2?a._t4.width():a._t4.height();a._h3=-(a._r3-a._s3)-(a.st.thumbs.firstMargin?a._m6:0);a._g3=a.st.thumbs.firstMargin?a._m6:0;a._l6=Math.floor(a._s3/a._k6);if(a._r3<a._s3)a.st.thumbs.autoCenter&&a._j3((a._s3-a._r3)/2),a.st.thumbs.arrows&&a._i6&&(a._i6.addClass("rsThumbsArrowDisabled"),a._j6.addClass("rsThumbsArrowDisabled")),a._b6=!1,a._g6=!1,
+a._t4.off(a._f1);else if(a.st.thumbs.navigation&&!a._b6&&(a._b6=!0,!a.hasTouch&&a.st.thumbs.drag||a.hasTouch&&a.st.thumbs.touch))a._g6=!0,a._t4.on(a._f1,function(b){a._b2(b,!0)});a._l3.css(b);if(a._p3&&(a.isFullscreen||a.st.thumbs.fitInViewport))a._x2?a._v3=a._n6-a._t4.outerHeight():a._u3=a._n6-a._t4.outerWidth()},setThumbsOrientation:function(a,e){this._p3&&(this.st.thumbs.orientation=a,this._t4.remove(),this.slider.removeClass("rsWithThumbsHor rsWithThumbsVer"),this._a6(),this._t4.off(this._f1),
+e||this.updateSliderSize(!0))},_j3:function(a){this._b3=a;this._c?this._l3.css(this._r1,this._s1+(this._x2?a+this._t1+0:0+this._t1+a)+this._u1):this._l3.css(this._x2?this._r1:this._q1,a)},_t3:function(a,e,b,c,g){var d=this;if(d._b6){e||(e=d.st.thumbs.transitionSpeed);d._b3=a;d._o6&&clearTimeout(d._o6);d._f6&&(d._c||d._l3.stop(),b=!0);var h={};d._f6=!0;d._c?(h[d._e+"transition-duration"]=e+"ms",h[d._e+"transition-timing-function"]=b?f.rsCSS3Easing[d.st.easeOut]:f.rsCSS3Easing[d.st.easeInOut],d._l3.css(h),
+d._j3(a)):(h[d._x2?d._r1:d._q1]=a+"px",d._l3.animate(h,e,b?"easeOutCubic":d.st.easeInOut));c&&(d._b3=c);d._p6();d._o6=setTimeout(function(){d._f6=!1;g&&(d._t3(c,g,!0),g=null)},e)}},_p6:function(){this._h6&&(this._b3===this._g3?this._i6.addClass("rsThumbsArrowDisabled"):this._i6.removeClass("rsThumbsArrowDisabled"),this._b3===this._h3?this._j6.addClass("rsThumbsArrowDisabled"):this._j6.removeClass("rsThumbsArrowDisabled"))},_c6:function(a,e){var b=0,c,f=a*this._k6+2*this._k6-this._m6+this._g3,d=Math.floor(this._b3/
+this._k6);this._b6&&(f+this._b3>this._s3?(a===this.numSlides-1&&(b=1),d=-a+this._l6-2+b,c=d*this._k6+this._s3%this._k6+this._m6-this._g3):0!==a?(a-1)*this._k6<=-this._b3+this._g3&&a-1<=this.numSlides-this._l6&&(c=(-a+1)*this._k6+this._g3):c=this._g3,c!==this._b3&&(b=void 0===c?this._b3:c,b>this._g3?this._j3(this._g3):b<this._h3?this._j3(this._h3):void 0!==c&&(e?this._j3(c):this._t3(c))),this._p6())}});f.rsModules.thumbnails=f.rsProto._y5})(jQuery);
+// jquery.rs.tabs v1.0.1
+(function(e){e.extend(e.rsProto,{_w5:function(){var a=this;"tabs"===a.st.controlNavigation&&(a.ev.on("rsBeforeParseNode",function(a,d,b){d=e(d);b.thumbnail=d.find(".rsTmb").remove();b.thumbnail.length?b.thumbnail=e(document.createElement("div")).append(b.thumbnail).html():(b.thumbnail=d.attr("data-rsTmb"),b.thumbnail||(b.thumbnail=d.find(".rsImg").attr("data-rsTmb")),b.thumbnail=b.thumbnail?'<img src="'+b.thumbnail+'"/>':"")}),a.ev.one("rsAfterPropsSetup",function(){a._x5()}),a.ev.on("rsOnAppendSlide",
+function(c,d,b){b>=a.numSlides?a._t4.append('<div class="rsNavItem rsTab">'+d.thumbnail+"</div>"):a._h5.eq(b).before('<div class="rsNavItem rsTab">'+item.thumbnail+"</div>");a._h5=a._t4.children()}),a.ev.on("rsOnRemoveSlide",function(c,d){var b=a._h5.eq(d);b&&(b.remove(),a._h5=a._t4.children())}),a.ev.on("rsOnUpdateNav",function(){var c=a.currSlideId;a._i5&&a._i5.removeClass("rsNavSelected");c=e(a._h5[c]);c.addClass("rsNavSelected");a._i5=c}))},_x5:function(){var a=this,c,d;a._g5=!0;c='<div class="rsNav rsTabs">';
+for(var b=0;b<a.numSlides;b++)b===a.numSlides-1&&(style=""),d=a.slides[b],c+='<div class="rsNavItem rsTab">'+d.thumbnail+"</div>";c=e(c+"</div>");a._t4=c;a._h5=c.find(".rsNavItem");a.slider.append(c);a._t4.click(function(b){b=e(b.target).closest(".rsNavItem");b.length&&a.goTo(b.index())})}});e.rsModules.tabs=e.rsProto._w5})(jQuery);
+// jquery.rs.fullscreen v1.0.1
+(function(c){c.extend(c.rsProto,{_l5:function(){var a=this;a._m5={enabled:!1,keyboardNav:!0,buttonFS:!0,nativeFS:!1,doubleTap:!0};a.st.fullscreen=c.extend({},a._m5,a.st.fullscreen);if(a.st.fullscreen.enabled)a.ev.one("rsBeforeSizeSet",function(){a._n5()})},_n5:function(){var a=this;a._o5=!a.st.keyboardNavEnabled&&a.st.fullscreen.keyboardNav;if(a.st.fullscreen.nativeFS){a._p5={supportsFullScreen:!1,isFullScreen:function(){return!1},requestFullScreen:function(){},cancelFullScreen:function(){},fullScreenEventName:"",
+prefix:""};var b=["webkit","moz","o","ms","khtml"];if("undefined"!=typeof document.cancelFullScreen)a._p5.supportsFullScreen=!0;else for(var d=0;d<b.length;d++)if(a._p5.prefix=b[d],"undefined"!=typeof document[a._p5.prefix+"CancelFullScreen"]){a._p5.supportsFullScreen=!0;break}a._p5.supportsFullScreen?(a._p5.fullScreenEventName=a._p5.prefix+"fullscreenchange.rs",a._p5.isFullScreen=function(){switch(this.prefix){case "":return document.fullScreen;case "webkit":return document.webkitIsFullScreen;default:return document[this.prefix+
+"FullScreen"]}},a._p5.requestFullScreen=function(a){return""===this.prefix?a.requestFullScreen():a[this.prefix+"RequestFullScreen"]()},a._p5.cancelFullScreen=function(){return""===this.prefix?document.cancelFullScreen():document[this.prefix+"CancelFullScreen"]()}):a._p5=!1}a.st.fullscreen.buttonFS&&(a._q5=c('<div class="rsFullscreenBtn"><div class="rsFullscreenIcn"></div></div>').appendTo(a.st.controlsInside?a._a1:a.slider).on("click.rs",function(){a.isFullscreen?a.exitFullscreen():a.enterFullscreen()}))},
+enterFullscreen:function(a){var b=this;if(b._p5)if(a)b._p5.requestFullScreen(c("html")[0]);else{b._a.on(b._p5.fullScreenEventName,function(){b._p5.isFullScreen()?b.enterFullscreen(!0):b.exitFullscreen(!0)});b._p5.requestFullScreen(c("html")[0]);return}if(!b._r5){b._r5=!0;b._a.on("keyup.rsfullscreen",function(a){27===a.keyCode&&b.exitFullscreen()});b._o5&&b._v1();b._s5=c("html").attr("style");b._t5=c("body").attr("style");b._u5=b.slider.attr("style");c("body, html").css({overflow:"hidden",height:"100%",
+width:"100%",margin:"0",padding:"0"});b.slider.addClass("rsFullscreen");var d;for(d=0;d<b.numSlides;d++)if(a=b.slides[d],a.isRendered=!1,a.bigImage){a.isMedLoaded=a.isLoaded;a.isMedLoading=a.isLoading;a.medImage=a.image;a.medIW=a.iW;a.medIH=a.iH;a.slideId=-99;a.bigImage!==a.medImage&&(a.sizeType="big");a.isLoaded=a.isBigLoaded;a.isLoading=a.isBigLoading;a.image=a.bigImage;a.iW=a.bigIW;a.iH=a.bigIH;a.contentAdded=!1;var e=!a.isLoaded?'<a class="rsImg" href="'+a.image+'"></a>':'<img class="rsImg" src="'+
+a.image+'"/>';a.content.hasClass("rsImg")?a.content=c(e):a.content.find(".rsImg").replaceWith(e)}b.isFullscreen=!0;setTimeout(function(){b._r5=!1;b.updateSliderSize();b.ev.trigger("rsEnterFullscreen")},100)}},exitFullscreen:function(a){var b=this;if(b._p5){if(!a){b._p5.cancelFullScreen(c("html")[0]);return}b._a.off(b._p5.fullScreenEventName)}if(!b._r5){b._r5=!0;b._a.off("keyup.rsfullscreen");b._o5&&b._a.off("keydown.rskb");c("html").attr("style",b._s5||"");c("body").attr("style",b._t5||"");b.slider.removeClass("rsFullscreen");
+var d;for(d=0;d<b.numSlides;d++)if(a=b.slides[d],a.isRendered=!1,a.bigImage){a.slideId=-99;a.isBigLoaded=a.isLoaded;a.isBigLoading=a.isLoading;a.bigImage=a.image;a.bigIW=a.iW;a.bigIH=a.iH;a.isLoaded=a.isMedLoaded;a.isLoading=a.isMedLoading;a.image=a.medImage;a.iW=a.medIW;a.iH=a.medIH;a.contentAdded=!1;var e=!a.isLoaded?'<a class="rsImg" href="'+a.image+'"></a>':'<img class="rsImg" src="'+a.image+'"/>';a.content.hasClass("rsImg")?a.content=c(e):a.content.find(".rsImg").replaceWith(e);a.holder&&a.holder.html(a.content);
+a.bigImage!==a.medImage&&(a.sizeType="med")}b.isFullscreen=!1;setTimeout(function(){b._r5=!1;b.updateSliderSize();b.ev.trigger("rsExitFullscreen")},100)}}});c.rsModules.fullscreen=c.rsProto._l5})(jQuery);
+// jquery.rs.autoplay v1.0.4
+(function(b){b.extend(b.rsProto,{_u4:function(){var a=this,d;a._v4={enabled:!1,stopAtAction:!0,pauseOnHover:!0,delay:2E3};!a.st.autoPlay&&a.st.autoplay&&(a.st.autoPlay=a.st.autoplay);a.st.autoPlay=b.extend({},a._v4,a.st.autoPlay);a.st.autoPlay.enabled&&(a.ev.on("rsBeforeParseNode",function(a,c,e){c=b(c);if(d=c.attr("data-rsDelay"))e.customDelay=parseInt(d,10)}),a.ev.one("rsAfterInit",function(){a._w4()}),a.ev.on("rsBeforeDestroy",function(){a.stopAutoPlay()}))},_w4:function(){var a=this;a.startAutoPlay();
+a.ev.on("rsAfterContentSet",function(d,b){!a._g2&&(!a._m2&&a._x4&&b===a.currSlide)&&a._y4()});a.ev.on("rsDragRelease",function(){a._x4&&a._z4&&(a._z4=!1,a._y4())});a.ev.on("rsAfterSlideChange",function(){a._x4&&a._z4&&(a._z4=!1,a.currSlide.isLoaded&&a._y4())});a.ev.on("rsDragStart",function(){a._x4&&(a.st.autoPlay.stopAtAction?a.stopAutoPlay():(a._z4=!0,a._a5()))});a.ev.on("rsBeforeMove",function(b,f,c){a._x4&&(c&&a.st.autoPlay.stopAtAction?a.stopAutoPlay():(a._z4=!0,a._a5()))});a._b5=!1;a.ev.on("rsVideoStop",
+function(){a._x4&&(a._b5=!1,a._y4())});a.ev.on("rsVideoPlay",function(){a._x4&&(a._z4=!1,a._a5(),a._b5=!0)});a.st.autoPlay.pauseOnHover&&(a._c5=!1,a.slider.hover(function(){a._x4&&(a._z4=!1,a._a5(),a._c5=!0)},function(){a._x4&&(a._c5=!1,a._y4())}))},toggleAutoPlay:function(){this._x4?this.stopAutoPlay():this.startAutoPlay()},startAutoPlay:function(){this._x4=!0;this.currSlide.isLoaded&&this._y4()},stopAutoPlay:function(){this._b5=this._c5=this._z4=this._x4=!1;this._a5()},_y4:function(){var a=this;
+!a._c5&&!a._b5&&(a._d5=!0,a._e5&&clearTimeout(a._e5),a._e5=setTimeout(function(){var b;!a._v&&!a.st.loopRewind&&(b=!0,a.st.loopRewind=!0);a.next(!0);b&&(a.st.loopRewind=!1)},!a.currSlide.customDelay?a.st.autoPlay.delay:a.currSlide.customDelay))},_a5:function(){!this._c5&&!this._b5&&(this._d5=!1,this._e5&&(clearTimeout(this._e5),this._e5=null))}});b.rsModules.autoplay=b.rsProto._u4})(jQuery);
+// jquery.rs.video v1.0.4
+(function(e){e.extend(e.rsProto,{_q6:function(){var a=this;a._r6={autoHideArrows:!0,autoHideControlNav:!1,autoHideBlocks:!1,youTubeCode:'<iframe src="http://www.youtube.com/embed/%id%?rel=1&autoplay=1&showinfo=0&autoplay=1&wmode=transparent" frameborder="no"></iframe>',vimeoCode:'<iframe src="http://player.vimeo.com/video/%id%?byline=0&amp;portrait=0&amp;autoplay=1" frameborder="no" webkitAllowFullScreen mozallowfullscreen allowFullScreen></iframe>'};a.st.video=e.extend({},a._r6,a.st.video);a.ev.on("rsBeforeSizeSet",
+function(){a._d4&&setTimeout(function(){var b=a._d1,b=b.hasClass("rsVideoContainer")?b:b.find(".rsVideoContainer");a._s6.css({width:b.width(),height:b.height()})},32)});var c=e.browser.mozilla;a.ev.on("rsAfterParseNode",function(b,f,d){b=e(f);if(d.videoURL){c&&(a._c=a._d=!1);var f=e('<div class="rsVideoContainer"></div>'),g=e('<div class="rsBtnCenterer"><div class="rsPlayBtn"><div class="rsPlayBtnIcon"></div></div></div>');b.hasClass("rsImg")?d.content=f.append(b).append(g):d.content.find(".rsImg").wrap(f).after(g)}})},
+toggleVideo:function(){return this._d4?this.stopVideo():this.playVideo()},playVideo:function(){var a=this;if(!a._d4){var c=a.currSlide;if(!c.videoURL)return!1;var b=a._t6=c.content,c=c.videoURL,f,d;c.match(/youtu\.be/i)||c.match(/youtube\.com\/watch/i)?(d=/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/,(d=c.match(d))&&11==d[7].length&&(f=d[7]),void 0!==f&&(a._s6=a.st.video.youTubeCode.replace("%id%",f))):c.match(/vimeo\.com/i)&&(d=/\/\/(www\.)?vimeo.com\/(\d+)($|\/)/,
+(d=c.match(d))&&(f=d[2]),void 0!==f&&(a._s6=a.st.video.vimeoCode.replace("%id%",f)));a.videoObj=e(a._s6);a.ev.trigger("rsOnCreateVideoElement",[c]);a.videoObj.length&&(a._s6=e('<div class="rsVideoFrameHolder"><div class="rsPreloader"></div><div class="rsCloseVideoBtn"><div class="rsCloseVideoIcn"></div></div></div>'),a._s6.find(".rsPreloader").after(a.videoObj),b=b.hasClass("rsVideoContainer")?b:b.find(".rsVideoContainer"),a._s6.css({width:b.width(),height:b.height()}).find(".rsCloseVideoBtn").off("click.rsv").on("click.rsv",
+function(b){a.stopVideo();b.preventDefault();b.stopPropagation();return!1}),b.append(a._s6),a.isIPAD&&b.addClass("rsIOSVideo"),a._w1&&a.st.video.autoHideArrows&&(a._w1.addClass("rsHidden"),a._x1.addClass("rsHidden"),a._y1=!0),a._t4&&a.st.video.autoHideControlNav&&a._t4.addClass("rsHidden"),a.st.video.autoHideBlocks&&a.currSlide.animBlocks&&a.currSlide.animBlocks.addClass("rsHidden"),setTimeout(function(){a._s6.addClass("rsVideoActive")},10),a.ev.trigger("rsVideoPlay"),a._d4=!0);return!0}return!1},
+stopVideo:function(){var a=this;return a._d4?(a.isIPAD&&a.slider.find(".rsCloseVideoBtn").remove(),a._w1&&a.st.video.autoHideArrows&&(a._w1.removeClass("rsHidden"),a._x1.removeClass("rsHidden"),a._y1=!1),a._t4&&a.st.video.autoHideControlNav&&a._t4.removeClass("rsHidden"),a.st.video.autoHideBlocks&&a.currSlide.animBlocks&&a.currSlide.animBlocks.removeClass("rsHidden"),setTimeout(function(){a.ev.trigger("rsOnDestroyVideoElement",[a.videoObj]);var c=a._s6.find("iframe");c.length&&c.attr("src","");a._s6.remove()},
+16),a.ev.trigger("rsVideoStop"),a._d4=!1,!0):!1}});e.rsModules.video=e.rsProto._q6})(jQuery);
+// jquery.rs.animated-blocks v1.0.2
+(function(i){i.extend(i.rsProto,{_k4:function(){function j(){var e=a.currSlide;if(a.currSlide&&a.currSlide.isLoaded&&a._o4!==e){if(0<a._n4.length){for(b=0;b<a._n4.length;b++)clearTimeout(a._n4[b]);a._n4=[]}if(0<a._m4.length){var g;for(b=0;b<a._m4.length;b++)if(g=a._m4[b])a._c?(g.block.css(a._e+a._o1,"0s"),g.block.css(g.css)):g.running?g.block.stop(!0,!0):g.block.css(g.css),a._o4=null,e.animBlocksDisplayed=!1;a._m4=[]}e.animBlocks&&(e.animBlocksDisplayed=!0,a._o4=e,a._p4(e.animBlocks))}}var a=this,
+b;a._l4={fadeEffect:!0,moveEffect:"top",moveOffset:20,speed:400,easing:"easeOutSine",delay:200};a.st.block=i.extend({},a._l4,a.st.block);a._m4=[];a._n4=[];a.ev.on("rsAfterInit",function(){j()});a.ev.on("rsBeforeParseNode",function(a,b,c){b=i(b);c.animBlocks=b.find(".rsABlock").css("display","none");c.animBlocks.length||(c.animBlocks=b.hasClass("rsABlock")?b.css("display","none"):!1)});a.ev.on("rsAfterContentSet",function(b,g){g.id===a.currSlideId&&setTimeout(function(){j()},a.st.fadeinLoadedSlide?
+300:0)});a.ev.on("rsAfterSlideChange",function(){j()})},_q4:function(i,a){setTimeout(function(){i.css(a)},6)},_p4:function(j){var a=this,b,e,g,c;a._n4=[];j.each(function(j){b=i(this);e={};g={};c=null;var f=b.data("move-offset");isNaN(f)&&(f=a.st.block.moveOffset);if(0<f){var d=b.data("move-effect");d?(d=d.toLowerCase(),"none"===d?d=!1:"left"!==d&&("top"!==d&&"bottom"!==d&&"right"!==d)&&(d=a.st.block.moveEffect,"none"===d&&(d=!1))):d=a.st.block.moveEffect;if(d){var l;l="right"===d||"left"===d?!0:!1;
+var k,h;isOppositeProp=!1;a._c?(k=0,h=a._r1):(l?isNaN(parseInt(b.css("right"),10))?h="left":(h="right",isOppositeProp=!0):isNaN(parseInt(b.css("bottom"),10))?h="top":(h="bottom",isOppositeProp=!0),h="margin-"+h,isOppositeProp&&(f=-f),k=parseInt(b.css(h),10));g[h]=a._h4("top"===d||"left"===d?k-f:k+f,l);e[h]=a._h4(k,l)}}if(f=b.attr("data-fade-effect")){if("none"===f.toLowerCase()||"false"===f.toLowerCase())f=!1}else f=a.st.block.fadeEffect;f&&(g.opacity=0,e.opacity=1);if(f||d)c={},c.hasFade=Boolean(f),
+Boolean(d)&&(c.moveProp=h,c.hasMove=!0),c.speed=b.data("speed"),isNaN(c.speed)&&(c.speed=a.st.block.speed),c.easing=b.data("easing"),c.easing||(c.easing=a.st.block.easing),c.css3Easing=i.rsCSS3Easing[c.easing],c.delay=b.data("delay"),isNaN(c.delay)&&(c.delay=a.st.block.delay*j);d={};a._c&&(d[a._e+a._o1]="0ms");d.moveProp=e.moveProp;d.opacity=e.opacity;d.display="none";a._m4.push({block:b,css:d});a._q4(b,g);a._n4.push(setTimeout(function(b,d,c,g){return function(){b.css("display","block");if(c){var f=
+{};if(a._c){var e="";c.hasMove&&(e+=c.moveProp);c.hasFade&&(c.hasMove&&(e+=", "),e+="opacity");f[a._e+a._n1]=e;f[a._e+a._o1]=c.speed+"ms";f[a._e+a._p1]=c.css3Easing;b.css(f);setTimeout(function(){b.css(d)},24)}else setTimeout(function(){b.animate(d,c.speed,c.easing)},16)}delete a._n4[g]}}(b,e,c,j),6>=c.delay?12:c.delay))})}});i.rsModules.animatedBlocks=i.rsProto._k4})(jQuery);
+// jquery.rs.auto-height v1.0.1
+(function(b){b.extend(b.rsProto,{_r4:function(){var a=this;if(a.st.autoHeight){var b,c;a.slider.addClass("rsAutoHeight");a.ev.on("rsAfterInit",function(){setTimeout(function(){d(!1);setTimeout(function(){a.slider.append('<div id="clear" style="clear:both;"></div>');a._c&&a._a1.css(a._e+"transition","height "+a.st.transitionSpeed+"ms ease-in-out")},16)},16)});a.ev.on("rsBeforeAnimStart",function(){d(!0)});a.ev.on("rsBeforeSizeSet",function(){setTimeout(function(){d(!1)},16)});var d=function(f){var e=
+a.slides[a.currSlideId];b=e.holder;if(e.isLoaded)b&&(c=b.height(),0!==c&&void 0!==c&&(a._v3=c,a._c||!f?a._a1.css("height",c):a._a1.stop(!0,!0).animate({height:c},a.st.transitionSpeed)));else a.ev.off("rsAfterContentSet.rsAutoHeight").on("rsAfterContentSet.rsAutoHeight",function(a,b){e===b&&d()})}}}});b.rsModules.autoHeight=b.rsProto._r4})(jQuery);
+// jquery.rs.global-caption v1.0
+(function(b){b.extend(b.rsProto,{_v5:function(){var a=this;a.st.globalCaption&&(a.ev.on("rsAfterInit",function(){a.globalCaption=b('<div class="rsGCaption"></div>').appendTo(a.slider);a.globalCaption.html(a.currSlide.caption)}),a.ev.on("rsBeforeAnimStart",function(){a.globalCaption.html(a.currSlide.caption)}))}});b.rsModules.globalCaption=b.rsProto._v5})(jQuery);
+// jquery.rs.active-class v1.0
+(function(b){b.rsProto._j4=function(){var c,a=this;if(a.st.addActiveClass){a.ev.on("rsBeforeMove",function(){b()});a.ev.on("rsAfterInit",function(){b()});var b=function(){c&&clearTimeout(c);c=setTimeout(function(){a._a4&&a._a4.removeClass("rsActiveSlide");a._d1&&a._d1.addClass("rsActiveSlide");c=null},50)}}};b.rsModules.activeClass=b.rsProto._j4})(jQuery);
+// jquery.rs.deeplinking v1.0.1 + jQuery hashchange plugin v1.3 Copyright (c) 2010
+(function(a){a.extend(a.rsProto,{_j5:function(){var b=this,g,d,e;b._k5={enabled:!1,change:!1,prefix:""};b.st.deeplinking=a.extend({},b._k5,b.st.deeplinking);if(b.st.deeplinking.enabled){var j=b.st.deeplinking.change,c="#"+b.st.deeplinking.prefix,f=function(){var a=window.location.hash;return a&&(a=parseInt(a.substring(c.length),10),0<=a)?a-1:-1},h=f();-1!==h&&(b.st.startSlideId=h);if(j)a(window).on("hashchange.rs",function(){if(!g){var a=f();0>a||(a>b.numSlides-1&&(a=b.numSlides-1),b.goTo(a))}});
+b.ev.on("rsAfterSlideChange",function(){d&&clearTimeout(d);e&&clearTimeout(e);e=setTimeout(function(){g=!0;window.location.hash=c+(b.currSlideId+1);d=setTimeout(function(){g=!1;d=0},60)},750)})}}});a.rsModules.deeplinking=a.rsProto._j5})(jQuery);
+(function(a,b,g){function d(a){a=a||location.href;return"#"+a.replace(/^[^#]*#?(.*)$/,"$1")}"$:nomunge";var e=document,j,c=a.event.special,f=e.documentMode,h="onhashchange"in b&&(f===g||7<f);a.fn.hashchange=function(a){return a?this.bind("hashchange",a):this.trigger("hashchange")};a.fn.hashchange.delay=50;c.hashchange=a.extend(c.hashchange,{setup:function(){if(h)return!1;a(j.start)},teardown:function(){if(h)return!1;a(j.stop)}});var n=function(){var c=d(),e=q(m);c!==m?(p(m=c,e),a(b).trigger("hashchange")):
+e!==m&&(location.href=location.href.replace(/#.*/,"")+e);k=setTimeout(n,a.fn.hashchange.delay)},c={},k,m=d(),p=f=function(a){return a},q=f;c.start=function(){k||n()};c.stop=function(){k&&clearTimeout(k);k=g};if(a.browser.msie&&!h){var i,l;c.start=function(){i||(l=(l=a.fn.hashchange.src)&&l+d(),i=a('<iframe tabindex="-1" title="empty"/>').hide().one("load",function(){l||p(d());n()}).attr("src",l||"javascript:0").insertAfter("body")[0].contentWindow,e.onpropertychange=function(){try{"title"===event.propertyName&&
+(i.document.title=e.title)}catch(a){}})};c.stop=f;q=function(){return d(i.location.href)};p=function(b,c){var d=i.document,f=a.fn.hashchange.domain;b!==c&&(d.title=e.title,d.open(),f&&d.write('<script>document.domain="'+f+'"<\/script>'),d.close(),i.location.hash=b)}}j=c})(jQuery,this);
+
+}});
+define("product/guoqude/1.0.0/front_net/module/validation-debug", [], function (require, exports, module) {
+    //vali_delay class可以延迟1毫秒验证
+    //所有验证触发始于'input[type=submit], .submit'的click事件
+    //在submit buttom中使用title属性可以指定对应表单元素去验证，不使用title则验证其closest('form')中的所有'[class*=validate]'表单项
+    //atlast 验证较复杂，相关地方不要随意修改
+    //针对IE6做了提示框的宽度计算，_fixPromptWidth
+    //validate[func[functionname]] 可以自定义验证函数
+    //valiarr[topLeft] 可以指定提示框位置
+    //添加_unFieldEvent事件，默认用作焦点进入input时关闭错误提示
+	//345（updatePromptsPosition）行bug，修改为 var form = $(this).closest('form');
+	//$.validationEngineLanguage.allRules["card_adult"] = { "func": exports.cerd.checkAdult }; //扩展验证方法，而不是内嵌在jq_validation文件
+    //_ajax 事件更新，完全自定义回调处理
+    //判断 usePlaceholder，为placeholder做Hack
+    // 返回 methods 对象给调用者
+    // 新增showPassText参数
+
+     return function ($, _, JSON) {
+        /*
+        * Inline Form Validation Engine 2.2, jQuery plugin
+        * http://www.position-absolute.com
+        * http://www.crionics.com
+        */
+        var isAspWebForm = typeof glo_isAspWebForm == "undefined" ? false : glo_isAspWebForm;
+        
+        $.validationEngineLanguage = {
+            allRules: {
+                "equals": {
+                    "alertText": "前后不一致！"
+                },
+                "atlast": {
+                    "alertText": "至少填写其中项！"
+                },
+                "required": {
+                    "alertText": "* 此项必填",
+                    "alertTextCheckboxMultiple": "* 请选择",
+                    "alertTextCheckboxe": "* 请先勾选同意本协议"
+                },
+                "length": {
+                    "alertText": "在 ",
+                    "alertText2": " 到 ",
+                    "alertText3": " 个字符间"
+                },
+                "minSize": {
+                    "alertText": "字符长度不得小于 ",
+                    "alertText2": " 位"
+                },
+                "maxSize": {
+                    "alertText": "字符长度不得大于 ",
+                    "alertText2": " 位"
+                },
+                "maxCheckbox": {
+                    "alertText": "* Checks allowed Exceeded"
+                },
+                "minCheckbox": {
+                    "alertText": "请选择至少",
+                    "alertText2": " 个选项"
+                },
+                /* FuncVali */
+                "dateRegion": {
+                    "func": function (val) {
+                        var val = val.replace("-", "/");
+                        var vald = new Date(val);
+                        var nowDate = new Date();
+                        if (vald <= nowDate)
+                            return "日期不能小于等于今天";
+                        else
+                            return "ok";
+                    }
+                },
+                "continueSix": {
+                    "func": function (val) {
+                        var val = val.toLowerCase();
+                        var flag, continuation = 1;
+                        for (var i = 0; i < val.length; i++) {
+                            if (val.charCodeAt(i) == flag) {
+                                continuation++;
+                                if (continuation > 5)
+                                    return "密码过于简单，不能连续6个及以上相同的字母或数字";
+                            } else
+                                continuation = 1;
+                            flag = val.charCodeAt(i);
+                        }
+                        return "ok";
+                    }
+                },
+                /* compareFunc */
+                "equalsSix": {
+                    "func": function (val, eqval, eqtitle) {
+                        var val = val.toLowerCase();
+                        var eqval = eqval.toLowerCase();
+                        for (var i = 0; i < val.length; i++) {
+                            var valstr = val.substr(i, 6);
+                            if (valstr.length < 6) break;
+                            for (var x = 0; x < eqval.length; x++) {
+                                var eqvalstr = eqval.substr(x, 6);
+                                if (eqvalstr.length < 6) break;
+                                if (eqvalstr == valstr) {
+                                    return "不允许连续6个及以上字符与" + eqtitle + "相同";
+                                }
+                            }
+                        }
+                        return "ok";
+                    }
+                },
+                "beMin": {
+                    "func": function (val, eqval, eqtitle) {
+                        var val = Number(val);
+                        var eqval = Number(eqval);
+                        if (val < eqval) {
+                            return "不允许小于" + eqtitle;
+                        }
+                        return "ok";
+                    }
+                },
+                /* compareOthers */
+                "SHbeMin": {
+                    "func": function (val, eqval, eqtitle, eqval2, eqtitle2) {
+                        var val = Number(val);
+                        var eqval = Number(eqval);
+                        var eqval2 = Number(eqval2);
+                        if (eqval != 0 && val < eqval2) {
+                            return "不允许小于" + eqtitle2;
+                        }
+                        return "ok";
+                    }
+                },
+                "SHObeMin": {
+                    "func": function (val, eqval, eqtitle, eqval2, eqtitle2) {
+                        var eqval = Number(eqval);
+                        var eqval2 = Number(eqval2);
+                        if (eqval != 0 && eqval < eqval2) {
+                            return eqtitle + "不允许小于" + eqtitle2;
+                        }
+                        return "ok";
+                    }
+                },
+
+                "noPullNumber": {
+                    "func": function (val) {
+                        var pattern = new RegExp(/^[0-9]+$/);
+                        if (pattern.test(val))
+                            return "不能由纯数字组成";
+                        else
+                            return "ok";
+                    }
+                },
+                "ajaxEmailExist": {
+                    "url": window.urlprefix + "/people/check",
+                    "extraData": "email=eric",
+                    "alertText": "* 这个email已被使用",
+                    "alertTextLoad": "* 验证中, 请等待"
+                },
+                /* CustomRegex */
+                "telephone": {
+                    "regex": /^[0-9\-\(\)\ ]{7,}$/,
+                    "alertText": "电话号码格式不正确"
+                },
+                "validate": {
+                    "regex": /^[0-9\-\(\)\ ]+$/,
+                    "alertText": "验证码格式不正确"
+                },
+                "email": {
+                    //http://projects.scottsplayground.com/email_address_validation/
+                    "regex": /^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?$/i,
+                    "alertText": "Email格式不正确"
+                },
+                "date": {
+                    "regex": /^[0-9]{4}\-[0-9]{1,2}\-[0-9]{1,2}$/,
+                    "alertText": "日期格式不正确，必须为'YYYY-MM-DD'格式"
+                },
+                "chinese": {
+                    "regex": /^[\u4e00-\u9fa5]+$/,
+                    "alertText": "必须是中文"
+                },
+                "onlyNumber": {
+                    "regex": /^[0-9]+$/,
+                    "alertText": "必须是数字"
+                },
+                "onlyLetter": {
+                    "regex": /^[a-zA-Z]+$/,
+                    "alertText": "* 必须是英文字母"
+                },
+                "userName": {
+                    "regex": /^[a-zA-Z][0-9a-zA-Z]+$/,
+                    "alertText": "* 必须是字母和数字内容，数字不允许开头"
+                },
+                "price": {
+                    "regex": /^[0-9]+(\.[0-9]{1,2})?$/,
+                    "alertText": "价格格式不正确"
+                },
+                "shared": {
+                    "regex": /^[0-9]+(\.[0-9]{1,2})?$/,
+                    "alertText": "份额格式不正确"
+                },
+                "ipv4": {
+                    "regex": /^((([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))[.]){3}(([0-1]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))$/,
+                    "alertText": "* 错误的 IP 地址"
+                },
+                "url": {
+                    "regex": /^(https?|ftp):\/\/(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/,
+                    "alertText": "* 错误的 URL"
+                },
+                "postCode": {
+                    "regex": /^\d{6}$/,
+                    "alertText": "邮编格式不正确"
+                },
+                "passWord": {
+                    "regex": /^[0-9a-zA-z]{6,}$/,
+                    "alertText": "密码格式不正确，至少6位数字或字母"
+                },
+                "bankCard": {
+                    "regex": /^[0-9]{8}$|^[0-9]{16}$|^[0-9]{18}|^[0-9]{19}$/,
+                    "alertText": "银行卡格式不正确"
+                },
+                "bankCardWithSpace": {
+                    "regex": /^[0-9 ]{9}$|^[0-9 ]{19}$|^[0-9 ]{21}|^[0-9 ]{22}$/,
+                    "alertText": "银行卡格式不正确"
+                }
+            }
+        };
+
+        var methods = {
+            init: function (options) {
+                var form = this;
+                if (!form.data('jqv') || form.data('jqv') == null) {
+                    methods._saveOptions(form, options);
+                    $(".formError").live("click", function () {
+                        $(this).fadeOut(150, function () {
+                            $(this).remove();
+                        });
+                    });
+                }
+            },
+            attach: function (userOptions) {
+                var form = this;
+                var options;
+                if (userOptions)
+                    options = methods._saveOptions(form, userOptions);
+                else
+                    options = form.data('jqv');
+
+                if (!options.binded) {
+                    var field = form.find("[class*=validate]");
+                    field.not('[type=checkbox], .vali_delay').bind(options.eventTrigger, methods._onFieldEvent);
+                    field.filter('[type=checkbox]').bind("click", methods._onFieldEvent);
+                    field.filter('.vali_delay').bind(options.eventTrigger, methods._delay_onFieldEvent);
+                    if(options.uneventTrigger)
+                        field.not('[type=checkbox]').bind(options.uneventTrigger, methods._unFieldEvent);
+                    form.find('input[type=submit], button[type=submit], a.submit').bind("click", methods._onSubmitEvent);
+                    //when without jq_vali:
+                    //$('a.submit', box).on "click", ->
+                    //    $(this).closest('form').submit()
+                    options.binded = true;
+                    if (options.autoPositionUpdate) {
+                        $(window).bind("resize", { "noAnimation": true, "formElem": form }, methods.updatePromptsPosition);
+                    }
+                }
+                return this;
+            },
+            detach: function () {
+                var form = this;
+                var options = form.data('jqv');
+
+                var field = form.find("[class*=validate]");
+                field.not('[type=checkbox], .vali_delay').unbind(options.eventTrigger, methods._onFieldEvent);
+                field.filter('[type=checkbox]').unbind("click", methods._onFieldEvent);
+                field.filter('.vali_delay').unbind(options.eventTrigger, methods._delay_onFieldEvent);
+                if(options.uneventTrigger)
+                    field.not('[type=checkbox]').unbind(options.uneventTrigger, methods._unFieldEvent);
+                form.find('input[type=submit], button[type=submit], a.submit').unbind("click", methods._onSubmitEvent);
+
+                form.removeData('jqv');
+                if (options.autoPositionUpdate) {
+                    $(window).unbind("resize", methods.updatePromptsPosition)
+                }
+                return this;
+            },
+            validate: function () {
+                return methods._validateFields(this);
+            },
+            validateField: function (el) {
+                var options = $(this).data('jqv');
+                var r = methods._validateField($(el), options);
+                if (options.onSuccess && options.InvalidFields.length == 0)
+                    options.onSuccess();
+                else if (options.onFailure && options.InvalidFields.length > 0)
+                    options.onFailure();
+                return r;
+            },
+            updatePromptsPosition: function (event) {
+                if (event && this == window)
+                    var form = event.data.formElem, noAnimation = event.data.noAnimation;
+                else
+                    var form = $(this).closest('form');
+
+                var options = form.data('jqv');
+                form.find('[class*=validate]').not(':hidden').not(":disabled").each(function () {
+                    var field = $(this);
+                    var prompt = methods._getPrompt(field);
+                    var promptText = $(prompt).find(".formErrorContent").html();
+                    if (prompt)
+                        methods._updatePrompt(field, $(prompt), promptText, undefined, false, options, noAnimation);
+                })
+                return this;
+            },
+            showPrompt: function (promptText, type, promptPosition, showArrow) {
+                var form = this.closest('form');
+                var options = form.data('jqv');
+                if (!options)
+                    options = methods._saveOptions(this, options);
+                if (promptPosition)
+                    options.promptPosition = promptPosition;
+                options.showArrow = showArrow == true;
+                methods._showPrompt(this, promptText, type, false, options);
+            },
+            hidePrompt: function () {
+                var promptClass = "." + methods._getClassName($(this).data("vali_class")) + "formError";
+                $(promptClass).fadeTo("fast", 0.3, function () {
+                    $(this).remove();
+                });
+            },
+            closePrompt: function (field) {
+                return methods._closePrompt(field);
+            },
+            hide: function () {
+                var closingtag;
+                if ($(this).is("form")) {
+                    closingtag = "parentForm" + $(this).attr('id');
+                } else {
+                    closingtag = $(this).attr('id') + "formError";
+                }
+                $('.' + closingtag).fadeTo("fast", 0.3, function () {
+                    $(this).remove();
+                });
+            },
+            hideAll: function () {
+                $('.formError').fadeTo("fast", 0.3, function () {
+                    $(this).remove();
+                });
+            },
+
+            _saveOptions: function (form, options) {
+                var userOptions = $.extend(true,
+                    { allrules: $.validationEngineLanguage.allRules },
+                    $.validationEngine.defaults,
+                    options);
+                form.data('jqv', userOptions);
+                return userOptions;
+            },
+            _unFieldEvent: function () {
+                methods._closePrompt($(this));
+            },
+            _onFieldEvent: function (event) {
+                var field = $(this);
+                var form = field.closest('form');
+                var options = form.data('jqv');
+                window.setTimeout(function () {
+                    methods._validateField(field, options);
+                    if (options.InvalidFields.length == 0 && options.onSuccess) {
+                        options.onSuccess();
+                    } else if (options.InvalidFields.length > 0 && options.onFailure) {
+                        options.onFailure();
+                    }
+                }, (event.data) ? event.data.delay : 0);
+            },
+            _delay_onFieldEvent: function () {
+                var field = this;
+                var args = arguments;
+                window.setTimeout(function () {
+                    methods._onFieldEvent.apply(field, args);
+                }, 1000);
+            },
+            _onSubmitEvent: function (event) {
+                var form = $(this).closest('form');
+                if($(this).hasClass('.vali_skip'))
+                    form.submit();
+                var options = form.data('jqv');
+                var btntgt = "";
+                if ($(event.target).is('[class*=valitarget]'))
+                    btntgt = /valitarget\[(.*)\]/.exec($(event.target).attr('class'))[1];
+                var r = methods._validateFields(form, true, btntgt);
+
+                if (options.onValidationComplete) {
+                    options.onValidationComplete(form, r);
+                    return false;
+                }
+
+                if(r)
+                    form.submit();
+                return false;
+            },
+            _validateFields: function (form, skipAjaxValidation, btntgt) {
+                var options = form.data('jqv');
+                var errorFound = false;
+                form.trigger("jqv.form.validating");
+                var fields = form.find('[class*=validate]').not(':hidden');
+                if (btntgt)
+                    fields = fields.filter('.valitarget_' + btntgt);
+                fields.each(function () {
+                    errorFound |= methods._validateField($(this), options, skipAjaxValidation);
+                });
+                form.trigger("jqv.form.result", [errorFound]);
+
+                if (!errorFound) return true;
+                if (!options.scroll) return false;
+                var destination = Number.MAX_VALUE;
+                var fixleft = 0;
+                var lst = $(".formError:not('.greenPopup')");
+                for (var i = 0; i < lst.length; i++) {
+                    var d = $(lst[i]).offset().top;
+                    if (d < destination) {
+                        destination = d;
+                        fixleft = $(lst[i]).offset().left;
+                    }
+                }
+                if (!options.isOverflown)
+                    $("html:not(:animated),body:not(:animated)").animate({
+                        scrollTop: destination,
+                        scrollLeft: fixleft
+                    }, 1100);
+                else {
+                    var overflowDIV = $(options.overflownDIV);
+                    var scrollContainerScroll = overflowDIV.scrollTop();
+                    var scrollContainerPos = -parseInt(overflowDIV.offset().top);
+                    destination += scrollContainerScroll + scrollContainerPos - 5;
+                    var scrollContainer = $(options.overflownDIV + ":not(:animated)");
+                    scrollContainer.animate({
+                        scrollTop: destination
+                    }, 1100);
+                    $("html:not(:animated),body:not(:animated)").animate({
+                        scrollTop: overflowDIV.offset().top,
+                        scrollLeft: fixleft
+                    }, 1100);
+                }
+                return false;
+            },
+            _hasPlaceholderSupport: function () {
+                var input = document.createElement('input');
+                return ('placeholder' in input);
+            },
+            _validateField: function (field, options, skipAjaxValidation) {
+                var getRules = /validate\[(.*)\]/.exec(field.attr('class'));
+                if (!getRules) return false;
+
+                var str = getRules[1];
+                var rules = str.split(/\[|,|\]/);
+                if (field.val() == "") {
+                    rules1 = ['required', 'atlast'];
+                    for (var i = 0; i < rules.length; i++) {
+                        if (rules[i] == 'atlast')
+                            rules1.push(rules[i + 1]);
+                    }
+                    rules = _.intersection(rules, rules1);
+                }
+
+                var form = $(field.closest("form"));
+                var isAjaxValidator = false;
+                var fieldName = field.attr("name");
+                var promptText = "";
+                options.isError = false;
+                options.showArrow = true;
+
+                var usePlaceholder = false;
+                if (!methods._hasPlaceholderSupport() && field.val() == field.attr("placeholder")) {
+                    usePlaceholder = true;
+                    for (var i = 0; i < rules.length; i++) {
+                        switch (rules[i]) {
+                            case "required":
+                                promptText = "不能为空";
+                                options.isError = true;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                };
+
+                if (!usePlaceholder) {
+                    for (var i = 0; i < rules.length; i++) {
+                        var errorMsg = undefined;
+                        switch (rules[i]) {
+                            case "required":
+                                errorMsg = methods._required(field, rules, i, options);
+                                break;
+                            case "custom":
+                                errorMsg = methods._customRegex(field, rules, i, options);
+                                break;
+                            case "ajax":
+                                // ajax has its own prompts handling technique
+                                if (!skipAjaxValidation) {
+                                    methods._ajax(field, rules, i, options);
+                                    isAjaxValidator = true;
+                                }
+                                break;
+                            case "minSize":
+                                errorMsg = methods._minSize(field, rules, i, options);
+                                break;
+                            case "maxSize":
+                                errorMsg = methods._maxSize(field, rules, i, options);
+                                break;
+                            case "min":
+                                errorMsg = methods._min(field, rules, i, options);
+                                break;
+                            case "max":
+                                errorMsg = methods._max(field, rules, i, options);
+                                break;
+                            case "past":
+                                errorMsg = methods._past(field, rules, i, options);
+                                break;
+                            case "future":
+                                errorMsg = methods._future(field, rules, i, options);
+                                break;
+                            case "dateRange":
+                                var classGroup = "[class*=" + rules[i + 1] + "]";
+                                var firstOfGroup = form.find(classGroup).eq(0);
+                                var secondOfGroup = form.find(classGroup).eq(1);
+                                if (firstOfGroup[0].value || secondOfGroup[0].value) {
+                                    errorMsg = methods._dateRange(firstOfGroup, secondOfGroup, rules, i, options);
+                                }
+                                if (errorMsg) required = true;
+                                options.showArrow = false;
+                                break;
+                            case "maxCheckbox":
+                                errorMsg = methods._maxCheckbox(field, rules, i, options);
+                                field = $($("input[name='" + fieldName + "']"));
+                                break;
+                            case "minCheckbox":
+                                errorMsg = methods._minCheckbox(field, rules, i, options);
+                                var groupname = fieldName.substring(0, fieldName.length - 1);
+                                field = $($("input[name^='" + groupname + "']"));
+                                break;
+                            case "equals":
+                                errorMsg = methods._equals(field, rules, i, options);
+                                break;
+                            case "func":
+                                errorMsg = methods._funcCall(field, rules, i, options);
+                                break;
+                            case "compareFunc":
+                                errorMsg = methods._compareFunc(field, rules, i, options);
+                                break;
+                            case "compareOthers":
+                                errorMsg = methods._compareOthers(field, rules, i, options);
+                                break;
+                            case "atlast":
+                                errorMsg = methods._atlast(field, rules, i, options);
+                                break;
+                            default:
+                                break;
+                        }
+                        if (errorMsg !== undefined) {
+                            promptText += errorMsg + "<br/>";
+                            options.isError = true;
+                        }
+                    }
+                }
+
+                var fieldType = field.attr("type");
+                if ((fieldType == "radio" || fieldType == "checkbox") && $("input[name='" + fieldName + "']").size() > 1) {
+                    field = $($("input[name='" + fieldName + "'][type!=hidden]:first"));
+                    options.showArrow = false;
+                }
+                if (fieldType == "text" && form.find("input[name='" + fieldName + "']").size() > 1) {
+                    field = $(form.find("input[name='" + fieldName + "'][type!=hidden]:first"));
+                    options.showArrow = false;
+                }
+
+                if (options.isError) {
+                    methods._showPrompt(field, promptText, "", false, options);
+                    field.data("promptText", promptText);
+                } else {
+                    if (!isAjaxValidator) {
+                        methods._closePrompt(field);
+                        if (options.showPassText) {
+                            methods._showPrompt(field, options.showPassText, "pass", true, options);
+                        }
+                    }
+                    field.data("promptText", "");
+                }
+
+                if (!isAjaxValidator)
+                    field.trigger("jqv.field.result", [field, options.isError, promptText]);
+
+                /* Record error */
+                var errindex = $.inArray(field[0], options.InvalidFields);
+                if (errindex == -1) {
+                    if (options.isError)
+                        options.InvalidFields.push(field[0]);
+                } else if (!options.isError) {
+                    options.InvalidFields.splice(errindex, 1);
+                }
+
+                return options.isError;
+            },
+
+            _required: function (field, rules, i, options) {
+                switch (field.attr("type")) {
+                    case "text":
+                    case "password":
+                    case "textarea":
+                    case "file":
+                    default:
+                        if (!field.val())
+                            return options.allrules[rules[i]].alertText;
+                        break;
+                    case "radio":
+                    case "checkbox":
+                        var name = field.attr("name");
+                        if ($("input[name='" + name + "']:checked").size() == 0) {
+
+                            if ($("input[name='" + name + "']").size() == 1)
+                                return options.allrules[rules[i]].alertTextCheckboxe;
+                            else
+                                return options.allrules[rules[i]].alertTextCheckboxMultiple;
+                        }
+                        break;
+                    case "select-one":
+                        if (!field.val())
+                            return options.allrules[rules[i]].alertText;
+                        break;
+                    case "select-multiple":
+                        if (!field.find("option:selected").val())
+                            return options.allrules[rules[i]].alertText;
+                        break;
+                }
+            },
+            _customRegex: function (field, rules, i, options) {
+                var customRule = rules[i + 1];
+                var rule = options.allrules[customRule];
+                if (!rule) {
+                    alert("jqv:custom rule not found " + customRule);
+                    return;
+                }
+                var ex = rule.regex;
+                if (!ex) return;
+                var pattern = new RegExp(ex);
+                if (!pattern.test(field.val()))
+                    return options.allrules[customRule].alertText;
+            },
+            _funcCall: function (field, rules, i, options) {
+                var func_name = rules[i + 1];
+                var rule = options.allrules[func_name];
+                var result = rule.func(field.val());
+                if (result != "" && result != "ok") {
+                    if (options.allrules[func_name].alertText)
+                        return options.allrules[func_name].alertText;
+                    else
+                        return result;
+                }
+            },
+            _equals: function (field, rules, i, options) {
+                var equalsField = rules[i + 1];
+                if (field.val() != $("#" + equalsField).val())
+                    return options.allrules.equals.alertText;
+            },
+            _compareFunc: function (field, rules, i, options) {
+                var func_name = rules[i + 1];
+                var equalsField = $("#" + rules[i + 2]);
+                var rule = options.allrules[func_name];
+                var result = rule.func(field.val(), equalsField.val() || equalsField.text(), equalsField.attr('title'));
+                if (result != "" && result != "ok") {
+                    if (options.allrules[func_name].alertText)
+                        return options.allrules[func_name].alertText;
+                    else
+                        return result;
+                }
+            },
+            _compareOthers: function (field, rules, i, options) {
+                var func_name = rules[i + 1];
+                var equalsField = $("#" + rules[i + 2]);
+                var equalsField2 = $("#" + rules[i + 3]);
+                var rule = options.allrules[func_name];
+                var result = rule.func(field.val(), equalsField.val() || equalsField.text(), equalsField.attr('title'),
+                    equalsField2.val() || equalsField2.text(), equalsField2.attr('title'));
+                if (result != "" && result != "ok") {
+                    if (options.allrules[func_name].alertText)
+                        return options.allrules[func_name].alertText;
+                    else
+                        return result;
+                }
+            },
+            _atlast: function (field, rules, i, options) {
+                var atlast_rule = rules[i + 1];
+                var form = field.closest('form');
+                var inps = $("input[class*='atlast[" + atlast_rule + "]']", form);
+                var ok = false;
+                inps.each(function () {
+                    if ($(this).val() != "") {
+                        ok = true;
+                        return false;
+                    }
+                });
+                if (ok)
+                    return;
+                var fields_tips = "";
+                inps.each(function () {
+                    fields_tips += $(this).attr('title');
+                    fields_tips += ',';
+                });
+                return fields_tips + options.allrules.atlast.alertText;
+            },
+            _maxSize: function (field, rules, i, options) {
+                var max = parseFloat(rules[i + 1]);
+                var len = field.val().length;
+
+                if (len > max) {
+                    var rule = options.allrules.maxSize;
+                    return rule.alertText + max + rule.alertText2;
+                }
+            },
+            _minSize: function (field, rules, i, options) {
+                var min = parseFloat(rules[i + 1]);
+                var len = field.val().length;
+
+                if (len < min) {
+                    var rule = options.allrules.minSize;
+                    return rule.alertText + min + rule.alertText2;
+                }
+            },
+            _min: function (field, rules, i, options) {
+                var min = parseFloat(rules[i + 1]);
+                var len = parseFloat(field.val());
+
+                if (len < min) {
+                    return "不得小于" + min;
+                }
+            },
+            _max: function (field, rules, i, options) {
+                var max = parseFloat(rules[i + 1]);
+                var len = parseFloat(field.val());
+
+                if (len > max) {
+                    return "不得大于" + max;
+                }
+            },
+            _past: function (field, rules, i, options) {
+                var p = rules[i + 1];
+                var pdate = (p.toLowerCase() == "now") ? new Date() : methods._parseDate(p);
+                var vdate = methods._parseDate(field.val());
+
+                if (vdate < pdate) {
+                    var rule = options.allrules.past;
+                    if (rule.alertText2) return rule.alertText + methods._dateToString(pdate) + rule.alertText2;
+                    return rule.alertText + methods._dateToString(pdate);
+                }
+            },
+            _future: function (field, rules, i, options) {
+                var p = rules[i + 1];
+                var pdate = (p.toLowerCase() == "now") ? new Date() : methods._parseDate(p);
+                var vdate = methods._parseDate(field.val());
+                if (vdate > pdate) {
+                    var rule = options.allrules.future;
+                    if (rule.alertText2) return rule.alertText + methods._dateToString(pdate) + rule.alertText2;
+                    return rule.alertText + methods._dateToString(pdate);
+                }
+            },
+            _isDate: function (value) {
+                var dateRegEx = new RegExp(/^\d{4}[\/\-](0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])$|^(?:(?:(?:0?[13578]|1[02])(\/|-)31)|(?:(?:0?[1,3-9]|1[0-2])(\/|-)(?:29|30)))(\/|-)(?:[1-9]\d\d\d|\d[1-9]\d\d|\d\d[1-9]\d|\d\d\d[1-9])$|^(?:(?:0?[1-9]|1[0-2])(\/|-)(?:0?[1-9]|1\d|2[0-8]))(\/|-)(?:[1-9]\d\d\d|\d[1-9]\d\d|\d\d[1-9]\d|\d\d\d[1-9])$|^(0?2(\/|-)29)(\/|-)(?:(?:0[48]00|[13579][26]00|[2468][048]00)|(?:\d\d)?(?:0[48]|[2468][048]|[13579][26]))$/);
+                if (dateRegEx.test(value))
+                    return true;
+                return false;
+            },
+            _dateCompare: function (start, end) {
+                return (new Date(start.toString()) < new Date(end.toString()));
+            },
+            _dateRange: function (first, second, rules, i, options) {
+                if ((!first[0].value && second[0].value) || (first[0].value && !second[0].value))
+                    return options.allrules[rules[i]].alertText + options.allrules[rules[i]].alertText2;
+                if (!methods._isDate(first[0].value) || !methods._isDate(second[0].value))
+                    return options.allrules[rules[i]].alertText + options.allrules[rules[i]].alertText2;
+                if (!methods._dateCompare(first[0].value, second[0].value))
+                    return options.allrules[rules[i]].alertText + options.allrules[rules[i]].alertText2;
+            },
+            _maxCheckbox: function (field, rules, i, options) {
+                var nbCheck = rules[i + 1];
+                var groupname = field.attr("name");
+                var groupSize = $("input[name='" + groupname + "']:checked").size();
+                if (groupSize > nbCheck) {
+                    options.showArrow = false;
+                    if (options.allrules.maxCheckbox.alertText2) return options.allrules.maxCheckbox.alertText + " " + nbCheck + " " + options.allrules.maxCheckbox.alertText2;
+                    return options.allrules.maxCheckbox.alertText;
+                }
+            },
+            _minCheckbox: function (field, rules, i, options) {
+                var nbCheck = rules[i + 1];
+                var attr = field.attr("name");
+                var groupname = attr.substring(0, attr.length - 1);
+                var groupSize = $("input[name^='" + groupname + "']:checked").size();
+                if (groupSize < nbCheck) {
+                    options.showArrow = false;
+                    return options.allrules.minCheckbox.alertText + " " + nbCheck + " " + options.allrules.minCheckbox.alertText2;
+                }
+            },
+            _ajax: function (field, rules, i, options) {
+                if (options.isError) return;
+                var errorSelector = rules[i + 1];
+                var rule = options.allrules[errorSelector];
+                var extraData = rule.extraData;
+                var extraDataDynamic = rule.extraDataDynamic;
+                if (!extraData)
+                    extraData = "";
+                if (extraDataDynamic) {
+                    var tmpData = [];
+                    var domIds = String(extraDataDynamic).split(",");
+                    for (var i = 0; i < domIds.length; i++) {
+                        var id = domIds[i];
+                        if ($("#" + id).length) {
+                            var inputValue = $("#" + id).val();
+                            var keyValue = id + '=' + escape(inputValue);
+                            tmpData.push(keyValue);
+                        }
+                    }
+                    extraDataDynamic = tmpData.join("&");
+                    extraData += ("&" + extraDataDynamic);
+                }
+                var ajaxData = {};
+                ajaxData.fieldId = field.attr("id");
+                ajaxData.fieldValue = field.val();
+                _.each(extraData.split('&'), function (item) {
+                    var kv = item.split('=');
+                    ajaxData[kv[0]] = kv[1];
+                });
+
+                $.ajax({
+                    type: "POST",
+                    url: rule.url,
+                    cache: false,
+                    dataType: "json",
+                    data: isAspWebForm ? JSON.stringify(ajaxData) : ajaxData,
+                    field: field,
+                    rule: rule,
+                    options: options,
+                    beforeSend: function () {
+                        var loadingText = rule.alertTextLoad;
+                        if (loadingText)
+                            methods._showPrompt(field, loadingText, "load", true, options);
+                    },
+                    error: function (data, transport) {
+                        methods._closePrompt(this.field);
+                        console.log("Ajax error: " + data.status + " " + transport);
+                    },
+                    success: function (result) {
+                        var msg = "";
+                        if (rule.callback)
+                            msg = rule.callback(result, this.field, methods);
+                        else if (result.d)
+                            msg = result.d;
+                        else
+                            msg = result;
+                        var nowPromptText = this.field.data("promptText");
+                        if (msg != "ok") {
+                            methods._showPrompt(this.field,
+                                                rule.alertText + msg + "<br/>" + nowPromptText,
+                                                "", true, options);
+                        } else if (options.showPassText && !nowPromptText) {
+                            methods._showPrompt(field, options.showPassText, "pass", true, options);
+                        }
+                    }
+                });
+
+            },
+            _dateToString: function (date) {
+                return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+            },
+            _parseDate: function (d) {
+                var dateParts = d.split("-");
+                if (dateParts == d)
+                    dateParts = d.split("/");
+                return new Date(dateParts[0], (dateParts[1] - 1), dateParts[2]);
+            },
+
+            _showPrompt: function (field, promptText, type, ajaxed, options, ajaxform) {
+                var prompt = methods._getPrompt(field);
+                if (ajaxform) prompt = false;
+                if (prompt)
+                    methods._updatePrompt(field, prompt, promptText, type, ajaxed, options);
+                else
+                    methods._buildPrompt(field, promptText, type, ajaxed, options);
+            },
+            _fixPromptWidth: function (promptText, promptContent) {
+                var charlength = 0;
+                _.each(promptText.split('<br/>'), function (str) {
+                    if (str.length > charlength)
+                        charlength = str.length;
+                });
+                promptContent.width(charlength * 12);
+            },
+            _buildPrompt: function (field, promptText, type, ajaxed, options) {
+                //ready
+                var getPosition = /valiarr\[(.*)\]/.exec(field.attr('class'));
+                if (getPosition) {
+                    field.data('valiarr', getPosition[1].split(/\[|,|\]/)[0]);
+                } else {
+                    field.data('valiarr', options.promptPosition);
+                }
+                if (field.attr("id")) {
+                    field.data('vali_class', field.attr("id"));
+                } else {
+                    field.data('vali_class', "jqvali_" + Math.random() * 11);
+                }
+                var buildClass = function (prompt) {
+                    prompt.addClass(methods._getClassName(field.data('vali_class')) + "formError");
+                    if (field.is(":input"))
+                        prompt.addClass("parentForm" + methods._getClassName(field.parents('form').attr("id")));
+                }
+
+                var prompt = $('<div>');
+                buildClass(prompt);
+                prompt.addClass("formError");
+
+                switch (type) {
+                    case "pass":
+                        prompt.addClass("greenPopup");
+                        break;
+                    case "load":
+                        prompt.addClass("blackPopup");
+                }
+                if (ajaxed)
+                    prompt.addClass("ajaxed");
+
+                var promptContent = $('<div>').addClass("formErrorContent").html(promptText).appendTo(prompt);
+                methods._fixPromptWidth(promptText, promptContent);
+
+                if (options.showArrow) {
+                    var arrow = $('<div>').addClass("formErrorArrow");
+                    switch (field.data('valiarr')) {
+                        case "bottomLeft":
+                        case "bottomRight":
+                            prompt.find(".formErrorContent").before(arrow);
+                            arrow.addClass("formErrorArrowBottom").html('<div class="line1"><!-- --></div><div class="line2"><!-- --></div><div class="line3"><!-- --></div><div class="line4"><!-- --></div><div class="line5"><!-- --></div><div class="line6"><!-- --></div><div class="line7"><!-- --></div><div class="line8"><!-- --></div><div class="line9"><!-- --></div><div class="line10"><!-- --></div>');
+                            break;
+                        case "topLeft":
+                        case "topRight":
+                            arrow.html('<div class="line10"><!-- --></div><div class="line9"><!-- --></div><div class="line8"><!-- --></div><div class="line7"><!-- --></div><div class="line6"><!-- --></div><div class="line5"><!-- --></div><div class="line4"><!-- --></div><div class="line3"><!-- --></div><div class="line2"><!-- --></div><div class="line1"><!-- --></div>');
+                            prompt.append(arrow);
+                            break;
+                    }
+                }
+
+                if (options.isOverflown)
+                    field.before(prompt);
+                else
+                    $("body").append(prompt);
+
+                var pos = methods._calculatePosition(field, prompt, options);
+                prompt.css({
+                    "top": pos.callerTopPosition,
+                    "left": pos.callerleftPosition,
+                    "marginTop": pos.marginTopSize,
+                    "opacity": 0
+                });
+                return prompt.animate({
+                    "opacity": 0.87
+                });
+
+            },
+            _updatePrompt: function (field, prompt, promptText, type, ajaxed, options) {
+                if (!prompt) return;
+
+                methods._fixPromptWidth(promptText, prompt.children(".formErrorContent"));
+
+                if (type == "pass")
+                    prompt.addClass("greenPopup");
+                else
+                    prompt.removeClass("greenPopup");
+
+                if (type == "load")
+                    prompt.addClass("blackPopup");
+                else
+                    prompt.removeClass("blackPopup");
+
+                if (ajaxed)
+                    prompt.addClass("ajaxed");
+                else
+                    prompt.removeClass("ajaxed");
+
+                prompt.find(".formErrorContent").html(promptText);
+
+                var pos = methods._calculatePosition(field, prompt, options);
+                prompt.animate({
+                    "top": pos.callerTopPosition,
+                    "marginTop": pos.marginTopSize
+                });
+            },
+            _closePrompt: function (field) {
+                var prompt = methods._getPrompt(field);
+                if (prompt) {
+                    prompt.fadeTo("fast", 0, function () {
+                        prompt.remove();
+                    });
+                }
+            },
+            _getPrompt: function (field) {
+                if (!field.data('vali_class')) return;
+                var className = "." + methods._getClassName(field.data('vali_class')) + "formError";
+                var match = $(className)[0];
+                if (match)
+                    return $(match);
+            },
+            _calculatePosition: function (field, promptElmt, options) {
+                var promptTopPosition, promptleftPosition, marginTopSize;
+                var fieldWidth = field.width();
+                var promptHeight = promptElmt.height();
+                var overflow = options.isOverflown;
+                if (overflow) {
+                    promptTopPosition = promptleftPosition = 0;
+                    marginTopSize = -promptHeight;
+                } else {
+                    var offset = field.offset();
+                    promptTopPosition = offset.top;
+                    promptleftPosition = offset.left;
+                    marginTopSize = 0;
+                }
+                switch (field.data('valiarr')) {
+                    default:
+                    case "topRight":
+                        if (overflow)
+                            promptleftPosition += fieldWidth - 30;
+                        else {
+                            promptleftPosition += fieldWidth - 30;
+                            promptTopPosition += -promptHeight;
+                        }
+                        break;
+                    case "topLeft":
+                        promptTopPosition += -promptHeight - 0;
+                        break;
+                    case "centerRight":
+                        promptleftPosition += fieldWidth + 13;
+                        break;
+                    case "bottomLeft":
+                        promptTopPosition = promptTopPosition + field.height() + 15;
+                        break;
+                    case "bottomRight":
+                        promptleftPosition += fieldWidth - 30;
+                        promptTopPosition += field.height() + 5;
+                }
+                return {
+                    "callerTopPosition": promptTopPosition + "px",
+                    "callerleftPosition": promptleftPosition + "px",
+                    "marginTopSize": marginTopSize + "px"
+                };
+            },
+            _getClassName: function (className) {
+                return className.replace(":", "_").replace(".", "_");
+            }
+        };
+
+        $.fn.validationEngine = function (method) {
+            var form = $(this);
+            if (!form[0]) return false;
+            if (typeof (method) == 'string' && method.charAt(0) != '_' && methods[method]) {
+                // make sure init is called once
+                if (method != "showPrompt" && method != "hidePrompt" && method != "hide" && method != "hideAll")
+                    methods.init.apply(form);
+                return methods[method].apply(form, Array.prototype.slice.call(arguments, 1));
+            } else {
+                methods.init.apply(form, arguments);
+                return methods.attach.apply(form);
+            }
+        };
+
+        $.validationEngine = {
+            defaults: {
+                eventTrigger: "blur",
+                uneventTrigger: "", //click
+                showPassText: "", //&nbsp;
+                // Automatically scroll viewport to the first error
+                scroll: true,
+                // Opening box position, possible locations are: topLeft, topRight, bottomLeft, centerRight, bottomRight
+                promptPosition: "centerRight",
+                // internal, automatically set to true when it parse a _ajax rule
+                inlineAjax: false,
+                // The url to send the submit ajax validation (default to action)
+                onAjaxFormComplete: $.noop,
+                // called right before the ajax call, may return false to cancel
+                onBeforeAjaxFormValidation: $.noop,
+                // Stops form from submitting and execute function assiciated with it
+                onValidationComplete: false,
+                // Used when the form is displayed within a scrolling DIV
+                isOverflown: false,
+                overflownDIV: "",
+                // true when form and fields are binded
+                binded: false,
+                showArrow: true,
+                // did one of the validation fail ? kept global to stop further ajax validations
+                isError: false,
+                // Caches field validation status, typically only bad status are created.
+                // the array is used during ajax form validation to detect issues early and prevent an expensive submit
+                ajaxValidCache: {},
+                // Auto update prompt position after window resize
+                autoPositionUpdate: false,
+                // Custom FieldVali Success|Failure Func
+                InvalidFields: [],
+                onSuccess: false,
+                onFailure: false
+            }
+        };
+        return methods;
+    }
+});
 define("product/guoqude/1.0.0/front_net/module/artDialog5/amd/artDialog5-debug", ["gallery/jquery/1.8.3/jquery-debug"], function (require, exports, module) {
 
 var $ = require('gallery/jquery/1.8.3/jquery-debug').sub();
@@ -5221,6 +7711,41 @@ Copyright (c) 2011 by Harvest
 module.exports = jQuery;
 
 });
+define("product/guoqude/1.0.0/front_net/module/overlabel/overlabel-debug", ["gallery/jquery/1.8.3/jquery-debug"], function (require, exports, module) {
+var $ = require('gallery/jquery/1.8.3/jquery-debug').sub();
+
+/*! Copyright (c) 2010 Brandon Aaron (http://brandonaaron.net)
+* Licensed under the MIT License (LICENSE.txt).
+*
+* Version 1.0
+*
+* Based on Making Compact Forms More Accessible by Mike Brittain (http://alistapart.com/articles/makingcompactformsmoreaccessible)
+*/
+
+$.fn.overlabel = function () {
+    this.each(function () {
+        var $label = $(this);
+        var $input = $('#' + $label.attr('for'));
+        if (!$input.val() && !$input.is(":focus")) $label.show();
+
+        $label.bind('click', function (event) {
+            $input.focus();
+        });
+
+        $input.bind('focus blur', function (event) {
+            if (event.type == 'blur' && !$input.val() && !$input.hasClass('using')) {
+                $label.show();
+            } else {
+                $label.hide();
+            }
+        });
+
+    });
+};
+
+module.exports = $;
+
+});
 define("product/guoqude/1.0.0/front_net/module/masonry-debug", ["gallery/jquery/1.8.3/jquery-debug"], function (require, exports, module) {
 var jQuery = require('gallery/jquery/1.8.3/jquery-debug').sub();
 
@@ -5724,122 +8249,6 @@ var jQuery = require('gallery/jquery/1.8.3/jquery-debug').sub();
   };
 
 })( window, jQuery );
-
-module.exports = jQuery;
-
-});
-define("product/guoqude/1.0.0/front_net/module/royalSlider/royalslider-debug", ["gallery/jquery/1.8.3/jquery-debug"], function (require, exports, module) {
-var jQuery = require('gallery/jquery/1.8.3/jquery-debug').sub();
-
-// jQuery RoyalSlider plugin. Custom build. Copyright 2011-2012 Dmitry Semenov http://dimsemenov.com 
-// jquery.royalslider v9.2.5
-(function(k){function u(b,e){var c=navigator.userAgent.toLowerCase(),g=k.browser,a=this,f=g.webkit;c.indexOf("android");a.isIPAD=c.match(/(ipad)/);for(var d=document.createElement("div").style,i=["webkit","Moz","ms","O"],h="",j=0,m,c=0;c<i.length;c++)m=i[c],!h&&m+"Transform"in d&&(h=m),m=m.toLowerCase(),window.requestAnimationFrame||(window.requestAnimationFrame=window[m+"RequestAnimationFrame"],window.cancelAnimationFrame=window[m+"CancelAnimationFrame"]||window[m+"CancelRequestAnimationFrame"]);
-window.requestAnimationFrame||(window.requestAnimationFrame=function(a){var b=(new Date).getTime(),c=Math.max(0,16-(b-j)),d=window.setTimeout(function(){a(b+c)},c);j=b+c;return d});window.cancelAnimationFrame||(window.cancelAnimationFrame=function(a){clearTimeout(a)});a.slider=k(b);a.ev=k({});a._a=k(document);a.st=k.extend({},k.fn.royalSlider.defaults,e);a._b=a.st.transitionSpeed;if(a.st.allowCSS3&&(!f||a.st.allowCSS3OnWebkit))c=h+(h?"T":"t"),a._c=c+"ransform"in d&&c+"ransition"in d,a._c&&(a._d=h+
-(h?"P":"p")+"erspective"in d);h=h.toLowerCase();a._e="-"+h+"-";a._f="vertical"===a.st.slidesOrientation?!1:!0;a._g=a._f?"left":"top";a._h=a._f?"width":"height";a._i=-1;a._j="fade"===a.st.transitionType?!1:!0;a._j||(a.st.sliderDrag=!1,a._k=10);a._l=0;a._m=0;k.each(k.rsModules,function(b,c){c.call(a)});a.slides=[];a._n=0;(a.st.slides?k(a.st.slides):a.slider.children().detach()).each(function(){a._o(this,!0)});a.st.randomizeSlides&&a.slides.sort(function(){return 0.5-Math.random()});a.numSlides=a.slides.length;
-a._p();a.st.startSlideId>a.numSlides-1&&(a.st.startSlideId=a.numSlides-1);a.staticSlideId=a.currSlideId=a._q=a.st.startSlideId;a.currSlide=a.slides[a.currSlideId];a._r=0;a.slider.addClass((a._f?"rsHor":"rsVer")+(a._j?"":" rsFade"));d='<div class="rsOverflow"><div class="rsContainer">';a.slidesSpacing=a.st.slidesSpacing;a._s=(a._f?a.slider.width():a.slider.height())+a.st.slidesSpacing;a._t=Boolean(0<a._u);1>=a.numSlides&&(a._v=!1);a._w=a._v&&a._j?2===a.numSlides?1:2:0;a._x=6>a.numSlides?a.numSlides:
-6;a._y=0;a._z=0;a.slidesJQ=[];for(c=0;c<a.numSlides;c++)a.slidesJQ.push(k('<div style="'+(a._j?"":c!==a.currSlideId?"z-index: 0; display:none; opacity: 0; position: absolute;  left: 0; top: 0;":"z-index: 0;  position: absolute; left: 0; top: 0;")+'" class="rsSlide "></div>'));a.slider.html(d+"</div></div>");a._a1=a.slider.children(".rsOverflow");a._b1=a._a1.children(".rsContainer");a._c1=k('<div class="rsPreloader"></div>');c=a._b1.children(".rsSlide");a._d1=a.slidesJQ[a.currSlideId];a._e1=0;"ontouchstart"in
-window||"createTouch"in document?(a.hasTouch=!0,a._f1="touchstart.rs",a._g1="touchmove.rs",a._h1="touchend.rs",a._i1="touchcancel.rs",a._j1=0.5):(a.hasTouch=!1,a._j1=0.2,a.st.sliderDrag&&(g.msie||g.opera?a._k1=a._l1="move":g.mozilla?(a._k1="-moz-grab",a._l1="-moz-grabbing"):f&&-1!=navigator.platform.indexOf("Mac")&&(a._k1="-webkit-grab",a._l1="-webkit-grabbing"),a._m1()),a._f1="mousedown.rs",a._g1="mousemove.rs",a._h1="mouseup.rs",a._i1="mouseup.rs");a._c?(a._n1="transition-property",a._o1="transition-duration",
-a._p1="transition-timing-function",a._q1=a._r1=a._e+"transform",a._d?(f&&a.slider.addClass("rsWebkit3d"),a._s1="translate3d(",a._t1="px, ",a._u1="px, 0px)"):(a._s1="translate(",a._t1="px, ",a._u1="px)"),a._j?a._b1[a._e+a._n1]=a._e+"transform":(g={},g[a._e+a._n1]="opacity",g[a._e+a._o1]=a.st.transitionSpeed+"ms",g[a._e+a._p1]=a.st.css3easeInOut,c.css(g))):(a._r1="left",a._q1="top");var l;k(window).on("resize.rs",function(){l&&clearTimeout(l);l=setTimeout(function(){a.updateSliderSize()},50)});a.ev.trigger("rsAfterPropsSetup");
-a.updateSliderSize();a.st.keyboardNavEnabled&&a._v1();a.st.arrowsNavHideOnTouch&&a.hasTouch&&(a.st.arrowsNav=!1);a.st.arrowsNav&&(g=a.st.controlsInside?a._a1:a.slider,k('<div class="rsArrow rsArrowLeft"><div class="rsArrowIcn"></div></div><div class="rsArrow rsArrowRight"><div class="rsArrowIcn"></div></div>').appendTo(g),a._w1=g.children(".rsArrowLeft").click(function(b){b.preventDefault();a.prev()}),a._x1=g.children(".rsArrowRight").click(function(b){b.preventDefault();a.next()}),a.st.arrowsNavAutoHide&&
-!a.hasTouch&&(a._w1.addClass("rsHidden"),a._x1.addClass("rsHidden"),g.one("mousemove.arrowshover",function(){a._w1.removeClass("rsHidden");a._x1.removeClass("rsHidden")}),g.hover(function(){a._y1||(a._w1.removeClass("rsHidden"),a._x1.removeClass("rsHidden"))},function(){a._y1||(a._w1.addClass("rsHidden"),a._x1.addClass("rsHidden"))})),a.ev.on("rsOnUpdateNav",function(){a._z1()}),a._z1());a._a2=!a.hasTouch&&a.st.sliderDrag||a.hasTouch&&a.st.sliderTouch;if(a._a2)a._b1.on(a._f1,function(b){a._b2(b)});
-else a.dragSuccess=!1;var r=["rsPlayBtnIcon","rsPlayBtn","rsCloseVideoBtn","rsCloseVideoIcn"];a._b1.click(function(b){if(!a.dragSuccess){var c=k(b.target).attr("class");if(-1!==k.inArray(c,r)&&a.toggleVideo())return!1;if(a.st.navigateByClick&&!a._c2){if(k(b.target).closest(".rsNoDrag",a._d1).length)return!0;a._d2(b)}a.ev.trigger("rsSlideClick")}});a.ev.trigger("rsAfterInit")}k.rsModules||(k.rsModules={});u.prototype={_d2:function(b){0<b[this._f?"pageX":"pageY"]-this._e2?this.next():this.prev()},_p:function(){var b;
-b=this.st.numImagesToPreload;if(this._v=this.st.loop)2===this.numSlides?(this._v=!1,this.st.loopRewind=!0):2>this.numSlides&&(this.st.loopRewind=this._v=!1);this._v&&0<b&&(4>=this.numSlides?b=1:this.st.numImagesToPreload>(this.numSlides-1)/2&&(b=Math.floor((this.numSlides-1)/2)));this._u=b},_o:function(b,e){function c(b,c){a.image=b.attr(!c?"src":c);a.caption=!c?b.attr("alt"):b.contents();a.videoURL=b.attr("data-rsVideo")}var g,a={};this._f2=b=k(b);this.ev.trigger("rsBeforeParseNode",[b,a]);if(!a.stopParsing)return b=
-this._f2,a.id=this._n,a.contentAdded=!1,this._n++,a.hasCover||(b.hasClass("rsImg")?(tempEl=b,g=!0):(tempEl=b.find(".rsImg"),tempEl.length&&(g=!0)),g?(a.bigImage=tempEl.attr("data-rsBigImg"),tempEl.is("a")?c(tempEl,"href"):tempEl.is("img")&&c(tempEl)):b.is("img")&&(b.addClass("rsImg"),c(b))),tempEl=b.find(".rsCaption"),tempEl.length&&(a.caption=tempEl.remove()),a.image||(a.isLoaded=!0,a.isRendered=!1,a.isLoading=!1),a.content=b,this.ev.trigger("rsAfterParseNode",[b,a]),e&&this.slides.push(a),a},_v1:function(){function b(a){37===
-a?e.prev():39===a&&e.next()}var e=this,c,g;e._a.on("keydown.rskb",function(a){if(!e._g2&&(g=a.keyCode,(37===g||39===g)&&!c))b(g),c=setInterval(function(){b(g)},700)}).on("keyup.rskb",function(){c&&(clearInterval(c),c=null)})},goTo:function(b,e){b!==this.currSlideId&&this._h2(b,this.st.transitionSpeed,!0,!e)},destroy:function(b){var e=this;e.ev.trigger("rsBeforeDestroy");e._a.off("keydown.rskb keyup.rskb "+e._g1+" "+e._h1);e._b1.on(e._f1,function(b){e._b2(b)});e.slider.data("royalSlider","");b&&e.slider.remove()},
-_i2:function(b,e){function c(c,e,f){c.isAdded?(g(e,c),a(e,c)):(f||(f=d.slidesJQ[e]),c.holder?f=c.holder:(f=d.slidesJQ[e]=k(f),c.holder=f),c.appendOnLoaded=!1,a(e,c,f),g(e,c),d._k2(c,f,b),appended=c.isAdded=!0)}function g(a,c){c.contentAdded||(d.setItemHtml(c,b),b||(c.contentAdded=!0))}function a(a,b,c){d._j&&(c||(c=d.slidesJQ[a]),c.css(d._g,(a+d._z+r)*d._s))}function f(a){if(j){if(a>m-1)return f(a-m);if(0>a)return f(m+a)}return a}var d=this,i,h,j=d._v,m=d.numSlides;if(!isNaN(e))return f(e);var l=
-d.currSlideId,r,n=b?Math.abs(d._j2-d.currSlideId)>=d.numSlides-1?0:1:d._u,p=Math.min(2,n),s=!1,t=!1,q;for(h=l;h<l+1+p;h++)if(q=f(h),(i=d.slides[q])&&(!i.isAdded||!i.positionSet)){s=!0;break}for(h=l-1;h>l-1-p;h--)if(q=f(h),(i=d.slides[q])&&(!i.isAdded||!i.positionSet)){t=!0;break}if(s)for(h=l;h<l+n+1;h++)q=f(h),r=Math.floor((d._q-(l-h))/d.numSlides)*d.numSlides,(i=d.slides[q])&&c(i,q);if(t)for(h=l-1;h>l-1-n;h--)q=f(h),r=Math.floor((d._q-(l-h))/m)*m,(i=d.slides[q])&&c(i,q);if(!b){p=f(l-n);l=f(l+n);
-n=p>l?0:p;for(h=0;h<m;h++)if(!(p>l&&h>p-1)&&(h<n||h>l))if((i=d.slides[h])&&i.holder)i.holder.detach(),i.isAdded=!1}},setItemHtml:function(b,e){function c(){a.isWaiting=!0;b.holder.html(g._c1.clone());a.slideId=-99}var g=this,a=b.holder,f=function(a){var b=a.sizeType;return function(d){var f=a.content,h=a.holder;if(d){var i=d.currentTarget;k(i).off("load error");if("error"===d.type){a.isLoaded=!0;a.image="";a.isLoading=!1;f.addClass("rsSlideError");h.html(f);a.holder.trigger("rsAfterContentSet");g.ev.trigger("rsAfterContentSet",
-a);return}}if(a.image){if(a.bigImage&&a.sizeType!==b){"med"===b?a.isMedLoading=!1:"big"===b?a.isBigLoading=!1:a.isMedLoading=a.isLoading=!1;return}if(a.isLoaded){if(!a.isRendered&&e){c();return}g._l2(a)}else{var j;f.hasClass("rsImg")?(j=!0,d=f):(j=!1,d=f.find(".rsImg"));d.length&&d.is("a")&&(j?f=k('<img class="rsImg" src="'+a.image+'" />'):f.find(".rsImg").replaceWith('<img class="rsImg" src="'+a.image+'" />'),a.content=f);a.iW=i.width;0<a.iW&&(a.iH=i.height,a.isLoaded=!0,a.isLoading=!1,g._l2(a))}}else{if(!g._t&&
-e&&!a.isRendered){a.isRendered=!0;c();return}a.isLoaded=!0;a.isLoading=!1}i=a.id-g._l;!e&&!a.appendOnLoaded&&g.st.fadeinLoadedSlide&&(0===i||(g._m2||g._g2)&&(-1===i||1===i))?(f.css(g._e+"transition","opacity 400ms ease-in-out").css({visibility:"visible",opacity:0}),h.html(f),setTimeout(function(){f.css("opacity",1)},6)):h.html(f);a.isRendered=!0;h.find("a").off("click.rs").on("click.rs",function(){if(g.dragSuccess)return!1;g._c2=!0;setTimeout(function(){g._c2=!1},3)});a.holder.trigger("rsAfterContentSet");
-g.ev.trigger("rsAfterContentSet",a);a.appendOnLoaded&&g._k2(a,f,e)}};if(b.isLoaded)f(b)();else if(e)c();else if(b.image)if(b.isLoading){var d=1,i=function(){if(b.isLoading)if(b.isLoaded)f(b)();else{if(0===d%50){var a=b.imageLoader;if(a.complete&&void 0!==a.naturalWidth&&0!==a.naturalWidth&&0!==a.naturalHeight){f(b)();return}}300<d||(setTimeout(i,400),d++)}};i(b.sizeType)}else{var h=k("<img/>"),j=b.image;e?c():b.isLoading||(j||(j=h.attr("src"),h=k("<img/>")),b.holder.html(g._c1.clone()),b.isLoading=
-!0,b.imageLoader=h,h.one("load error",f(b)).attr("src",j))}else f(b)()},_k2:function(b,e,c){var g=b.holder,a=b.id-this._l;this._j&&!c&&this.st.fadeinLoadedSlide&&(0===a||(this._m2||this._g2)&&(-1===a||1===a))?(e=b.content,e.css(this._e+"transition","opacity 400ms ease-in-out").css({visibility:"visible",opacity:0}),this._b1.append(g),setTimeout(function(){e.css("opacity",1)},6)):this._b1.append(g);b.appendOnLoaded=!1},_b2:function(b,e){var c=this,g;c.dragSuccess=!1;if(k(b.target).closest(".rsNoDrag",
-c._d1).length)return!0;e||c._m2&&c._n2();if(c._g2)c.hasTouch&&(c._o2=!0);else{c.hasTouch&&(c._o2=!1);c._p2();if(c.hasTouch){var a=b.originalEvent.touches;if(a&&0<a.length)g=a[0],1<a.length&&(c._o2=!0);else return}else g=b,b.preventDefault();c._g2=!0;c._a.on(c._g1,function(a){c._q2(a,e)}).on(c._h1,function(a){c._r2(a,e)});c._s2="";c._t2=!1;c._u2=g.pageX;c._v2=g.pageY;c._w2=c._r=(!e?c._f:c._x2)?g.pageX:g.pageY;c._y2=0;c._z2=0;c._a3=!e?c._m:c._b3;c._c3=(new Date).getTime();if(c.hasTouch)c._a1.on(c._i1,
-function(a){c._r2(a,e)})}},_d3:function(b,e){if(this._e3){var c=this._f3,g=b.pageX-this._u2,a=b.pageY-this._v2,f=this._a3+g,d=this._a3+a,i=!e?this._f:this._x2,f=i?f:d,h=this._s2;this._t2=!0;this._u2=b.pageX;this._v2=b.pageY;d=i?this._u2:this._v2;"x"===h&&0!==g?this._y2=0<g?1:-1:"y"===h&&0!==a&&(this._z2=0<a?1:-1);g=i?g:a;e?f>this._g3?f=this._a3+g*this._j1:f<this._h3&&(f=this._a3+g*this._j1):this._v||(0>=this.currSlideId&&0<d-this._w2&&(f=this._a3+g*this._j1),this.currSlideId>=this.numSlides-1&&0>
-d-this._w2&&(f=this._a3+g*this._j1));this._a3=f;200<c-this._c3&&(this._c3=c,this._r=d);e?this._j3(this._a3):this._j&&this._i3(this._a3)}},_q2:function(b,e){var c=this;if(c.hasTouch){if(c._k3)return;var g=b.originalEvent.touches;if(g){if(1<g.length)return;point=g[0]}else return}else point=b;c._t2||(c._c&&(!e?c._b1:c._l3).css(c._e+c._o1,"0s"),function d(){c._g2&&(c._m3=requestAnimationFrame(d),c._n3&&c._d3(c._n3,e))}());if(c._e3)b.preventDefault(),c._f3=(new Date).getTime(),c._n3=point;else{var g=!e?
-c._f:c._x2,a=Math.abs(point.pageX-c._u2)-Math.abs(point.pageY-c._v2)-(g?-7:7);if(7<a){if(g)b.preventDefault(),c._s2="x";else if(c.hasTouch){c._o3();return}c._e3=!0}else if(-7>a){if(g){if(c.hasTouch){c._o3();return}}else b.preventDefault(),c._s2="y";c._e3=!0}}},_o3:function(){this._k3=!0;this._t2=this._g2=!1;this._r2()},_r2:function(b,e){function c(a){return 100>a?100:500<a?500:a}function g(b,d){if(a._j||e)i=(-a._q-a._z)*a._s,h=Math.abs(a._m-i),a._b=h/d,b&&(a._b+=250),a._b=c(a._b),a._q3(i,!1)}var a=
-this,f,d,i,h;a.ev.trigger("rsDragRelease");a._n3=null;a._g2=!1;a._k3=!1;a._e3=!1;a._f3=0;cancelAnimationFrame(a._m3);a._t2&&(e?a._j3(a._a3):a._j&&a._i3(a._a3));a._a.off(a._g1).off(a._h1);a.hasTouch&&a._a1.off(a._i1);a._m1();if(!a._t2&&!a._o2&&e&&a._p3){var j=k(b.target).closest(".rsNavItem");j.length&&a.goTo(j.index())}else if(d=!e?a._f:a._x2,a._t2&&!("y"===a._s2&&d||"x"===a._s2&&!d)){a.dragSuccess=!0;a._s2="";var m=a.st.minSlideOffset;f=a.hasTouch?b.originalEvent.changedTouches[0]:b;var l=d?f.pageX:
-f.pageY,r=a._w2;f=a._r;var n=a.currSlideId,p=a.numSlides,s=d?a._y2:a._z2,t=a._v;Math.abs(l-r);f=l-f;d=(new Date).getTime()-a._c3;d=Math.abs(f)/d;if(0===s||1>=p)g(!0,d);else{if(!t&&!e)if(0>=n){if(0<s){g(!0,d);return}}else if(n>=p-1&&0>s){g(!0,d);return}if(e){i=a._b3;if(i>a._g3)i=a._g3;else if(i<a._h3)i=a._h3;else{m=d*d/0.006;j=-a._b3;l=a._r3-a._s3+a._b3;0<f&&m>j?(j+=a._s3/(15/(0.003*(m/d))),d=d*j/m,m=j):0>f&&m>l&&(l+=a._s3/(15/(0.003*(m/d))),d=d*l/m,m=l);j=Math.max(Math.round(d/0.003),50);i+=m*(0>
-f?-1:1);if(i>a._g3){a._t3(i,j,!0,a._g3,200);return}if(i<a._h3){a._t3(i,j,!0,a._h3,200);return}}a._t3(i,j,!0)}else r+m<l?0>s?g(!1,d):a._h2("prev",c(Math.abs(a._m-(-a._q-a._z+1)*a._s)/d),!1,!0,!0):r-m>l?0<s?g(!1,d):a._h2("next",c(Math.abs(a._m-(-a._q-a._z-1)*a._s)/d),!1,!0,!0):g(!1,d)}}},_i3:function(b){b=this._m=b;this._c?this._b1.css(this._r1,this._s1+(this._f?b+this._t1+0:0+this._t1+b)+this._u1):this._b1.css(this._f?this._r1:this._q1,b)},updateSliderSize:function(b){var e,c;this.st.beforeResize&&
-this.st.beforeResize.call(this);if(this.st.autoScaleSlider){var g=this.st.autoScaleSliderWidth,a=this.st.autoScaleSliderHeight;this.st.autoScaleHeight?(e=this.slider.width(),e!=this.width&&(this.slider.css("height",e*(a/g)),e=this.slider.width()),c=this.slider.height()):(c=this.slider.height(),c!=this.height&&(this.slider.css("width",c*(g/a)),c=this.slider.height()),e=this.slider.width())}else e=this.slider.width(),c=this.slider.height();this._e2=this.slider.offset();this._e2=this._e2[this._g];if(b||
-e!=this.width||c!=this.height){this.width=e;this.height=c;this._u3=e;this._v3=c;this.ev.trigger("rsBeforeSizeSet");this._a1.css({width:this._u3,height:this._v3});this._s=(this._f?this._u3:this._v3)+this.st.slidesSpacing;this._w3=this.st.imageScalePadding;for(e=0;e<this.slides.length;e++)b=this.slides[e],b.positionSet=!1,b&&(b.image&&b.isLoaded)&&(b.isRendered=!1,this._l2(b));if(this._x3)for(e=0;e<this._x3.length;e++)b=this._x3[e],b.holder.css(this._g,(b.id+this._z)*this._s);this._i2();this._j&&(this._c&&
-this._b1.css(this._e+"transition-duration","0s"),this._i3((-this._q-this._z)*this._s));this.ev.trigger("rsOnUpdateNav");this.st.afterResize&&this.st.afterResize.call(this)}},setSlidesOrientation:function(){},appendSlide:function(b,e){var c=this._o(b);if(isNaN(e)||e>this.numSlides)e=this.numSlides;this.slides.splice(e,0,c);this.slidesJQ.splice(e,0,'<div style="'+(this._j?"position: absolute;":"z-index: 0; display:none; opacity: 0; position: absolute;  left: 0; top: 0;")+'" class="rsSlide"></div>');
-e<this.currSlideId&&this.currSlideId++;this.ev.trigger("rsOnAppendSlide",[c,e]);this._z3(e);e===this.currSlideId&&this.ev.trigger("rsAfterSlideChange")},removeSlide:function(b){var e=this.slides[b];e&&(e.holder&&e.holder.remove(),b<this.currSlideId&&this.currSlideId++,this.slides.splice(b,1),this.slidesJQ.splice(b,1),this.ev.trigger("rsOnRemoveSlide",[b]),this._z3(b),b===this.currSlideId&&this.ev.trigger("rsAfterSlideChange"))},_z3:function(){var b=this,e=b.numSlides,e=0>=b._q?0:Math.floor(b._q/e);
-b.numSlides=b.slides.length;0===b.numSlides?(b.currSlideId=b._z=b._q=0,b.currSlide=b._a4=null):b._q=e*b.numSlides+b.currSlideId;for(e=0;e<b.numSlides;e++)b.slides[e].id=e;b.currSlide=b.slides[b.currSlideId];b._d1=b.slidesJQ[b.currSlideId];b.currSlideId>=b.numSlides?b.goTo(b.numSlides-1):0>b.currSlideId&&b.goTo(0);b._p();b._j&&b._v&&b._b1.css(b._e+b._o1,"0ms");b._b4&&clearTimeout(b._b4);b._b4=setTimeout(function(){b._j&&b._i3((-b._q-b._z)*b._s);b._i2();b._j||b._d1.css({display:"block",opacity:1})},
-14);b.ev.trigger("rsOnUpdateNav")},_m1:function(){!this.hasTouch&&this._j&&(this._k1?this._a1.css("cursor",this._k1):(this._a1.removeClass("grabbing-cursor"),this._a1.addClass("grab-cursor")))},_p2:function(){!this.hasTouch&&this._j&&(this._l1?this._a1.css("cursor",this._l1):(this._a1.removeClass("grab-cursor"),this._a1.addClass("grabbing-cursor")))},next:function(b){this._h2("next",this.st.transitionSpeed,!0,!b)},prev:function(b){this._h2("prev",this.st.transitionSpeed,!0,!b)},_h2:function(b,e,c,
-g,a){var f=this,d,i,h;f._d4&&f.stopVideo();f.ev.trigger("rsBeforeMove",[b,g]);newItemId="next"===b?f.currSlideId+1:"prev"===b?f.currSlideId-1:b=parseInt(b,10);if(!f._v){if(0>newItemId){f._e4("left",!g);return}if(newItemId>=f.numSlides){f._e4("right",!g);return}}f._m2&&(f._n2(),c=!1);i=newItemId-f.currSlideId;h=f._j2=f.currSlideId;var j=f.currSlideId+i,g=f._q,m;f._v?(j=f._i2(!1,j),g+=i):g=j;f._l=j;f._a4=f.slidesJQ[f.currSlideId];f._q=g;f.currSlideId=f._l;f.currSlide=f.slides[f.currSlideId];f._d1=f.slidesJQ[f.currSlideId];
-j=Boolean(0<i);i=Math.abs(i);var l=Math.floor(h/f._u),k=Math.floor((h+(j?2:-2))/f._u),l=(j?Math.max(l,k):Math.min(l,k))*f._u+(j?f._u-1:0);l>f.numSlides-1?l=f.numSlides-1:0>l&&(l=0);h=j?l-h:h-l;h>f._u&&(h=f._u);if(i>h+2){f._z+=(i-(h+2))*(j?-1:1);e*=1.4;for(h=0;h<f.numSlides;h++)f.slides[h].positionSet=!1}f._b=e;f._i2(!0);a||(m=!0);d=(-g-f._z)*f._s;m?setTimeout(function(){f._c4=!1;f._q3(d,b,!1,c);f.ev.trigger("rsOnUpdateNav")},0):(f._q3(d,b,!1,c),f.ev.trigger("rsOnUpdateNav"))},_z1:function(){this.st.arrowsNav&&
-(1>=this.numSlides?(this._w1.css("display","none"),this._x1.css("display","none")):(this._w1.css("display","block"),this._x1.css("display","block"),!this._v&&!this.st.loopRewind&&(0===this.currSlideId?this._w1.addClass("rsArrowDisabled"):this._w1.removeClass("rsArrowDisabled"),this.currSlideId===this.numSlides-1?this._x1.addClass("rsArrowDisabled"):this._x1.removeClass("rsArrowDisabled"))))},_q3:function(b,e,c,g,a){function f(){var a;if(i&&(a=i.data("rsTimeout")))i!==h&&i.css({opacity:0,display:"none",
-zIndex:0}),clearTimeout(a),i.data("rsTimeout","");if(a=h.data("rsTimeout"))clearTimeout(a),h.data("rsTimeout","")}var d=this,i,h,j={};isNaN(d._b)&&(d._b=400);d._m=d._a3=b;d.ev.trigger("rsBeforeAnimStart");d.st.beforeSlideChange&&d.st.beforeSlideChange.call(d);d._c?d._j?(j[d._e+d._o1]=d._b+"ms",j[d._e+d._p1]=g?k.rsCSS3Easing[d.st.easeInOut]:k.rsCSS3Easing[d.st.easeOut],d._b1.css(j),setTimeout(function(){d._i3(b)},d.hasTouch?5:0)):(d._b=d.st.transitionSpeed,i=d._a4,h=d._d1,h.data("rsTimeout")&&h.css("opacity",
-0),f(),i&&i.data("rsTimeout",setTimeout(function(){j[d._e+d._o1]="0ms";j.zIndex=0;j.display="none";i.data("rsTimeout","");i.css(j);setTimeout(function(){i.css("opacity",0)},16)},d._b+60)),j.display="block",j.zIndex=d._k,j.opacity=0,j[d._e+d._o1]="0ms",j[d._e+d._p1]=k.rsCSS3Easing[d.st.easeInOut],h.css(j),h.data("rsTimeout",setTimeout(function(){h.css(d._e+d._o1,d._b+"ms");h.data("rsTimeout",setTimeout(function(){h.css("opacity",1);h.data("rsTimeout","")},20))},20))):d._j?(j[d._f?d._r1:d._q1]=b+"px",
-d._b1.animate(j,d._b,g?d.st.easeInOut:d.st.easeOut)):(i=d._a4,h=d._d1,h.stop(!0,!0).css({opacity:0,display:"block",zIndex:d._k}),d._b=d.st.transitionSpeed,h.animate({opacity:1},d._b,d.st.easeInOut),f(),i&&i.data("rsTimeout",setTimeout(function(){i.stop(!0,!0).css({opacity:0,display:"none",zIndex:0})},d._b+60)));d._m2=!0;d.loadingTimeout&&clearTimeout(d.loadingTimeout);d.loadingTimeout=a?setTimeout(function(){d.loadingTimeout=null;a.call()},d._b+60):setTimeout(function(){d.loadingTimeout=null;d._f4(e)},
-d._b+60)},_n2:function(){this._m2=!1;clearTimeout(this.loadingTimeout);if(this._j)if(this._c){var b=this._m,e=this._a3=this._g4();this._b1.css(this._e+this._o1,"0ms");b!==e&&this._i3(e)}else this._b1.stop(!0),this._m=parseInt(this._b1.css(this._r1),10);else 20<this._k?this._k=10:this._k++},_g4:function(){var b=window.getComputedStyle(this._b1.get(0),null).getPropertyValue(this._e+"transform").replace(/^matrix\(/i,"").split(/, |\)$/g);return parseInt(b[this._f?4:5],10)},_h4:function(b,e){return this._c?
-this._s1+(e?b+this._t1+0:0+this._t1+b)+this._u1:b},_f4:function(){this._j||(this._d1.css("z-index",0),this._k=10);this._m2=!1;this.staticSlideId=this.currSlideId;this._i2();this._i4=!1;this.ev.trigger("rsAfterSlideChange");this.st.afterSlideChange&&this.st.afterSlideChange.call(this)},_e4:function(b,e){var c=this,g=(-c._q-c._z)*c._s;moveDist=30;if(0!==c.numSlides)if(c.st.loopRewind)"left"===b?c.goTo(c.numSlides-1,e):c.goTo(0,e);else if(!c._m2&&c._j&&0!==moveDist){c._b=200;var a=function(){c._m2=!1};
-c._q3(g+("left"===b?moveDist:-moveDist),"",!1,!0,function(){c._m2=!1;c._q3(g,"",!1,!0,a)})}},_l2:function(b){if(!b.isRendered){var e=b.content,c="rsImg",g,a=this.st.imageAlignCenter,f=this.st.imageScaleMode,d;b.videoURL&&(c="rsVideoContainer","fill"!==f?g=!0:(d=e,d.hasClass(c)||(d=d.find("."+c)),d.css({width:"100%",height:"100%"}),c="rsImg"));e.hasClass(c)||(e=e.find("."+c));var i=b.iW,c=b.iH;b.isRendered=!0;if("none"!==f||a){bMargin="fill"!==f?this._w3:0;b=this._u3-2*bMargin;d=this._v3-2*bMargin;
-var h,j,k={};if("fit-if-smaller"===f&&(i>b||c>d))f="fit";if("fill"===f||"fit"===f)h=b/i,j=d/c,h="fill"==f?h>j?h:j:"fit"==f?h<j?h:j:1,i=Math.ceil(i*h,10),c=Math.ceil(c*h,10);"none"!==f&&(k.width=i,k.height=c,g&&e.find(".rsImg").css({width:"100%",height:"100%"}));a&&(k.marginLeft=Math.floor((b-i)/2)+bMargin,k.marginTop=Math.floor((d-c)/2)+bMargin);e.css(k)}}}};k.rsProto=u.prototype;k.fn.royalSlider=function(b){var e=arguments;return this.each(function(){var c=k(this);if("object"===typeof b||!b)c.data("royalSlider")||
-c.data("royalSlider",new u(c,b));else if((c=c.data("royalSlider"))&&c[b])return c[b].apply(c,Array.prototype.slice.call(e,1))})};k.fn.royalSlider.defaults={slidesSpacing:8,startSlideId:0,loop:!1,loopRewind:!1,numImagesToPreload:4,fadeinLoadedSlide:!0,slidesOrientation:"horizontal",transitionType:"move",transitionSpeed:600,controlNavigation:"bullets",controlsInside:!0,arrowsNav:!0,arrowsNavAutoHide:!0,navigateByClick:!0,randomizeSlides:!1,sliderDrag:!0,sliderTouch:!0,keyboardNavEnabled:!1,fadeInAfterLoaded:!0,
-allowCSS3:!0,allowCSS3OnWebkit:!0,addActiveClass:!1,autoHeight:!1,easeOut:"easeOutSine",easeInOut:"easeInOutSine",minSlideOffset:10,imageScaleMode:"fit-if-smaller",imageAlignCenter:!0,imageScalePadding:4,autoScaleSlider:!1,autoScaleSliderWidth:800,autoScaleSliderHeight:400,autoScaleHeight:!0,arrowsNavHideOnTouch:!1,globalCaption:!1,beforeSlideChange:null,afterSlideChange:null,beforeResize:null,afterResize:null};k.rsCSS3Easing={easeOutSine:"cubic-bezier(0.390, 0.575, 0.565, 1.000)",easeInOutSine:"cubic-bezier(0.445, 0.050, 0.550, 0.950)"};
-k.extend(jQuery.easing,{easeInOutSine:function(b,e,c,g,a){return-g/2*(Math.cos(Math.PI*e/a)-1)+c},easeOutSine:function(b,e,c,g,a){return g*Math.sin(e/a*(Math.PI/2))+c},easeOutCubic:function(b,e,c,g,a){return g*((e=e/a-1)*e*e+1)+c}})})(jQuery,window);
-// jquery.rs.bullets v1.0
-(function(c){c.extend(c.rsProto,{_f5:function(){var a=this;"bullets"===a.st.controlNavigation&&(a.ev.one("rsAfterPropsSetup",function(){a._g5=!0;a.slider.addClass("rsWithBullets");for(var b='<div class="rsNav rsBullets">',e=0;e<a.numSlides;e++)b+='<div class="rsNavItem rsBullet"><span class=""></span></div>';b=c(b+"</div>");a._t4=b;a._h5=b.children();a.slider.append(b);a._t4.click(function(b){b=c(b.target).closest(".rsNavItem");b.length&&a.goTo(b.index())})}),a.ev.on("rsOnAppendSlide",function(b,
-c,d){d>=a.numSlides?a._t4.append('<div class="rsNavItem rsBullet"><span class=""></span></div>'):a._h5.eq(d).before('<div class="rsNavItem rsBullet"><span class=""></span></div>');a._h5=a._t4.children()}),a.ev.on("rsOnRemoveSlide",function(b,c){var d=a._h5.eq(c);d&&(d.remove(),a._h5=a._t4.children())}),a.ev.on("rsOnUpdateNav",function(){var b=a.currSlideId;a._i5&&a._i5.removeClass("rsNavSelected");b=c(a._h5[b]);b.addClass("rsNavSelected");a._i5=b}))}});c.rsModules.bullets=c.rsProto._f5})(jQuery);
-// jquery.rs.thumbnails v1.0.2
-(function(f){f.extend(f.rsProto,{_y5:function(){var a=this;"thumbnails"===a.st.controlNavigation&&(a._z5={drag:!0,touch:!0,orientation:"horizontal",navigation:!0,arrows:!0,arrowLeft:null,arrowRight:null,spacing:4,arrowsAutoHide:!1,appendSpan:!1,transitionSpeed:600,autoCenter:!0,fitInViewport:!0,firstMargin:!0},a.st.thumbs=f.extend({},a._z5,a.st.thumbs),a.ev.on("rsBeforeParseNode",function(a,b,c){b=f(b);c.thumbnail=b.find(".rsTmb").remove();c.thumbnail.length?c.thumbnail=f(document.createElement("div")).append(c.thumbnail).html():
-(c.thumbnail=b.attr("data-rsTmb"),c.thumbnail||(c.thumbnail=b.find(".rsImg").attr("data-rsTmb")),c.thumbnail=c.thumbnail?'<img src="'+c.thumbnail+'"/>':"")}),a.ev.one("rsAfterPropsSetup",function(){a._a6()}),a.ev.on("rsOnUpdateNav",function(){var e=a.currSlideId,b;a._i5&&a._i5.removeClass("rsNavSelected");b=f(a._h5[e]);b.addClass("rsNavSelected");a._b6&&a._c6(e);a._i5=b}),a.ev.on("rsOnAppendSlide",function(e,b,c){e="<div"+a._d6+' class="rsNavItem rsThumb">'+a._e6+b.thumbnail+"</div>";c>=a.numSlides?
-a._l3.append(e):a._h5.eq(c).before(e);a._h5=a._l3.children();a.updateThumbsSize()}),a.ev.on("rsOnRemoveSlide",function(e,b){var c=a._h5.eq(b);c&&(c.remove(),a._h5=a._l3.children(),a.updateThumbsSize())}))},_a6:function(){var a=this,e="rsThumbs",b="",c,g,d=a.st.thumbs.spacing;a._g5=!0;0<d?(c=d+"px ",c=' style="margin: 0 '+c+c+'0;"'):c="";a._d6=c;a._x2="vertical"===a.st.thumbs.orientation?!1:!0;a._b3=0;a._f6=!1;a._g6=!1;a._b6=!1;a._h6=a.st.thumbs.arrows&&a.st.thumbs.navigation;g=a._x2?"Hor":"Ver";a.slider.addClass("rsWithThumbs rsWithThumbs"+
-g);b+='<div class="rsNav rsThumbs rsThumbs'+g+'"><div class="'+e+'Container">';a._e6=a.st.thumbs.appendSpan?'<span class="thumbIco"></span>':"";for(var h=0;h<a.numSlides;h++)g=a.slides[h],b+="<div"+c+' class="rsNavItem rsThumb">'+a._e6+g.thumbnail+"</div>";b=f(b+"</div></div>");a._l3=f(b).find("."+e+"Container");a._h6&&(e+="Arrow",a.st.thumbs.arrowLeft?a._i6=a.st.thumbs.arrowLeft:(a._i6=f('<div class="'+e+" "+e+'Left"><div class="'+e+'Icn"></div></div>'),b.append(a._i6)),a.st.thumbs.arrowRight?a._j6=
-a.st.thumbs.arrowRight:(a._j6=f('<div class="'+e+" "+e+'Right"><div class="'+e+'Icn"></div></div>'),b.append(a._j6)),a._i6.click(function(){var b=(Math.floor(a._b3/a._k6)+a._l6)*a._k6;a._t3(b>a._g3?a._g3:b)}),a._j6.click(function(){var b=(Math.floor(a._b3/a._k6)-a._l6)*a._k6;a._t3(b<a._h3?a._h3:b)}),a.st.thumbs.arrowsAutoHide&&!a.hasTouch&&(a._i6.css("opacity",0),a._j6.css("opacity",0),b.one("mousemove.rsarrowshover",function(){a._b6&&(a._i6.css("opacity",1),a._j6.css("opacity",1))}),b.hover(function(){a._b6&&
-(a._i6.css("opacity",1),a._j6.css("opacity",1))},function(){a._b6&&(a._i6.css("opacity",0),a._j6.css("opacity",0))})));a._t4=b;a._h5=a._l3.children();a.slider.append(b);a._p3=!0;a._m6=d;a.st.thumbs.navigation&&a._c&&a._l3.css(a._e+"transition-property",a._e+"transform");a._t4.click(function(b){a._g6||(b=f(b.target).closest(".rsNavItem"),b.length&&a.goTo(b.index()))});a.ev.off("rsBeforeSizeSet.thumbs").on("rsBeforeSizeSet.thumbs",function(){a._n6=a._x2?a._v3:a._u3;a.updateThumbsSize()})},updateThumbsSize:function(){var a=
-this,e=a._h5.first(),b={},c=a._h5.length;a._k6=(a._x2?e.outerWidth():e.outerHeight())+a._m6;a._r3=c*a._k6-a._m6;b[a._x2?"width":"height"]=a._r3+a._m6;a._s3=a._x2?a._t4.width():a._t4.height();a._h3=-(a._r3-a._s3)-(a.st.thumbs.firstMargin?a._m6:0);a._g3=a.st.thumbs.firstMargin?a._m6:0;a._l6=Math.floor(a._s3/a._k6);if(a._r3<a._s3)a.st.thumbs.autoCenter&&a._j3((a._s3-a._r3)/2),a.st.thumbs.arrows&&a._i6&&(a._i6.addClass("rsThumbsArrowDisabled"),a._j6.addClass("rsThumbsArrowDisabled")),a._b6=!1,a._g6=!1,
-a._t4.off(a._f1);else if(a.st.thumbs.navigation&&!a._b6&&(a._b6=!0,!a.hasTouch&&a.st.thumbs.drag||a.hasTouch&&a.st.thumbs.touch))a._g6=!0,a._t4.on(a._f1,function(b){a._b2(b,!0)});a._l3.css(b);if(a._p3&&(a.isFullscreen||a.st.thumbs.fitInViewport))a._x2?a._v3=a._n6-a._t4.outerHeight():a._u3=a._n6-a._t4.outerWidth()},setThumbsOrientation:function(a,e){this._p3&&(this.st.thumbs.orientation=a,this._t4.remove(),this.slider.removeClass("rsWithThumbsHor rsWithThumbsVer"),this._a6(),this._t4.off(this._f1),
-e||this.updateSliderSize(!0))},_j3:function(a){this._b3=a;this._c?this._l3.css(this._r1,this._s1+(this._x2?a+this._t1+0:0+this._t1+a)+this._u1):this._l3.css(this._x2?this._r1:this._q1,a)},_t3:function(a,e,b,c,g){var d=this;if(d._b6){e||(e=d.st.thumbs.transitionSpeed);d._b3=a;d._o6&&clearTimeout(d._o6);d._f6&&(d._c||d._l3.stop(),b=!0);var h={};d._f6=!0;d._c?(h[d._e+"transition-duration"]=e+"ms",h[d._e+"transition-timing-function"]=b?f.rsCSS3Easing[d.st.easeOut]:f.rsCSS3Easing[d.st.easeInOut],d._l3.css(h),
-d._j3(a)):(h[d._x2?d._r1:d._q1]=a+"px",d._l3.animate(h,e,b?"easeOutCubic":d.st.easeInOut));c&&(d._b3=c);d._p6();d._o6=setTimeout(function(){d._f6=!1;g&&(d._t3(c,g,!0),g=null)},e)}},_p6:function(){this._h6&&(this._b3===this._g3?this._i6.addClass("rsThumbsArrowDisabled"):this._i6.removeClass("rsThumbsArrowDisabled"),this._b3===this._h3?this._j6.addClass("rsThumbsArrowDisabled"):this._j6.removeClass("rsThumbsArrowDisabled"))},_c6:function(a,e){var b=0,c,f=a*this._k6+2*this._k6-this._m6+this._g3,d=Math.floor(this._b3/
-this._k6);this._b6&&(f+this._b3>this._s3?(a===this.numSlides-1&&(b=1),d=-a+this._l6-2+b,c=d*this._k6+this._s3%this._k6+this._m6-this._g3):0!==a?(a-1)*this._k6<=-this._b3+this._g3&&a-1<=this.numSlides-this._l6&&(c=(-a+1)*this._k6+this._g3):c=this._g3,c!==this._b3&&(b=void 0===c?this._b3:c,b>this._g3?this._j3(this._g3):b<this._h3?this._j3(this._h3):void 0!==c&&(e?this._j3(c):this._t3(c))),this._p6())}});f.rsModules.thumbnails=f.rsProto._y5})(jQuery);
-// jquery.rs.tabs v1.0.1
-(function(e){e.extend(e.rsProto,{_w5:function(){var a=this;"tabs"===a.st.controlNavigation&&(a.ev.on("rsBeforeParseNode",function(a,d,b){d=e(d);b.thumbnail=d.find(".rsTmb").remove();b.thumbnail.length?b.thumbnail=e(document.createElement("div")).append(b.thumbnail).html():(b.thumbnail=d.attr("data-rsTmb"),b.thumbnail||(b.thumbnail=d.find(".rsImg").attr("data-rsTmb")),b.thumbnail=b.thumbnail?'<img src="'+b.thumbnail+'"/>':"")}),a.ev.one("rsAfterPropsSetup",function(){a._x5()}),a.ev.on("rsOnAppendSlide",
-function(c,d,b){b>=a.numSlides?a._t4.append('<div class="rsNavItem rsTab">'+d.thumbnail+"</div>"):a._h5.eq(b).before('<div class="rsNavItem rsTab">'+item.thumbnail+"</div>");a._h5=a._t4.children()}),a.ev.on("rsOnRemoveSlide",function(c,d){var b=a._h5.eq(d);b&&(b.remove(),a._h5=a._t4.children())}),a.ev.on("rsOnUpdateNav",function(){var c=a.currSlideId;a._i5&&a._i5.removeClass("rsNavSelected");c=e(a._h5[c]);c.addClass("rsNavSelected");a._i5=c}))},_x5:function(){var a=this,c,d;a._g5=!0;c='<div class="rsNav rsTabs">';
-for(var b=0;b<a.numSlides;b++)b===a.numSlides-1&&(style=""),d=a.slides[b],c+='<div class="rsNavItem rsTab">'+d.thumbnail+"</div>";c=e(c+"</div>");a._t4=c;a._h5=c.find(".rsNavItem");a.slider.append(c);a._t4.click(function(b){b=e(b.target).closest(".rsNavItem");b.length&&a.goTo(b.index())})}});e.rsModules.tabs=e.rsProto._w5})(jQuery);
-// jquery.rs.fullscreen v1.0.1
-(function(c){c.extend(c.rsProto,{_l5:function(){var a=this;a._m5={enabled:!1,keyboardNav:!0,buttonFS:!0,nativeFS:!1,doubleTap:!0};a.st.fullscreen=c.extend({},a._m5,a.st.fullscreen);if(a.st.fullscreen.enabled)a.ev.one("rsBeforeSizeSet",function(){a._n5()})},_n5:function(){var a=this;a._o5=!a.st.keyboardNavEnabled&&a.st.fullscreen.keyboardNav;if(a.st.fullscreen.nativeFS){a._p5={supportsFullScreen:!1,isFullScreen:function(){return!1},requestFullScreen:function(){},cancelFullScreen:function(){},fullScreenEventName:"",
-prefix:""};var b=["webkit","moz","o","ms","khtml"];if("undefined"!=typeof document.cancelFullScreen)a._p5.supportsFullScreen=!0;else for(var d=0;d<b.length;d++)if(a._p5.prefix=b[d],"undefined"!=typeof document[a._p5.prefix+"CancelFullScreen"]){a._p5.supportsFullScreen=!0;break}a._p5.supportsFullScreen?(a._p5.fullScreenEventName=a._p5.prefix+"fullscreenchange.rs",a._p5.isFullScreen=function(){switch(this.prefix){case "":return document.fullScreen;case "webkit":return document.webkitIsFullScreen;default:return document[this.prefix+
-"FullScreen"]}},a._p5.requestFullScreen=function(a){return""===this.prefix?a.requestFullScreen():a[this.prefix+"RequestFullScreen"]()},a._p5.cancelFullScreen=function(){return""===this.prefix?document.cancelFullScreen():document[this.prefix+"CancelFullScreen"]()}):a._p5=!1}a.st.fullscreen.buttonFS&&(a._q5=c('<div class="rsFullscreenBtn"><div class="rsFullscreenIcn"></div></div>').appendTo(a.st.controlsInside?a._a1:a.slider).on("click.rs",function(){a.isFullscreen?a.exitFullscreen():a.enterFullscreen()}))},
-enterFullscreen:function(a){var b=this;if(b._p5)if(a)b._p5.requestFullScreen(c("html")[0]);else{b._a.on(b._p5.fullScreenEventName,function(){b._p5.isFullScreen()?b.enterFullscreen(!0):b.exitFullscreen(!0)});b._p5.requestFullScreen(c("html")[0]);return}if(!b._r5){b._r5=!0;b._a.on("keyup.rsfullscreen",function(a){27===a.keyCode&&b.exitFullscreen()});b._o5&&b._v1();b._s5=c("html").attr("style");b._t5=c("body").attr("style");b._u5=b.slider.attr("style");c("body, html").css({overflow:"hidden",height:"100%",
-width:"100%",margin:"0",padding:"0"});b.slider.addClass("rsFullscreen");var d;for(d=0;d<b.numSlides;d++)if(a=b.slides[d],a.isRendered=!1,a.bigImage){a.isMedLoaded=a.isLoaded;a.isMedLoading=a.isLoading;a.medImage=a.image;a.medIW=a.iW;a.medIH=a.iH;a.slideId=-99;a.bigImage!==a.medImage&&(a.sizeType="big");a.isLoaded=a.isBigLoaded;a.isLoading=a.isBigLoading;a.image=a.bigImage;a.iW=a.bigIW;a.iH=a.bigIH;a.contentAdded=!1;var e=!a.isLoaded?'<a class="rsImg" href="'+a.image+'"></a>':'<img class="rsImg" src="'+
-a.image+'"/>';a.content.hasClass("rsImg")?a.content=c(e):a.content.find(".rsImg").replaceWith(e)}b.isFullscreen=!0;setTimeout(function(){b._r5=!1;b.updateSliderSize();b.ev.trigger("rsEnterFullscreen")},100)}},exitFullscreen:function(a){var b=this;if(b._p5){if(!a){b._p5.cancelFullScreen(c("html")[0]);return}b._a.off(b._p5.fullScreenEventName)}if(!b._r5){b._r5=!0;b._a.off("keyup.rsfullscreen");b._o5&&b._a.off("keydown.rskb");c("html").attr("style",b._s5||"");c("body").attr("style",b._t5||"");b.slider.removeClass("rsFullscreen");
-var d;for(d=0;d<b.numSlides;d++)if(a=b.slides[d],a.isRendered=!1,a.bigImage){a.slideId=-99;a.isBigLoaded=a.isLoaded;a.isBigLoading=a.isLoading;a.bigImage=a.image;a.bigIW=a.iW;a.bigIH=a.iH;a.isLoaded=a.isMedLoaded;a.isLoading=a.isMedLoading;a.image=a.medImage;a.iW=a.medIW;a.iH=a.medIH;a.contentAdded=!1;var e=!a.isLoaded?'<a class="rsImg" href="'+a.image+'"></a>':'<img class="rsImg" src="'+a.image+'"/>';a.content.hasClass("rsImg")?a.content=c(e):a.content.find(".rsImg").replaceWith(e);a.holder&&a.holder.html(a.content);
-a.bigImage!==a.medImage&&(a.sizeType="med")}b.isFullscreen=!1;setTimeout(function(){b._r5=!1;b.updateSliderSize();b.ev.trigger("rsExitFullscreen")},100)}}});c.rsModules.fullscreen=c.rsProto._l5})(jQuery);
-// jquery.rs.autoplay v1.0.4
-(function(b){b.extend(b.rsProto,{_u4:function(){var a=this,d;a._v4={enabled:!1,stopAtAction:!0,pauseOnHover:!0,delay:2E3};!a.st.autoPlay&&a.st.autoplay&&(a.st.autoPlay=a.st.autoplay);a.st.autoPlay=b.extend({},a._v4,a.st.autoPlay);a.st.autoPlay.enabled&&(a.ev.on("rsBeforeParseNode",function(a,c,e){c=b(c);if(d=c.attr("data-rsDelay"))e.customDelay=parseInt(d,10)}),a.ev.one("rsAfterInit",function(){a._w4()}),a.ev.on("rsBeforeDestroy",function(){a.stopAutoPlay()}))},_w4:function(){var a=this;a.startAutoPlay();
-a.ev.on("rsAfterContentSet",function(d,b){!a._g2&&(!a._m2&&a._x4&&b===a.currSlide)&&a._y4()});a.ev.on("rsDragRelease",function(){a._x4&&a._z4&&(a._z4=!1,a._y4())});a.ev.on("rsAfterSlideChange",function(){a._x4&&a._z4&&(a._z4=!1,a.currSlide.isLoaded&&a._y4())});a.ev.on("rsDragStart",function(){a._x4&&(a.st.autoPlay.stopAtAction?a.stopAutoPlay():(a._z4=!0,a._a5()))});a.ev.on("rsBeforeMove",function(b,f,c){a._x4&&(c&&a.st.autoPlay.stopAtAction?a.stopAutoPlay():(a._z4=!0,a._a5()))});a._b5=!1;a.ev.on("rsVideoStop",
-function(){a._x4&&(a._b5=!1,a._y4())});a.ev.on("rsVideoPlay",function(){a._x4&&(a._z4=!1,a._a5(),a._b5=!0)});a.st.autoPlay.pauseOnHover&&(a._c5=!1,a.slider.hover(function(){a._x4&&(a._z4=!1,a._a5(),a._c5=!0)},function(){a._x4&&(a._c5=!1,a._y4())}))},toggleAutoPlay:function(){this._x4?this.stopAutoPlay():this.startAutoPlay()},startAutoPlay:function(){this._x4=!0;this.currSlide.isLoaded&&this._y4()},stopAutoPlay:function(){this._b5=this._c5=this._z4=this._x4=!1;this._a5()},_y4:function(){var a=this;
-!a._c5&&!a._b5&&(a._d5=!0,a._e5&&clearTimeout(a._e5),a._e5=setTimeout(function(){var b;!a._v&&!a.st.loopRewind&&(b=!0,a.st.loopRewind=!0);a.next(!0);b&&(a.st.loopRewind=!1)},!a.currSlide.customDelay?a.st.autoPlay.delay:a.currSlide.customDelay))},_a5:function(){!this._c5&&!this._b5&&(this._d5=!1,this._e5&&(clearTimeout(this._e5),this._e5=null))}});b.rsModules.autoplay=b.rsProto._u4})(jQuery);
-// jquery.rs.video v1.0.4
-(function(e){e.extend(e.rsProto,{_q6:function(){var a=this;a._r6={autoHideArrows:!0,autoHideControlNav:!1,autoHideBlocks:!1,youTubeCode:'<iframe src="http://www.youtube.com/embed/%id%?rel=1&autoplay=1&showinfo=0&autoplay=1&wmode=transparent" frameborder="no"></iframe>',vimeoCode:'<iframe src="http://player.vimeo.com/video/%id%?byline=0&amp;portrait=0&amp;autoplay=1" frameborder="no" webkitAllowFullScreen mozallowfullscreen allowFullScreen></iframe>'};a.st.video=e.extend({},a._r6,a.st.video);a.ev.on("rsBeforeSizeSet",
-function(){a._d4&&setTimeout(function(){var b=a._d1,b=b.hasClass("rsVideoContainer")?b:b.find(".rsVideoContainer");a._s6.css({width:b.width(),height:b.height()})},32)});var c=e.browser.mozilla;a.ev.on("rsAfterParseNode",function(b,f,d){b=e(f);if(d.videoURL){c&&(a._c=a._d=!1);var f=e('<div class="rsVideoContainer"></div>'),g=e('<div class="rsBtnCenterer"><div class="rsPlayBtn"><div class="rsPlayBtnIcon"></div></div></div>');b.hasClass("rsImg")?d.content=f.append(b).append(g):d.content.find(".rsImg").wrap(f).after(g)}})},
-toggleVideo:function(){return this._d4?this.stopVideo():this.playVideo()},playVideo:function(){var a=this;if(!a._d4){var c=a.currSlide;if(!c.videoURL)return!1;var b=a._t6=c.content,c=c.videoURL,f,d;c.match(/youtu\.be/i)||c.match(/youtube\.com\/watch/i)?(d=/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/,(d=c.match(d))&&11==d[7].length&&(f=d[7]),void 0!==f&&(a._s6=a.st.video.youTubeCode.replace("%id%",f))):c.match(/vimeo\.com/i)&&(d=/\/\/(www\.)?vimeo.com\/(\d+)($|\/)/,
-(d=c.match(d))&&(f=d[2]),void 0!==f&&(a._s6=a.st.video.vimeoCode.replace("%id%",f)));a.videoObj=e(a._s6);a.ev.trigger("rsOnCreateVideoElement",[c]);a.videoObj.length&&(a._s6=e('<div class="rsVideoFrameHolder"><div class="rsPreloader"></div><div class="rsCloseVideoBtn"><div class="rsCloseVideoIcn"></div></div></div>'),a._s6.find(".rsPreloader").after(a.videoObj),b=b.hasClass("rsVideoContainer")?b:b.find(".rsVideoContainer"),a._s6.css({width:b.width(),height:b.height()}).find(".rsCloseVideoBtn").off("click.rsv").on("click.rsv",
-function(b){a.stopVideo();b.preventDefault();b.stopPropagation();return!1}),b.append(a._s6),a.isIPAD&&b.addClass("rsIOSVideo"),a._w1&&a.st.video.autoHideArrows&&(a._w1.addClass("rsHidden"),a._x1.addClass("rsHidden"),a._y1=!0),a._t4&&a.st.video.autoHideControlNav&&a._t4.addClass("rsHidden"),a.st.video.autoHideBlocks&&a.currSlide.animBlocks&&a.currSlide.animBlocks.addClass("rsHidden"),setTimeout(function(){a._s6.addClass("rsVideoActive")},10),a.ev.trigger("rsVideoPlay"),a._d4=!0);return!0}return!1},
-stopVideo:function(){var a=this;return a._d4?(a.isIPAD&&a.slider.find(".rsCloseVideoBtn").remove(),a._w1&&a.st.video.autoHideArrows&&(a._w1.removeClass("rsHidden"),a._x1.removeClass("rsHidden"),a._y1=!1),a._t4&&a.st.video.autoHideControlNav&&a._t4.removeClass("rsHidden"),a.st.video.autoHideBlocks&&a.currSlide.animBlocks&&a.currSlide.animBlocks.removeClass("rsHidden"),setTimeout(function(){a.ev.trigger("rsOnDestroyVideoElement",[a.videoObj]);var c=a._s6.find("iframe");c.length&&c.attr("src","");a._s6.remove()},
-16),a.ev.trigger("rsVideoStop"),a._d4=!1,!0):!1}});e.rsModules.video=e.rsProto._q6})(jQuery);
-// jquery.rs.animated-blocks v1.0.2
-(function(i){i.extend(i.rsProto,{_k4:function(){function j(){var e=a.currSlide;if(a.currSlide&&a.currSlide.isLoaded&&a._o4!==e){if(0<a._n4.length){for(b=0;b<a._n4.length;b++)clearTimeout(a._n4[b]);a._n4=[]}if(0<a._m4.length){var g;for(b=0;b<a._m4.length;b++)if(g=a._m4[b])a._c?(g.block.css(a._e+a._o1,"0s"),g.block.css(g.css)):g.running?g.block.stop(!0,!0):g.block.css(g.css),a._o4=null,e.animBlocksDisplayed=!1;a._m4=[]}e.animBlocks&&(e.animBlocksDisplayed=!0,a._o4=e,a._p4(e.animBlocks))}}var a=this,
-b;a._l4={fadeEffect:!0,moveEffect:"top",moveOffset:20,speed:400,easing:"easeOutSine",delay:200};a.st.block=i.extend({},a._l4,a.st.block);a._m4=[];a._n4=[];a.ev.on("rsAfterInit",function(){j()});a.ev.on("rsBeforeParseNode",function(a,b,c){b=i(b);c.animBlocks=b.find(".rsABlock").css("display","none");c.animBlocks.length||(c.animBlocks=b.hasClass("rsABlock")?b.css("display","none"):!1)});a.ev.on("rsAfterContentSet",function(b,g){g.id===a.currSlideId&&setTimeout(function(){j()},a.st.fadeinLoadedSlide?
-300:0)});a.ev.on("rsAfterSlideChange",function(){j()})},_q4:function(i,a){setTimeout(function(){i.css(a)},6)},_p4:function(j){var a=this,b,e,g,c;a._n4=[];j.each(function(j){b=i(this);e={};g={};c=null;var f=b.data("move-offset");isNaN(f)&&(f=a.st.block.moveOffset);if(0<f){var d=b.data("move-effect");d?(d=d.toLowerCase(),"none"===d?d=!1:"left"!==d&&("top"!==d&&"bottom"!==d&&"right"!==d)&&(d=a.st.block.moveEffect,"none"===d&&(d=!1))):d=a.st.block.moveEffect;if(d){var l;l="right"===d||"left"===d?!0:!1;
-var k,h;isOppositeProp=!1;a._c?(k=0,h=a._r1):(l?isNaN(parseInt(b.css("right"),10))?h="left":(h="right",isOppositeProp=!0):isNaN(parseInt(b.css("bottom"),10))?h="top":(h="bottom",isOppositeProp=!0),h="margin-"+h,isOppositeProp&&(f=-f),k=parseInt(b.css(h),10));g[h]=a._h4("top"===d||"left"===d?k-f:k+f,l);e[h]=a._h4(k,l)}}if(f=b.attr("data-fade-effect")){if("none"===f.toLowerCase()||"false"===f.toLowerCase())f=!1}else f=a.st.block.fadeEffect;f&&(g.opacity=0,e.opacity=1);if(f||d)c={},c.hasFade=Boolean(f),
-Boolean(d)&&(c.moveProp=h,c.hasMove=!0),c.speed=b.data("speed"),isNaN(c.speed)&&(c.speed=a.st.block.speed),c.easing=b.data("easing"),c.easing||(c.easing=a.st.block.easing),c.css3Easing=i.rsCSS3Easing[c.easing],c.delay=b.data("delay"),isNaN(c.delay)&&(c.delay=a.st.block.delay*j);d={};a._c&&(d[a._e+a._o1]="0ms");d.moveProp=e.moveProp;d.opacity=e.opacity;d.display="none";a._m4.push({block:b,css:d});a._q4(b,g);a._n4.push(setTimeout(function(b,d,c,g){return function(){b.css("display","block");if(c){var f=
-{};if(a._c){var e="";c.hasMove&&(e+=c.moveProp);c.hasFade&&(c.hasMove&&(e+=", "),e+="opacity");f[a._e+a._n1]=e;f[a._e+a._o1]=c.speed+"ms";f[a._e+a._p1]=c.css3Easing;b.css(f);setTimeout(function(){b.css(d)},24)}else setTimeout(function(){b.animate(d,c.speed,c.easing)},16)}delete a._n4[g]}}(b,e,c,j),6>=c.delay?12:c.delay))})}});i.rsModules.animatedBlocks=i.rsProto._k4})(jQuery);
-// jquery.rs.auto-height v1.0.1
-(function(b){b.extend(b.rsProto,{_r4:function(){var a=this;if(a.st.autoHeight){var b,c;a.slider.addClass("rsAutoHeight");a.ev.on("rsAfterInit",function(){setTimeout(function(){d(!1);setTimeout(function(){a.slider.append('<div id="clear" style="clear:both;"></div>');a._c&&a._a1.css(a._e+"transition","height "+a.st.transitionSpeed+"ms ease-in-out")},16)},16)});a.ev.on("rsBeforeAnimStart",function(){d(!0)});a.ev.on("rsBeforeSizeSet",function(){setTimeout(function(){d(!1)},16)});var d=function(f){var e=
-a.slides[a.currSlideId];b=e.holder;if(e.isLoaded)b&&(c=b.height(),0!==c&&void 0!==c&&(a._v3=c,a._c||!f?a._a1.css("height",c):a._a1.stop(!0,!0).animate({height:c},a.st.transitionSpeed)));else a.ev.off("rsAfterContentSet.rsAutoHeight").on("rsAfterContentSet.rsAutoHeight",function(a,b){e===b&&d()})}}}});b.rsModules.autoHeight=b.rsProto._r4})(jQuery);
-// jquery.rs.global-caption v1.0
-(function(b){b.extend(b.rsProto,{_v5:function(){var a=this;a.st.globalCaption&&(a.ev.on("rsAfterInit",function(){a.globalCaption=b('<div class="rsGCaption"></div>').appendTo(a.slider);a.globalCaption.html(a.currSlide.caption)}),a.ev.on("rsBeforeAnimStart",function(){a.globalCaption.html(a.currSlide.caption)}))}});b.rsModules.globalCaption=b.rsProto._v5})(jQuery);
-// jquery.rs.active-class v1.0
-(function(b){b.rsProto._j4=function(){var c,a=this;if(a.st.addActiveClass){a.ev.on("rsBeforeMove",function(){b()});a.ev.on("rsAfterInit",function(){b()});var b=function(){c&&clearTimeout(c);c=setTimeout(function(){a._a4&&a._a4.removeClass("rsActiveSlide");a._d1&&a._d1.addClass("rsActiveSlide");c=null},50)}}};b.rsModules.activeClass=b.rsProto._j4})(jQuery);
-// jquery.rs.deeplinking v1.0.1 + jQuery hashchange plugin v1.3 Copyright (c) 2010
-(function(a){a.extend(a.rsProto,{_j5:function(){var b=this,g,d,e;b._k5={enabled:!1,change:!1,prefix:""};b.st.deeplinking=a.extend({},b._k5,b.st.deeplinking);if(b.st.deeplinking.enabled){var j=b.st.deeplinking.change,c="#"+b.st.deeplinking.prefix,f=function(){var a=window.location.hash;return a&&(a=parseInt(a.substring(c.length),10),0<=a)?a-1:-1},h=f();-1!==h&&(b.st.startSlideId=h);if(j)a(window).on("hashchange.rs",function(){if(!g){var a=f();0>a||(a>b.numSlides-1&&(a=b.numSlides-1),b.goTo(a))}});
-b.ev.on("rsAfterSlideChange",function(){d&&clearTimeout(d);e&&clearTimeout(e);e=setTimeout(function(){g=!0;window.location.hash=c+(b.currSlideId+1);d=setTimeout(function(){g=!1;d=0},60)},750)})}}});a.rsModules.deeplinking=a.rsProto._j5})(jQuery);
-(function(a,b,g){function d(a){a=a||location.href;return"#"+a.replace(/^[^#]*#?(.*)$/,"$1")}"$:nomunge";var e=document,j,c=a.event.special,f=e.documentMode,h="onhashchange"in b&&(f===g||7<f);a.fn.hashchange=function(a){return a?this.bind("hashchange",a):this.trigger("hashchange")};a.fn.hashchange.delay=50;c.hashchange=a.extend(c.hashchange,{setup:function(){if(h)return!1;a(j.start)},teardown:function(){if(h)return!1;a(j.stop)}});var n=function(){var c=d(),e=q(m);c!==m?(p(m=c,e),a(b).trigger("hashchange")):
-e!==m&&(location.href=location.href.replace(/#.*/,"")+e);k=setTimeout(n,a.fn.hashchange.delay)},c={},k,m=d(),p=f=function(a){return a},q=f;c.start=function(){k||n()};c.stop=function(){k&&clearTimeout(k);k=g};if(a.browser.msie&&!h){var i,l;c.start=function(){i||(l=(l=a.fn.hashchange.src)&&l+d(),i=a('<iframe tabindex="-1" title="empty"/>').hide().one("load",function(){l||p(d());n()}).attr("src",l||"javascript:0").insertAfter("body")[0].contentWindow,e.onpropertychange=function(){try{"title"===event.propertyName&&
-(i.document.title=e.title)}catch(a){}})};c.stop=f;q=function(){return d(i.location.href)};p=function(b,c){var d=i.document,f=a.fn.hashchange.domain;b!==c&&(d.title=e.title,d.open(),f&&d.write('<script>document.domain="'+f+'"<\/script>'),d.close(),i.location.hash=b)}}j=c})(jQuery,this);
 
 module.exports = jQuery;
 
@@ -7975,1103 +10384,6 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
 module.exports = jQuery;
 
 });
-define("product/guoqude/1.0.0/front_net/module/validation-debug", [], function (require, exports, module) {
-    //vali_delay class可以延迟1毫秒验证
-    //所有验证触发始于'input[type=submit], .submit'的click事件
-    //在submit buttom中使用title属性可以指定对应表单元素去验证，不使用title则验证其closest('form')中的所有'[class*=validate]'表单项
-    //atlast 验证较复杂，相关地方不要随意修改
-    //针对IE6做了提示框的宽度计算，_fixPromptWidth
-    //validate[func[functionname]] 可以自定义验证函数
-    //valiarr[topLeft] 可以指定提示框位置
-    //添加_unFieldEvent事件，默认用作焦点进入input时关闭错误提示
-	//345（updatePromptsPosition）行bug，修改为 var form = $(this).closest('form');
-	//$.validationEngineLanguage.allRules["card_adult"] = { "func": exports.cerd.checkAdult }; //扩展验证方法，而不是内嵌在jq_validation文件
-    //_ajax 事件更新，完全自定义回调处理
-    //判断 usePlaceholder，为placeholder做Hack
-    // 返回 methods 对象给调用者
-    // 新增showPassText参数
-
-     return function ($, _, JSON) {
-        /*
-        * Inline Form Validation Engine 2.2, jQuery plugin
-        * http://www.position-absolute.com
-        * http://www.crionics.com
-        */
-        var isAspWebForm = typeof glo_isAspWebForm == "undefined" ? false : glo_isAspWebForm;
-        
-        $.validationEngineLanguage = {
-            allRules: {
-                "equals": {
-                    "alertText": "前后不一致！"
-                },
-                "atlast": {
-                    "alertText": "至少填写其中项！"
-                },
-                "required": {
-                    "alertText": "* 此项必填",
-                    "alertTextCheckboxMultiple": "* 请选择",
-                    "alertTextCheckboxe": "* 请先勾选同意本协议"
-                },
-                "length": {
-                    "alertText": "在 ",
-                    "alertText2": " 到 ",
-                    "alertText3": " 个字符间"
-                },
-                "minSize": {
-                    "alertText": "字符长度不得小于 ",
-                    "alertText2": " 位"
-                },
-                "maxSize": {
-                    "alertText": "字符长度不得大于 ",
-                    "alertText2": " 位"
-                },
-                "maxCheckbox": {
-                    "alertText": "* Checks allowed Exceeded"
-                },
-                "minCheckbox": {
-                    "alertText": "请选择至少",
-                    "alertText2": " 个选项"
-                },
-                /* FuncVali */
-                "dateRegion": {
-                    "func": function (val) {
-                        var val = val.replace("-", "/");
-                        var vald = new Date(val);
-                        var nowDate = new Date();
-                        if (vald <= nowDate)
-                            return "日期不能小于等于今天";
-                        else
-                            return "ok";
-                    }
-                },
-                "continueSix": {
-                    "func": function (val) {
-                        var val = val.toLowerCase();
-                        var flag, continuation = 1;
-                        for (var i = 0; i < val.length; i++) {
-                            if (val.charCodeAt(i) == flag) {
-                                continuation++;
-                                if (continuation > 5)
-                                    return "密码过于简单，不能连续6个及以上相同的字母或数字";
-                            } else
-                                continuation = 1;
-                            flag = val.charCodeAt(i);
-                        }
-                        return "ok";
-                    }
-                },
-                /* compareFunc */
-                "equalsSix": {
-                    "func": function (val, eqval, eqtitle) {
-                        var val = val.toLowerCase();
-                        var eqval = eqval.toLowerCase();
-                        for (var i = 0; i < val.length; i++) {
-                            var valstr = val.substr(i, 6);
-                            if (valstr.length < 6) break;
-                            for (var x = 0; x < eqval.length; x++) {
-                                var eqvalstr = eqval.substr(x, 6);
-                                if (eqvalstr.length < 6) break;
-                                if (eqvalstr == valstr) {
-                                    return "不允许连续6个及以上字符与" + eqtitle + "相同";
-                                }
-                            }
-                        }
-                        return "ok";
-                    }
-                },
-                "beMin": {
-                    "func": function (val, eqval, eqtitle) {
-                        var val = Number(val);
-                        var eqval = Number(eqval);
-                        if (val < eqval) {
-                            return "不允许小于" + eqtitle;
-                        }
-                        return "ok";
-                    }
-                },
-                /* compareOthers */
-                "SHbeMin": {
-                    "func": function (val, eqval, eqtitle, eqval2, eqtitle2) {
-                        var val = Number(val);
-                        var eqval = Number(eqval);
-                        var eqval2 = Number(eqval2);
-                        if (eqval != 0 && val < eqval2) {
-                            return "不允许小于" + eqtitle2;
-                        }
-                        return "ok";
-                    }
-                },
-                "SHObeMin": {
-                    "func": function (val, eqval, eqtitle, eqval2, eqtitle2) {
-                        var eqval = Number(eqval);
-                        var eqval2 = Number(eqval2);
-                        if (eqval != 0 && eqval < eqval2) {
-                            return eqtitle + "不允许小于" + eqtitle2;
-                        }
-                        return "ok";
-                    }
-                },
-
-                "noPullNumber": {
-                    "func": function (val) {
-                        var pattern = new RegExp(/^[0-9]+$/);
-                        if (pattern.test(val))
-                            return "不能由纯数字组成";
-                        else
-                            return "ok";
-                    }
-                },
-                "ajaxEmailExist": {
-                    "url": window.urlprefix + "/people/check",
-                    "extraData": "email=eric",
-                    "alertText": "* 这个email已被使用",
-                    "alertTextLoad": "* 验证中, 请等待"
-                },
-                /* CustomRegex */
-                "telephone": {
-                    "regex": /^[0-9\-\(\)\ ]{7,}$/,
-                    "alertText": "电话号码格式不正确"
-                },
-                "validate": {
-                    "regex": /^[0-9\-\(\)\ ]+$/,
-                    "alertText": "验证码格式不正确"
-                },
-                "email": {
-                    //http://projects.scottsplayground.com/email_address_validation/
-                    "regex": /^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?$/i,
-                    "alertText": "Email格式不正确"
-                },
-                "date": {
-                    "regex": /^[0-9]{4}\-[0-9]{1,2}\-[0-9]{1,2}$/,
-                    "alertText": "日期格式不正确，必须为'YYYY-MM-DD'格式"
-                },
-                "chinese": {
-                    "regex": /^[\u4e00-\u9fa5]+$/,
-                    "alertText": "必须是中文"
-                },
-                "onlyNumber": {
-                    "regex": /^[0-9]+$/,
-                    "alertText": "必须是数字"
-                },
-                "onlyLetter": {
-                    "regex": /^[a-zA-Z]+$/,
-                    "alertText": "* 必须是英文字母"
-                },
-                "userName": {
-                    "regex": /^[a-zA-Z][0-9a-zA-Z]+$/,
-                    "alertText": "* 必须是字母和数字内容，数字不允许开头"
-                },
-                "price": {
-                    "regex": /^[0-9]+(\.[0-9]{1,2})?$/,
-                    "alertText": "价格格式不正确"
-                },
-                "shared": {
-                    "regex": /^[0-9]+(\.[0-9]{1,2})?$/,
-                    "alertText": "份额格式不正确"
-                },
-                "ipv4": {
-                    "regex": /^((([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))[.]){3}(([0-1]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))$/,
-                    "alertText": "* 错误的 IP 地址"
-                },
-                "url": {
-                    "regex": /^(https?|ftp):\/\/(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/,
-                    "alertText": "* 错误的 URL"
-                },
-                "postCode": {
-                    "regex": /^\d{6}$/,
-                    "alertText": "邮编格式不正确"
-                },
-                "passWord": {
-                    "regex": /^[0-9a-zA-z]{6,}$/,
-                    "alertText": "密码格式不正确，至少6位数字或字母"
-                },
-                "bankCard": {
-                    "regex": /^[0-9]{8}$|^[0-9]{16}$|^[0-9]{18}|^[0-9]{19}$/,
-                    "alertText": "银行卡格式不正确"
-                },
-                "bankCardWithSpace": {
-                    "regex": /^[0-9 ]{9}$|^[0-9 ]{19}$|^[0-9 ]{21}|^[0-9 ]{22}$/,
-                    "alertText": "银行卡格式不正确"
-                }
-            }
-        };
-
-        var methods = {
-            init: function (options) {
-                var form = this;
-                if (!form.data('jqv') || form.data('jqv') == null) {
-                    methods._saveOptions(form, options);
-                    $(".formError").live("click", function () {
-                        $(this).fadeOut(150, function () {
-                            $(this).remove();
-                        });
-                    });
-                }
-            },
-            attach: function (userOptions) {
-                var form = this;
-                var options;
-                if (userOptions)
-                    options = methods._saveOptions(form, userOptions);
-                else
-                    options = form.data('jqv');
-
-                if (!options.binded) {
-                    var field = form.find("[class*=validate]");
-                    field.not('[type=checkbox], .vali_delay').bind(options.eventTrigger, methods._onFieldEvent);
-                    field.filter('[type=checkbox]').bind("click", methods._onFieldEvent);
-                    field.filter('.vali_delay').bind(options.eventTrigger, methods._delay_onFieldEvent);
-                    if(options.uneventTrigger)
-                        field.not('[type=checkbox]').bind(options.uneventTrigger, methods._unFieldEvent);
-                    form.find('input[type=submit], button[type=submit], a.submit').bind("click", methods._onSubmitEvent);
-                    //when without jq_vali:
-                    //$('a.submit', box).on "click", ->
-                    //    $(this).closest('form').submit()
-                    options.binded = true;
-                    if (options.autoPositionUpdate) {
-                        $(window).bind("resize", { "noAnimation": true, "formElem": form }, methods.updatePromptsPosition);
-                    }
-                }
-                return this;
-            },
-            detach: function () {
-                var form = this;
-                var options = form.data('jqv');
-
-                var field = form.find("[class*=validate]");
-                field.not('[type=checkbox], .vali_delay').unbind(options.eventTrigger, methods._onFieldEvent);
-                field.filter('[type=checkbox]').unbind("click", methods._onFieldEvent);
-                field.filter('.vali_delay').unbind(options.eventTrigger, methods._delay_onFieldEvent);
-                if(options.uneventTrigger)
-                    field.not('[type=checkbox]').unbind(options.uneventTrigger, methods._unFieldEvent);
-                form.find('input[type=submit], button[type=submit], a.submit').unbind("click", methods._onSubmitEvent);
-
-                form.removeData('jqv');
-                if (options.autoPositionUpdate) {
-                    $(window).unbind("resize", methods.updatePromptsPosition)
-                }
-                return this;
-            },
-            validate: function () {
-                return methods._validateFields(this);
-            },
-            validateField: function (el) {
-                var options = $(this).data('jqv');
-                var r = methods._validateField($(el), options);
-                if (options.onSuccess && options.InvalidFields.length == 0)
-                    options.onSuccess();
-                else if (options.onFailure && options.InvalidFields.length > 0)
-                    options.onFailure();
-                return r;
-            },
-            updatePromptsPosition: function (event) {
-                if (event && this == window)
-                    var form = event.data.formElem, noAnimation = event.data.noAnimation;
-                else
-                    var form = $(this).closest('form');
-
-                var options = form.data('jqv');
-                form.find('[class*=validate]').not(':hidden').not(":disabled").each(function () {
-                    var field = $(this);
-                    var prompt = methods._getPrompt(field);
-                    var promptText = $(prompt).find(".formErrorContent").html();
-                    if (prompt)
-                        methods._updatePrompt(field, $(prompt), promptText, undefined, false, options, noAnimation);
-                })
-                return this;
-            },
-            showPrompt: function (promptText, type, promptPosition, showArrow) {
-                var form = this.closest('form');
-                var options = form.data('jqv');
-                if (!options)
-                    options = methods._saveOptions(this, options);
-                if (promptPosition)
-                    options.promptPosition = promptPosition;
-                options.showArrow = showArrow == true;
-                methods._showPrompt(this, promptText, type, false, options);
-            },
-            hidePrompt: function () {
-                var promptClass = "." + methods._getClassName($(this).data("vali_class")) + "formError";
-                $(promptClass).fadeTo("fast", 0.3, function () {
-                    $(this).remove();
-                });
-            },
-            closePrompt: function (field) {
-                return methods._closePrompt(field);
-            },
-            hide: function () {
-                var closingtag;
-                if ($(this).is("form")) {
-                    closingtag = "parentForm" + $(this).attr('id');
-                } else {
-                    closingtag = $(this).attr('id') + "formError";
-                }
-                $('.' + closingtag).fadeTo("fast", 0.3, function () {
-                    $(this).remove();
-                });
-            },
-            hideAll: function () {
-                $('.formError').fadeTo("fast", 0.3, function () {
-                    $(this).remove();
-                });
-            },
-
-            _saveOptions: function (form, options) {
-                var userOptions = $.extend(true,
-                    { allrules: $.validationEngineLanguage.allRules },
-                    $.validationEngine.defaults,
-                    options);
-                form.data('jqv', userOptions);
-                return userOptions;
-            },
-            _unFieldEvent: function () {
-                methods._closePrompt($(this));
-            },
-            _onFieldEvent: function (event) {
-                var field = $(this);
-                var form = field.closest('form');
-                var options = form.data('jqv');
-                window.setTimeout(function () {
-                    methods._validateField(field, options);
-                    if (options.InvalidFields.length == 0 && options.onSuccess) {
-                        options.onSuccess();
-                    } else if (options.InvalidFields.length > 0 && options.onFailure) {
-                        options.onFailure();
-                    }
-                }, (event.data) ? event.data.delay : 0);
-            },
-            _delay_onFieldEvent: function () {
-                var field = this;
-                var args = arguments;
-                window.setTimeout(function () {
-                    methods._onFieldEvent.apply(field, args);
-                }, 1000);
-            },
-            _onSubmitEvent: function (event) {
-                var form = $(this).closest('form');
-                if($(this).hasClass('.vali_skip'))
-                    form.submit();
-                var options = form.data('jqv');
-                var btntgt = "";
-                if ($(event.target).is('[class*=valitarget]'))
-                    btntgt = /valitarget\[(.*)\]/.exec($(event.target).attr('class'))[1];
-                var r = methods._validateFields(form, true, btntgt);
-
-                if (options.onValidationComplete) {
-                    options.onValidationComplete(form, r);
-                    return false;
-                }
-
-                if(r)
-                    form.submit();
-                return false;
-            },
-            _validateFields: function (form, skipAjaxValidation, btntgt) {
-                var options = form.data('jqv');
-                var errorFound = false;
-                form.trigger("jqv.form.validating");
-                var fields = form.find('[class*=validate]').not(':hidden');
-                if (btntgt)
-                    fields = fields.filter('.valitarget_' + btntgt);
-                fields.each(function () {
-                    errorFound |= methods._validateField($(this), options, skipAjaxValidation);
-                });
-                form.trigger("jqv.form.result", [errorFound]);
-
-                if (!errorFound) return true;
-                if (!options.scroll) return false;
-                var destination = Number.MAX_VALUE;
-                var fixleft = 0;
-                var lst = $(".formError:not('.greenPopup')");
-                for (var i = 0; i < lst.length; i++) {
-                    var d = $(lst[i]).offset().top;
-                    if (d < destination) {
-                        destination = d;
-                        fixleft = $(lst[i]).offset().left;
-                    }
-                }
-                if (!options.isOverflown)
-                    $("html:not(:animated),body:not(:animated)").animate({
-                        scrollTop: destination,
-                        scrollLeft: fixleft
-                    }, 1100);
-                else {
-                    var overflowDIV = $(options.overflownDIV);
-                    var scrollContainerScroll = overflowDIV.scrollTop();
-                    var scrollContainerPos = -parseInt(overflowDIV.offset().top);
-                    destination += scrollContainerScroll + scrollContainerPos - 5;
-                    var scrollContainer = $(options.overflownDIV + ":not(:animated)");
-                    scrollContainer.animate({
-                        scrollTop: destination
-                    }, 1100);
-                    $("html:not(:animated),body:not(:animated)").animate({
-                        scrollTop: overflowDIV.offset().top,
-                        scrollLeft: fixleft
-                    }, 1100);
-                }
-                return false;
-            },
-            _hasPlaceholderSupport: function () {
-                var input = document.createElement('input');
-                return ('placeholder' in input);
-            },
-            _validateField: function (field, options, skipAjaxValidation) {
-                var getRules = /validate\[(.*)\]/.exec(field.attr('class'));
-                if (!getRules) return false;
-
-                var str = getRules[1];
-                var rules = str.split(/\[|,|\]/);
-                if (field.val() == "") {
-                    rules1 = ['required', 'atlast'];
-                    for (var i = 0; i < rules.length; i++) {
-                        if (rules[i] == 'atlast')
-                            rules1.push(rules[i + 1]);
-                    }
-                    rules = _.intersection(rules, rules1);
-                }
-
-                var form = $(field.closest("form"));
-                var isAjaxValidator = false;
-                var fieldName = field.attr("name");
-                var promptText = "";
-                options.isError = false;
-                options.showArrow = true;
-
-                var usePlaceholder = false;
-                if (!methods._hasPlaceholderSupport() && field.val() == field.attr("placeholder")) {
-                    usePlaceholder = true;
-                    for (var i = 0; i < rules.length; i++) {
-                        switch (rules[i]) {
-                            case "required":
-                                promptText = "不能为空";
-                                options.isError = true;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                };
-
-                if (!usePlaceholder) {
-                    for (var i = 0; i < rules.length; i++) {
-                        var errorMsg = undefined;
-                        switch (rules[i]) {
-                            case "required":
-                                errorMsg = methods._required(field, rules, i, options);
-                                break;
-                            case "custom":
-                                errorMsg = methods._customRegex(field, rules, i, options);
-                                break;
-                            case "ajax":
-                                // ajax has its own prompts handling technique
-                                if (!skipAjaxValidation) {
-                                    methods._ajax(field, rules, i, options);
-                                    isAjaxValidator = true;
-                                }
-                                break;
-                            case "minSize":
-                                errorMsg = methods._minSize(field, rules, i, options);
-                                break;
-                            case "maxSize":
-                                errorMsg = methods._maxSize(field, rules, i, options);
-                                break;
-                            case "min":
-                                errorMsg = methods._min(field, rules, i, options);
-                                break;
-                            case "max":
-                                errorMsg = methods._max(field, rules, i, options);
-                                break;
-                            case "past":
-                                errorMsg = methods._past(field, rules, i, options);
-                                break;
-                            case "future":
-                                errorMsg = methods._future(field, rules, i, options);
-                                break;
-                            case "dateRange":
-                                var classGroup = "[class*=" + rules[i + 1] + "]";
-                                var firstOfGroup = form.find(classGroup).eq(0);
-                                var secondOfGroup = form.find(classGroup).eq(1);
-                                if (firstOfGroup[0].value || secondOfGroup[0].value) {
-                                    errorMsg = methods._dateRange(firstOfGroup, secondOfGroup, rules, i, options);
-                                }
-                                if (errorMsg) required = true;
-                                options.showArrow = false;
-                                break;
-                            case "maxCheckbox":
-                                errorMsg = methods._maxCheckbox(field, rules, i, options);
-                                field = $($("input[name='" + fieldName + "']"));
-                                break;
-                            case "minCheckbox":
-                                errorMsg = methods._minCheckbox(field, rules, i, options);
-                                var groupname = fieldName.substring(0, fieldName.length - 1);
-                                field = $($("input[name^='" + groupname + "']"));
-                                break;
-                            case "equals":
-                                errorMsg = methods._equals(field, rules, i, options);
-                                break;
-                            case "func":
-                                errorMsg = methods._funcCall(field, rules, i, options);
-                                break;
-                            case "compareFunc":
-                                errorMsg = methods._compareFunc(field, rules, i, options);
-                                break;
-                            case "compareOthers":
-                                errorMsg = methods._compareOthers(field, rules, i, options);
-                                break;
-                            case "atlast":
-                                errorMsg = methods._atlast(field, rules, i, options);
-                                break;
-                            default:
-                                break;
-                        }
-                        if (errorMsg !== undefined) {
-                            promptText += errorMsg + "<br/>";
-                            options.isError = true;
-                        }
-                    }
-                }
-
-                var fieldType = field.attr("type");
-                if ((fieldType == "radio" || fieldType == "checkbox") && $("input[name='" + fieldName + "']").size() > 1) {
-                    field = $($("input[name='" + fieldName + "'][type!=hidden]:first"));
-                    options.showArrow = false;
-                }
-                if (fieldType == "text" && form.find("input[name='" + fieldName + "']").size() > 1) {
-                    field = $(form.find("input[name='" + fieldName + "'][type!=hidden]:first"));
-                    options.showArrow = false;
-                }
-
-                if (options.isError) {
-                    methods._showPrompt(field, promptText, "", false, options);
-                    field.data("promptText", promptText);
-                } else {
-                    if (!isAjaxValidator && options.showPassText) {
-                        methods._showPrompt(field, options.showPassText, "pass", true, options);
-                    }
-                    field.data("promptText", "");
-                }
-
-
-                if (!isAjaxValidator)
-                    field.trigger("jqv.field.result", [field, options.isError, promptText]);
-
-                /* Record error */
-                var errindex = $.inArray(field[0], options.InvalidFields);
-                if (errindex == -1) {
-                    if (options.isError)
-                        options.InvalidFields.push(field[0]);
-                } else if (!options.isError) {
-                    options.InvalidFields.splice(errindex, 1);
-                }
-
-                return options.isError;
-            },
-
-            _required: function (field, rules, i, options) {
-                switch (field.attr("type")) {
-                    case "text":
-                    case "password":
-                    case "textarea":
-                    case "file":
-                    default:
-                        if (!field.val())
-                            return options.allrules[rules[i]].alertText;
-                        break;
-                    case "radio":
-                    case "checkbox":
-                        var name = field.attr("name");
-                        if ($("input[name='" + name + "']:checked").size() == 0) {
-
-                            if ($("input[name='" + name + "']").size() == 1)
-                                return options.allrules[rules[i]].alertTextCheckboxe;
-                            else
-                                return options.allrules[rules[i]].alertTextCheckboxMultiple;
-                        }
-                        break;
-                    case "select-one":
-                        if (!field.val())
-                            return options.allrules[rules[i]].alertText;
-                        break;
-                    case "select-multiple":
-                        if (!field.find("option:selected").val())
-                            return options.allrules[rules[i]].alertText;
-                        break;
-                }
-            },
-            _customRegex: function (field, rules, i, options) {
-                var customRule = rules[i + 1];
-                var rule = options.allrules[customRule];
-                if (!rule) {
-                    alert("jqv:custom rule not found " + customRule);
-                    return;
-                }
-                var ex = rule.regex;
-                if (!ex) return;
-                var pattern = new RegExp(ex);
-                if (!pattern.test(field.val()))
-                    return options.allrules[customRule].alertText;
-            },
-            _funcCall: function (field, rules, i, options) {
-                var func_name = rules[i + 1];
-                var rule = options.allrules[func_name];
-                var result = rule.func(field.val());
-                if (result != "" && result != "ok") {
-                    if (options.allrules[func_name].alertText)
-                        return options.allrules[func_name].alertText;
-                    else
-                        return result;
-                }
-            },
-            _equals: function (field, rules, i, options) {
-                var equalsField = rules[i + 1];
-                if (field.val() != $("#" + equalsField).val())
-                    return options.allrules.equals.alertText;
-            },
-            _compareFunc: function (field, rules, i, options) {
-                var func_name = rules[i + 1];
-                var equalsField = $("#" + rules[i + 2]);
-                var rule = options.allrules[func_name];
-                var result = rule.func(field.val(), equalsField.val() || equalsField.text(), equalsField.attr('title'));
-                if (result != "" && result != "ok") {
-                    if (options.allrules[func_name].alertText)
-                        return options.allrules[func_name].alertText;
-                    else
-                        return result;
-                }
-            },
-            _compareOthers: function (field, rules, i, options) {
-                var func_name = rules[i + 1];
-                var equalsField = $("#" + rules[i + 2]);
-                var equalsField2 = $("#" + rules[i + 3]);
-                var rule = options.allrules[func_name];
-                var result = rule.func(field.val(), equalsField.val() || equalsField.text(), equalsField.attr('title'),
-                    equalsField2.val() || equalsField2.text(), equalsField2.attr('title'));
-                if (result != "" && result != "ok") {
-                    if (options.allrules[func_name].alertText)
-                        return options.allrules[func_name].alertText;
-                    else
-                        return result;
-                }
-            },
-            _atlast: function (field, rules, i, options) {
-                var atlast_rule = rules[i + 1];
-                var form = field.closest('form');
-                var inps = $("input[class*='atlast[" + atlast_rule + "]']", form);
-                var ok = false;
-                inps.each(function () {
-                    if ($(this).val() != "") {
-                        ok = true;
-                        return false;
-                    }
-                });
-                if (ok)
-                    return;
-                var fields_tips = "";
-                inps.each(function () {
-                    fields_tips += $(this).attr('title');
-                    fields_tips += ',';
-                });
-                return fields_tips + options.allrules.atlast.alertText;
-            },
-            _maxSize: function (field, rules, i, options) {
-                var max = parseFloat(rules[i + 1]);
-                var len = field.val().length;
-
-                if (len > max) {
-                    var rule = options.allrules.maxSize;
-                    return rule.alertText + max + rule.alertText2;
-                }
-            },
-            _minSize: function (field, rules, i, options) {
-                var min = parseFloat(rules[i + 1]);
-                var len = field.val().length;
-
-                if (len < min) {
-                    var rule = options.allrules.minSize;
-                    return rule.alertText + min + rule.alertText2;
-                }
-            },
-            _min: function (field, rules, i, options) {
-                var min = parseFloat(rules[i + 1]);
-                var len = parseFloat(field.val());
-
-                if (len < min) {
-                    return "不得小于" + min;
-                }
-            },
-            _max: function (field, rules, i, options) {
-                var max = parseFloat(rules[i + 1]);
-                var len = parseFloat(field.val());
-
-                if (len > max) {
-                    return "不得大于" + max;
-                }
-            },
-            _past: function (field, rules, i, options) {
-                var p = rules[i + 1];
-                var pdate = (p.toLowerCase() == "now") ? new Date() : methods._parseDate(p);
-                var vdate = methods._parseDate(field.val());
-
-                if (vdate < pdate) {
-                    var rule = options.allrules.past;
-                    if (rule.alertText2) return rule.alertText + methods._dateToString(pdate) + rule.alertText2;
-                    return rule.alertText + methods._dateToString(pdate);
-                }
-            },
-            _future: function (field, rules, i, options) {
-                var p = rules[i + 1];
-                var pdate = (p.toLowerCase() == "now") ? new Date() : methods._parseDate(p);
-                var vdate = methods._parseDate(field.val());
-                if (vdate > pdate) {
-                    var rule = options.allrules.future;
-                    if (rule.alertText2) return rule.alertText + methods._dateToString(pdate) + rule.alertText2;
-                    return rule.alertText + methods._dateToString(pdate);
-                }
-            },
-            _isDate: function (value) {
-                var dateRegEx = new RegExp(/^\d{4}[\/\-](0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])$|^(?:(?:(?:0?[13578]|1[02])(\/|-)31)|(?:(?:0?[1,3-9]|1[0-2])(\/|-)(?:29|30)))(\/|-)(?:[1-9]\d\d\d|\d[1-9]\d\d|\d\d[1-9]\d|\d\d\d[1-9])$|^(?:(?:0?[1-9]|1[0-2])(\/|-)(?:0?[1-9]|1\d|2[0-8]))(\/|-)(?:[1-9]\d\d\d|\d[1-9]\d\d|\d\d[1-9]\d|\d\d\d[1-9])$|^(0?2(\/|-)29)(\/|-)(?:(?:0[48]00|[13579][26]00|[2468][048]00)|(?:\d\d)?(?:0[48]|[2468][048]|[13579][26]))$/);
-                if (dateRegEx.test(value))
-                    return true;
-                return false;
-            },
-            _dateCompare: function (start, end) {
-                return (new Date(start.toString()) < new Date(end.toString()));
-            },
-            _dateRange: function (first, second, rules, i, options) {
-                if ((!first[0].value && second[0].value) || (first[0].value && !second[0].value))
-                    return options.allrules[rules[i]].alertText + options.allrules[rules[i]].alertText2;
-                if (!methods._isDate(first[0].value) || !methods._isDate(second[0].value))
-                    return options.allrules[rules[i]].alertText + options.allrules[rules[i]].alertText2;
-                if (!methods._dateCompare(first[0].value, second[0].value))
-                    return options.allrules[rules[i]].alertText + options.allrules[rules[i]].alertText2;
-            },
-            _maxCheckbox: function (field, rules, i, options) {
-                var nbCheck = rules[i + 1];
-                var groupname = field.attr("name");
-                var groupSize = $("input[name='" + groupname + "']:checked").size();
-                if (groupSize > nbCheck) {
-                    options.showArrow = false;
-                    if (options.allrules.maxCheckbox.alertText2) return options.allrules.maxCheckbox.alertText + " " + nbCheck + " " + options.allrules.maxCheckbox.alertText2;
-                    return options.allrules.maxCheckbox.alertText;
-                }
-            },
-            _minCheckbox: function (field, rules, i, options) {
-                var nbCheck = rules[i + 1];
-                var attr = field.attr("name");
-                var groupname = attr.substring(0, attr.length - 1);
-                var groupSize = $("input[name^='" + groupname + "']:checked").size();
-                if (groupSize < nbCheck) {
-                    options.showArrow = false;
-                    return options.allrules.minCheckbox.alertText + " " + nbCheck + " " + options.allrules.minCheckbox.alertText2;
-                }
-            },
-            _ajax: function (field, rules, i, options) {
-                if (options.isError) return;
-                var errorSelector = rules[i + 1];
-                var rule = options.allrules[errorSelector];
-                var extraData = rule.extraData;
-                var extraDataDynamic = rule.extraDataDynamic;
-                if (!extraData)
-                    extraData = "";
-                if (extraDataDynamic) {
-                    var tmpData = [];
-                    var domIds = String(extraDataDynamic).split(",");
-                    for (var i = 0; i < domIds.length; i++) {
-                        var id = domIds[i];
-                        if ($("#" + id).length) {
-                            var inputValue = $("#" + id).val();
-                            var keyValue = id + '=' + escape(inputValue);
-                            tmpData.push(keyValue);
-                        }
-                    }
-                    extraDataDynamic = tmpData.join("&");
-                    extraData += ("&" + extraDataDynamic);
-                }
-                var ajaxData = {};
-                ajaxData.fieldId = field.attr("id");
-                ajaxData.fieldValue = field.val();
-                _.each(extraData.split('&'), function (item) {
-                    var kv = item.split('=');
-                    ajaxData[kv[0]] = kv[1];
-                });
-
-                $.ajax({
-                    type: "POST",
-                    url: rule.url,
-                    cache: false,
-                    dataType: "json",
-                    data: isAspWebForm ? JSON.stringify(ajaxData) : ajaxData,
-                    field: field,
-                    rule: rule,
-                    options: options,
-                    beforeSend: function () {
-                        var loadingText = rule.alertTextLoad;
-                        if (loadingText)
-                            methods._showPrompt(field, loadingText, "load", true, options);
-                    },
-                    error: function (data, transport) {
-                        methods._closePrompt(this.field);
-                        console.log("Ajax error: " + data.status + " " + transport);
-                    },
-                    success: function (result) {
-                        var msg = "";
-                        if (rule.callback)
-                            msg = rule.callback(result, this.field, methods);
-                        else if (result.d)
-                            msg = result.d;
-                        else
-                            msg = result;
-                        var nowPromptText = this.field.data("promptText");
-                        if (msg != "ok") {
-                            methods._showPrompt(this.field,
-                                                rule.alertText + msg + "<br/>" + nowPromptText,
-                                                "", true, options);
-                        } else if (options.showPassText && !nowPromptText) {
-                            methods._showPrompt(field, options.showPassText, "pass", true, options);
-                        }
-                    }
-                });
-
-            },
-            _dateToString: function (date) {
-                return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
-            },
-            _parseDate: function (d) {
-                var dateParts = d.split("-");
-                if (dateParts == d)
-                    dateParts = d.split("/");
-                return new Date(dateParts[0], (dateParts[1] - 1), dateParts[2]);
-            },
-
-            _showPrompt: function (field, promptText, type, ajaxed, options, ajaxform) {
-                var prompt = methods._getPrompt(field);
-                if (ajaxform) prompt = false;
-                if (prompt)
-                    methods._updatePrompt(field, prompt, promptText, type, ajaxed, options);
-                else
-                    methods._buildPrompt(field, promptText, type, ajaxed, options);
-            },
-            _fixPromptWidth: function (promptText, promptContent) {
-                var charlength = 0;
-                _.each(promptText.split('<br/>'), function (str) {
-                    if (str.length > charlength)
-                        charlength = str.length;
-                });
-                promptContent.width(charlength * 12);
-            },
-            _buildPrompt: function (field, promptText, type, ajaxed, options) {
-                //ready
-                var getPosition = /valiarr\[(.*)\]/.exec(field.attr('class'));
-                if (getPosition) {
-                    field.data('valiarr', getPosition[1].split(/\[|,|\]/)[0]);
-                } else {
-                    field.data('valiarr', options.promptPosition);
-                }
-                if (field.attr("id")) {
-                    field.data('vali_class', field.attr("id"));
-                } else {
-                    field.data('vali_class', "jqvali_" + Math.random() * 11);
-                }
-                var buildClass = function (prompt) {
-                    prompt.addClass(methods._getClassName(field.data('vali_class')) + "formError");
-                    if (field.is(":input"))
-                        prompt.addClass("parentForm" + methods._getClassName(field.parents('form').attr("id")));
-                }
-
-                var prompt = $('<div>');
-                buildClass(prompt);
-                prompt.addClass("formError");
-
-                switch (type) {
-                    case "pass":
-                        prompt.addClass("greenPopup");
-                        break;
-                    case "load":
-                        prompt.addClass("blackPopup");
-                }
-                if (ajaxed)
-                    prompt.addClass("ajaxed");
-
-                var promptContent = $('<div>').addClass("formErrorContent").html(promptText).appendTo(prompt);
-                methods._fixPromptWidth(promptText, promptContent);
-
-                if (options.showArrow) {
-                    var arrow = $('<div>').addClass("formErrorArrow");
-                    switch (field.data('valiarr')) {
-                        case "bottomLeft":
-                        case "bottomRight":
-                            prompt.find(".formErrorContent").before(arrow);
-                            arrow.addClass("formErrorArrowBottom").html('<div class="line1"><!-- --></div><div class="line2"><!-- --></div><div class="line3"><!-- --></div><div class="line4"><!-- --></div><div class="line5"><!-- --></div><div class="line6"><!-- --></div><div class="line7"><!-- --></div><div class="line8"><!-- --></div><div class="line9"><!-- --></div><div class="line10"><!-- --></div>');
-                            break;
-                        case "topLeft":
-                        case "topRight":
-                            arrow.html('<div class="line10"><!-- --></div><div class="line9"><!-- --></div><div class="line8"><!-- --></div><div class="line7"><!-- --></div><div class="line6"><!-- --></div><div class="line5"><!-- --></div><div class="line4"><!-- --></div><div class="line3"><!-- --></div><div class="line2"><!-- --></div><div class="line1"><!-- --></div>');
-                            prompt.append(arrow);
-                            break;
-                    }
-                }
-
-                if (options.isOverflown)
-                    field.before(prompt);
-                else
-                    $("body").append(prompt);
-
-                var pos = methods._calculatePosition(field, prompt, options);
-                prompt.css({
-                    "top": pos.callerTopPosition,
-                    "left": pos.callerleftPosition,
-                    "marginTop": pos.marginTopSize,
-                    "opacity": 0
-                });
-                return prompt.animate({
-                    "opacity": 0.87
-                });
-
-            },
-            _updatePrompt: function (field, prompt, promptText, type, ajaxed, options) {
-                if (!prompt) return;
-
-                methods._fixPromptWidth(promptText, prompt.children(".formErrorContent"));
-
-                if (type == "pass")
-                    prompt.addClass("greenPopup");
-                else
-                    prompt.removeClass("greenPopup");
-
-                if (type == "load")
-                    prompt.addClass("blackPopup");
-                else
-                    prompt.removeClass("blackPopup");
-
-                if (ajaxed)
-                    prompt.addClass("ajaxed");
-                else
-                    prompt.removeClass("ajaxed");
-
-                prompt.find(".formErrorContent").html(promptText);
-
-                var pos = methods._calculatePosition(field, prompt, options);
-                prompt.animate({
-                    "top": pos.callerTopPosition,
-                    "marginTop": pos.marginTopSize
-                });
-            },
-            _closePrompt: function (field) {
-                var prompt = methods._getPrompt(field);
-                if (prompt) {
-                    prompt.fadeTo("fast", 0, function () {
-                        prompt.remove();
-                    });
-                }
-            },
-            _getPrompt: function (field) {
-                if (!field.data('vali_class')) return;
-                var className = "." + methods._getClassName(field.data('vali_class')) + "formError";
-                var match = $(className)[0];
-                if (match)
-                    return $(match);
-            },
-            _calculatePosition: function (field, promptElmt, options) {
-                var promptTopPosition, promptleftPosition, marginTopSize;
-                var fieldWidth = field.width();
-                var promptHeight = promptElmt.height();
-                var overflow = options.isOverflown;
-                if (overflow) {
-                    promptTopPosition = promptleftPosition = 0;
-                    marginTopSize = -promptHeight;
-                } else {
-                    var offset = field.offset();
-                    promptTopPosition = offset.top;
-                    promptleftPosition = offset.left;
-                    marginTopSize = 0;
-                }
-                switch (field.data('valiarr')) {
-                    default:
-                    case "topRight":
-                        if (overflow)
-                            promptleftPosition += fieldWidth - 30;
-                        else {
-                            promptleftPosition += fieldWidth - 30;
-                            promptTopPosition += -promptHeight;
-                        }
-                        break;
-                    case "topLeft":
-                        promptTopPosition += -promptHeight - 0;
-                        break;
-                    case "centerRight":
-                        promptleftPosition += fieldWidth + 13;
-                        break;
-                    case "bottomLeft":
-                        promptTopPosition = promptTopPosition + field.height() + 15;
-                        break;
-                    case "bottomRight":
-                        promptleftPosition += fieldWidth - 30;
-                        promptTopPosition += field.height() + 5;
-                }
-                return {
-                    "callerTopPosition": promptTopPosition + "px",
-                    "callerleftPosition": promptleftPosition + "px",
-                    "marginTopSize": marginTopSize + "px"
-                };
-            },
-            _getClassName: function (className) {
-                return className.replace(":", "_").replace(".", "_");
-            }
-        };
-
-        $.fn.validationEngine = function (method) {
-            var form = $(this);
-            if (!form[0]) return false;
-            if (typeof (method) == 'string' && method.charAt(0) != '_' && methods[method]) {
-                // make sure init is called once
-                if (method != "showPrompt" && method != "hidePrompt" && method != "hide" && method != "hideAll")
-                    methods.init.apply(form);
-                return methods[method].apply(form, Array.prototype.slice.call(arguments, 1));
-            } else {
-                methods.init.apply(form, arguments);
-                return methods.attach.apply(form);
-            }
-        };
-
-        $.validationEngine = {
-            defaults: {
-                eventTrigger: "blur",
-                uneventTrigger: "", //click
-                showPassText: "", //&nbsp;
-                // Automatically scroll viewport to the first error
-                scroll: true,
-                // Opening box position, possible locations are: topLeft, topRight, bottomLeft, centerRight, bottomRight
-                promptPosition: "centerRight",
-                // internal, automatically set to true when it parse a _ajax rule
-                inlineAjax: false,
-                // The url to send the submit ajax validation (default to action)
-                onAjaxFormComplete: $.noop,
-                // called right before the ajax call, may return false to cancel
-                onBeforeAjaxFormValidation: $.noop,
-                // Stops form from submitting and execute function assiciated with it
-                onValidationComplete: false,
-                // Used when the form is displayed within a scrolling DIV
-                isOverflown: false,
-                overflownDIV: "",
-                // true when form and fields are binded
-                binded: false,
-                showArrow: true,
-                // did one of the validation fail ? kept global to stop further ajax validations
-                isError: false,
-                // Caches field validation status, typically only bad status are created.
-                // the array is used during ajax form validation to detect issues early and prevent an expensive submit
-                ajaxValidCache: {},
-                // Auto update prompt position after window resize
-                autoPositionUpdate: false,
-                // Custom FieldVali Success|Failure Func
-                InvalidFields: [],
-                onSuccess: false,
-                onFailure: false
-            }
-        };
-        return methods;
-    }
-});
 define("product/guoqude/1.0.0/front_net/module-zic/plus_anim-debug", ["gallery/jquery/1.8.3/jquery-debug"], function (require, exports, module) {
 var $ = require('gallery/jquery/1.8.3/jquery-debug').sub();
 
@@ -9440,18 +10752,1779 @@ $.fn.oncesubmit = function () {
 }
 
 }});
-/*1.5.4*/
 define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload-debug", [], function (require, exports) {
-    (function () { var f = 0, k = [], m = {}, i = {}, a = { "<": "lt", ">": "gt", "&": "amp", '"': "quot", "'": "#39" }, l = /[<>&\"\']/g, b, c = window.setTimeout, d = {}, e; function h() { this.returnValue = false } function j() { this.cancelBubble = true } (function (n) { var o = n.split(/,/), p, r, q; for (p = 0; p < o.length; p += 2) { q = o[p + 1].split(/ /); for (r = 0; r < q.length; r++) { i[q[r]] = o[p] } } })("application/msword,doc dot,application/pdf,pdf,application/pgp-signature,pgp,application/postscript,ps ai eps,application/rtf,rtf,application/vnd.ms-excel,xls xlb,application/vnd.ms-powerpoint,ppt pps pot,application/zip,zip,application/x-shockwave-flash,swf swfl,application/vnd.openxmlformats-officedocument.wordprocessingml.document,docx,application/vnd.openxmlformats-officedocument.wordprocessingml.template,dotx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,xlsx,application/vnd.openxmlformats-officedocument.presentationml.presentation,pptx,application/vnd.openxmlformats-officedocument.presentationml.template,potx,application/vnd.openxmlformats-officedocument.presentationml.slideshow,ppsx,application/x-javascript,js,application/json,json,audio/mpeg,mpga mpega mp2 mp3,audio/x-wav,wav,audio/mp4,m4a,image/bmp,bmp,image/gif,gif,image/jpeg,jpeg jpg jpe,image/photoshop,psd,image/png,png,image/svg+xml,svg svgz,image/tiff,tiff tif,text/plain,asc txt text diff log,text/html,htm html xhtml,text/css,css,text/csv,csv,text/rtf,rtf,video/mpeg,mpeg mpg mpe,video/quicktime,qt mov,video/mp4,mp4,video/x-m4v,m4v,video/x-flv,flv,video/x-ms-wmv,wmv,video/avi,avi,video/webm,webm,video/vnd.rn-realvideo,rv,application/vnd.oasis.opendocument.formula-template,otf,application/octet-stream,exe"); var g = { VERSION: "1.5.4", STOPPED: 1, STARTED: 2, QUEUED: 1, UPLOADING: 2, FAILED: 4, DONE: 5, GENERIC_ERROR: -100, HTTP_ERROR: -200, IO_ERROR: -300, SECURITY_ERROR: -400, INIT_ERROR: -500, FILE_SIZE_ERROR: -600, FILE_EXTENSION_ERROR: -601, IMAGE_FORMAT_ERROR: -700, IMAGE_MEMORY_ERROR: -701, IMAGE_DIMENSIONS_ERROR: -702, mimeTypes: i, ua: (function () { var r = navigator, q = r.userAgent, s = r.vendor, o, n, p; o = /WebKit/.test(q); p = o && s.indexOf("Apple") !== -1; n = window.opera && window.opera.buildNumber; return { windows: navigator.platform.indexOf("Win") !== -1, ie: !o && !n && (/MSIE/gi).test(q) && (/Explorer/gi).test(r.appName), webkit: o, gecko: !o && /Gecko/.test(q), safari: p, opera: !!n } }()), typeOf: function (n) { return ({}).toString.call(n).match(/\s([a-z|A-Z]+)/)[1].toLowerCase() }, extend: function (n) { g.each(arguments, function (o, p) { if (p > 0) { g.each(o, function (r, q) { n[q] = r }) } }); return n }, cleanName: function (n) { var o, p; p = [/[\300-\306]/g, "A", /[\340-\346]/g, "a", /\307/g, "C", /\347/g, "c", /[\310-\313]/g, "E", /[\350-\353]/g, "e", /[\314-\317]/g, "I", /[\354-\357]/g, "i", /\321/g, "N", /\361/g, "n", /[\322-\330]/g, "O", /[\362-\370]/g, "o", /[\331-\334]/g, "U", /[\371-\374]/g, "u"]; for (o = 0; o < p.length; o += 2) { n = n.replace(p[o], p[o + 1]) } n = n.replace(/\s+/g, "_"); n = n.replace(/[^a-z0-9_\-\.]+/gi, ""); return n }, addRuntime: function (n, o) { o.name = n; k[n] = o; k.push(o); return o }, guid: function () { var n = new Date().getTime().toString(32), o; for (o = 0; o < 5; o++) { n += Math.floor(Math.random() * 65535).toString(32) } return (g.guidPrefix || "p") + n + (f++).toString(32) }, buildUrl: function (o, n) { var p = ""; g.each(n, function (r, q) { p += (p ? "&" : "") + encodeURIComponent(q) + "=" + encodeURIComponent(r) }); if (p) { o += (o.indexOf("?") > 0 ? "&" : "?") + p } return o }, each: function (q, r) { var p, o, n; if (q) { p = q.length; if (p === b) { for (o in q) { if (q.hasOwnProperty(o)) { if (r(q[o], o) === false) { return } } } } else { for (n = 0; n < p; n++) { if (r(q[n], n) === false) { return } } } } }, formatSize: function (n) { if (n === b || /\D/.test(n)) { return g.translate("N/A") } if (n > 1073741824) { return Math.round(n / 1073741824, 1) + " GB" } if (n > 1048576) { return Math.round(n / 1048576, 1) + " MB" } if (n > 1024) { return Math.round(n / 1024, 1) + " KB" } return n + " b" }, getPos: function (o, s) { var t = 0, r = 0, v, u = document, p, q; o = o; s = s || u.body; function n(B) { var z, A, w = 0, C = 0; if (B) { A = B.getBoundingClientRect(); z = u.compatMode === "CSS1Compat" ? u.documentElement : u.body; w = A.left + z.scrollLeft; C = A.top + z.scrollTop } return { x: w, y: C } } if (o && o.getBoundingClientRect && ((navigator.userAgent.indexOf("MSIE") > 0) && (u.documentMode < 8))) { p = n(o); q = n(s); return { x: p.x - q.x, y: p.y - q.y } } v = o; while (v && v != s && v.nodeType) { t += v.offsetLeft || 0; r += v.offsetTop || 0; v = v.offsetParent } v = o.parentNode; while (v && v != s && v.nodeType) { t -= v.scrollLeft || 0; r -= v.scrollTop || 0; v = v.parentNode } return { x: t, y: r } }, getSize: function (n) { return { w: n.offsetWidth || n.clientWidth, h: n.offsetHeight || n.clientHeight } }, parseSize: function (n) { var o; if (typeof (n) == "string") { n = /^([0-9]+)([mgk]?)$/.exec(n.toLowerCase().replace(/[^0-9mkg]/g, "")); o = n[2]; n = +n[1]; if (o == "g") { n *= 1073741824 } if (o == "m") { n *= 1048576 } if (o == "k") { n *= 1024 } } return n }, xmlEncode: function (n) { return n ? ("" + n).replace(l, function (o) { return a[o] ? "&" + a[o] + ";" : o }) : n }, toArray: function (p) { var o, n = []; for (o = 0; o < p.length; o++) { n[o] = p[o] } return n }, inArray: function (p, q) { if (q) { if (Array.prototype.indexOf) { return Array.prototype.indexOf.call(q, p) } for (var n = 0, o = q.length; n < o; n++) { if (q[n] === p) { return n } } } return -1 }, addI18n: function (n) { return g.extend(m, n) }, translate: function (n) { return m[n] || n }, isEmptyObj: function (n) { if (n === b) { return true } for (var o in n) { return false } return true }, hasClass: function (p, o) { var n; if (p.className == "") { return false } n = new RegExp("(^|\\s+)" + o + "(\\s+|$)"); return n.test(p.className) }, addClass: function (o, n) { if (!g.hasClass(o, n)) { o.className = o.className == "" ? n : o.className.replace(/\s+$/, "") + " " + n } }, removeClass: function (p, o) { var n = new RegExp("(^|\\s+)" + o + "(\\s+|$)"); p.className = p.className.replace(n, function (r, q, s) { return q === " " && s === " " ? " " : "" }) }, getStyle: function (o, n) { if (o.currentStyle) { return o.currentStyle[n] } else { if (window.getComputedStyle) { return window.getComputedStyle(o, null)[n] } } }, addEvent: function (s, n, t) { var r, q, p, o; o = arguments[3]; n = n.toLowerCase(); if (e === b) { e = "Plupload_" + g.guid() } if (s.addEventListener) { r = t; s.addEventListener(n, r, false) } else { if (s.attachEvent) { r = function () { var u = window.event; if (!u.target) { u.target = u.srcElement } u.preventDefault = h; u.stopPropagation = j; t(u) }; s.attachEvent("on" + n, r) } } if (s[e] === b) { s[e] = g.guid() } if (!d.hasOwnProperty(s[e])) { d[s[e]] = {} } q = d[s[e]]; if (!q.hasOwnProperty(n)) { q[n] = [] } q[n].push({ func: r, orig: t, key: o }) }, removeEvent: function (s, n) { var q, t, p; if (typeof (arguments[2]) == "function") { t = arguments[2] } else { p = arguments[2] } n = n.toLowerCase(); if (s[e] && d[s[e]] && d[s[e]][n]) { q = d[s[e]][n] } else { return } for (var o = q.length - 1; o >= 0; o--) { if (q[o].key === p || q[o].orig === t) { if (s.removeEventListener) { s.removeEventListener(n, q[o].func, false) } else { if (s.detachEvent) { s.detachEvent("on" + n, q[o].func) } } q[o].orig = null; q[o].func = null; q.splice(o, 1); if (t !== b) { break } } } if (!q.length) { delete d[s[e]][n] } if (g.isEmptyObj(d[s[e]])) { delete d[s[e]]; try { delete s[e] } catch (r) { s[e] = b } } }, removeAllEvents: function (o) { var n = arguments[1]; if (o[e] === b || !o[e]) { return } g.each(d[o[e]], function (q, p) { g.removeEvent(o, p, n) }) } }; g.Uploader = function (r) { var o = {}, u, t = [], q, p = false; u = new g.QueueProgress(); r = g.extend({ chunk_size: 0, multipart: true, multi_selection: true, file_data_name: "file", filters: [] }, r); function s() { var w, x = 0, v; if (this.state == g.STARTED) { for (v = 0; v < t.length; v++) { if (!w && t[v].status == g.QUEUED) { w = t[v]; w.status = g.UPLOADING; if (this.trigger("BeforeUpload", w)) { this.trigger("UploadFile", w) } } else { x++ } } if (x == t.length) { this.stop(); this.trigger("UploadComplete", t) } } } function n() { var w, v; u.reset(); for (w = 0; w < t.length; w++) { v = t[w]; if (v.size !== b) { u.size += v.size; u.loaded += v.loaded } else { u.size = b } if (v.status == g.DONE) { u.uploaded++ } else { if (v.status == g.FAILED) { u.failed++ } else { u.queued++ } } } if (u.size === b) { u.percent = t.length > 0 ? Math.ceil(u.uploaded / t.length * 100) : 0 } else { u.bytesPerSec = Math.ceil(u.loaded / ((+new Date() - q || 1) / 1000)); u.percent = u.size > 0 ? Math.ceil(u.loaded / u.size * 100) : 0 } } g.extend(this, { state: g.STOPPED, runtime: "", features: {}, files: t, settings: r, total: u, id: g.guid(), init: function () { var A = this, B, x, w, z = 0, y; if (typeof (r.preinit) == "function") { r.preinit(A) } else { g.each(r.preinit, function (D, C) { A.bind(C, D) }) } r.page_url = r.page_url || document.location.pathname.replace(/\/[^\/]+$/g, "/"); if (!/^(\w+:\/\/|\/)/.test(r.url)) { r.url = r.page_url + r.url } r.chunk_size = g.parseSize(r.chunk_size); r.max_file_size = g.parseSize(r.max_file_size); A.bind("FilesAdded", function (C, F) { var E, D, H = 0, I, G = r.filters; if (G && G.length) { I = []; g.each(G, function (J) { g.each(J.extensions.split(/,/), function (K) { if (/^\s*\*\s*$/.test(K)) { I.push("\\.*") } else { I.push("\\." + K.replace(new RegExp("[" + ("/^$.*+?|()[]{}\\".replace(/./g, "\\$&")) + "]", "g"), "\\$&")) } }) }); I = new RegExp(I.join("|") + "$", "i") } for (E = 0; E < F.length; E++) { D = F[E]; D.loaded = 0; D.percent = 0; D.status = g.QUEUED; if (I && !I.test(D.name)) { C.trigger("Error", { code: g.FILE_EXTENSION_ERROR, message: g.translate("File extension error."), file: D }); continue } if (D.size !== b && D.size > r.max_file_size) { C.trigger("Error", { code: g.FILE_SIZE_ERROR, message: g.translate("File size error."), file: D }); continue } t.push(D); H++ } if (H) { c(function () { A.trigger("QueueChanged"); A.refresh() }, 1) } else { return false } }); if (r.unique_names) { A.bind("UploadFile", function (C, D) { var F = D.name.match(/\.([^.]+)$/), E = "tmp"; if (F) { E = F[1] } D.target_name = D.id + "." + E }) } A.bind("UploadProgress", function (C, D) { D.percent = D.size > 0 ? Math.ceil(D.loaded / D.size * 100) : 100; n() }); A.bind("StateChanged", function (C) { if (C.state == g.STARTED) { q = (+new Date()) } else { if (C.state == g.STOPPED) { for (B = C.files.length - 1; B >= 0; B--) { if (C.files[B].status == g.UPLOADING) { C.files[B].status = g.QUEUED; n() } } } } }); A.bind("QueueChanged", n); A.bind("Error", function (C, D) { if (D.file) { D.file.status = g.FAILED; n(); if (C.state == g.STARTED) { c(function () { s.call(A) }, 1) } } }); A.bind("FileUploaded", function (C, D) { D.status = g.DONE; D.loaded = D.size; C.trigger("UploadProgress", D); c(function () { s.call(A) }, 1) }); if (r.runtimes) { x = []; y = r.runtimes.split(/\s?,\s?/); for (B = 0; B < y.length; B++) { if (k[y[B]]) { x.push(k[y[B]]) } } } else { x = k } function v() { var F = x[z++], E, C, D; if (F) { E = F.getFeatures(); C = A.settings.required_features; if (C) { C = C.split(","); for (D = 0; D < C.length; D++) { if (!E[C[D]]) { v(); return } } } F.init(A, function (G) { if (G && G.success) { A.features = E; A.runtime = F.name; A.trigger("Init", { runtime: F.name }); A.trigger("PostInit"); A.refresh() } else { v() } }) } else { A.trigger("Error", { code: g.INIT_ERROR, message: g.translate("Init error.") }) } } v(); if (typeof (r.init) == "function") { r.init(A) } else { g.each(r.init, function (D, C) { A.bind(C, D) }) } }, refresh: function () { this.trigger("Refresh") }, start: function () { if (t.length && this.state != g.STARTED) { this.state = g.STARTED; this.trigger("StateChanged"); s.call(this) } }, stop: function () { if (this.state != g.STOPPED) { this.state = g.STOPPED; this.trigger("CancelUpload"); this.trigger("StateChanged") } }, disableBrowse: function () { p = arguments[0] !== b ? arguments[0] : true; this.trigger("DisableBrowse", p) }, getFile: function (w) { var v; for (v = t.length - 1; v >= 0; v--) { if (t[v].id === w) { return t[v] } } }, removeFile: function (w) { var v; for (v = t.length - 1; v >= 0; v--) { if (t[v].id === w.id) { return this.splice(v, 1)[0] } } }, splice: function (x, v) { var w; w = t.splice(x === b ? 0 : x, v === b ? t.length : v); this.trigger("FilesRemoved", w); this.trigger("QueueChanged"); return w }, trigger: function (w) { var y = o[w.toLowerCase()], x, v; if (y) { v = Array.prototype.slice.call(arguments); v[0] = this; for (x = 0; x < y.length; x++) { if (y[x].func.apply(y[x].scope, v) === false) { return false } } } return true }, hasEventListener: function (v) { return !!o[v.toLowerCase()] }, bind: function (v, x, w) { var y; v = v.toLowerCase(); y = o[v] || []; y.push({ func: x, scope: w || this }); o[v] = y }, unbind: function (v) { v = v.toLowerCase(); var y = o[v], w, x = arguments[1]; if (y) { if (x !== b) { for (w = y.length - 1; w >= 0; w--) { if (y[w].func === x) { y.splice(w, 1); break } } } else { y = [] } if (!y.length) { delete o[v] } } }, unbindAll: function () { var v = this; g.each(o, function (x, w) { v.unbind(w) }) }, destroy: function () { this.stop(); this.trigger("Destroy"); this.unbindAll() } }) }; g.File = function (q, o, p) { var n = this; n.id = q; n.name = o; n.size = p; n.loaded = 0; n.percent = 0; n.status = 0 }; g.Runtime = function () { this.getFeatures = function () { }; this.init = function (n, o) { } }; g.QueueProgress = function () { var n = this; n.size = 0; n.loaded = 0; n.uploaded = 0; n.failed = 0; n.queued = 0; n.percent = 0; n.bytesPerSec = 0; n.reset = function () { n.size = n.loaded = n.uploaded = n.failed = n.queued = n.percent = n.bytesPerSec = 0 } }; g.runtimes = {}; window.plupload = g })();
-});
-define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.html5-debug", [], function (require, exports) {
-    (function (h, k, j, e) { var c = {}, g; function m(o, p) { var n; if ("FileReader" in h) { n = new FileReader(); n.readAsDataURL(o); n.onload = function () { p(n.result) } } else { return p(o.getAsDataURL()) } } function l(o, p) { var n; if ("FileReader" in h) { n = new FileReader(); n.readAsBinaryString(o); n.onload = function () { p(n.result) } } else { return p(o.getAsBinary()) } } function d(r, p, n, v) { var q, o, u, s, t = this; m(c[r.id], function (w) { q = k.createElement("canvas"); q.style.display = "none"; k.body.appendChild(q); o = q.getContext("2d"); u = new Image(); u.onerror = u.onabort = function () { v({ success: false }) }; u.onload = function () { var B, x, z, y, A; if (!p.width) { p.width = u.width } if (!p.height) { p.height = u.height } s = Math.min(p.width / u.width, p.height / u.height); if (s < 1 || (s === 1 && n === "image/jpeg")) { B = Math.round(u.width * s); x = Math.round(u.height * s); q.width = B; q.height = x; o.drawImage(u, 0, 0, B, x); if (n === "image/jpeg") { y = new f(atob(w.substring(w.indexOf("base64,") + 7))); if (y.headers && y.headers.length) { A = new a(); if (A.init(y.get("exif")[0])) { A.setExif("PixelXDimension", B); A.setExif("PixelYDimension", x); y.set("exif", A.getBinary()); if (t.hasEventListener("ExifData")) { t.trigger("ExifData", r, A.EXIF()) } if (t.hasEventListener("GpsData")) { t.trigger("GpsData", r, A.GPS()) } } } if (p.quality) { try { w = q.toDataURL(n, p.quality / 100) } catch (C) { w = q.toDataURL(n) } } } else { w = q.toDataURL(n) } w = w.substring(w.indexOf("base64,") + 7); w = atob(w); if (y && y.headers && y.headers.length) { w = y.restore(w); y.purge() } q.parentNode.removeChild(q); v({ success: true, data: w }) } else { v({ success: false }) } }; u.src = w }) } j.runtimes.Html5 = j.addRuntime("html5", { getFeatures: function () { var s, o, r, q, p, n; o = r = p = n = false; if (h.XMLHttpRequest) { s = new XMLHttpRequest(); r = !!s.upload; o = !!(s.sendAsBinary || s.upload) } if (o) { q = !!(s.sendAsBinary || (h.Uint8Array && h.ArrayBuffer)); p = !!(File && (File.prototype.getAsDataURL || h.FileReader) && q); n = !!(File && (File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice)) } g = j.ua.safari && j.ua.windows; return { html5: o, dragdrop: (function () { var t = k.createElement("div"); return ("draggable" in t) || ("ondragstart" in t && "ondrop" in t) }()), jpgresize: p, pngresize: p, multipart: p || !!h.FileReader || !!h.FormData, canSendBinary: q, cantSendBlobInFormData: !!(j.ua.gecko && h.FormData && h.FileReader && !FileReader.prototype.readAsArrayBuffer), progress: r, chunks: n, multi_selection: !(j.ua.safari && j.ua.windows), triggerDialog: (j.ua.gecko && h.FormData || j.ua.webkit) } }, init: function (p, r) { var n, q; function o(w) { var u, t, v = [], x, s = {}; for (t = 0; t < w.length; t++) { u = w[t]; if (s[u.name]) { continue } s[u.name] = true; x = j.guid(); c[x] = u; v.push(new j.File(x, u.fileName || u.name, u.fileSize || u.size)) } if (v.length) { p.trigger("FilesAdded", v) } } n = this.getFeatures(); if (!n.html5) { r({ success: false }); return } p.bind("Init", function (w) { var G, F, C = [], v, D, t = w.settings.filters, u, B, s = k.body, E; G = k.createElement("div"); G.id = w.id + "_html5_container"; j.extend(G.style, { position: "absolute", background: p.settings.shim_bgcolor || "transparent", width: "100px", height: "100px", overflow: "hidden", zIndex: 99999, opacity: p.settings.shim_bgcolor ? "" : 0 }); G.className = "plupload html5"; if (p.settings.container) { s = k.getElementById(p.settings.container); if (j.getStyle(s, "position") === "static") { s.style.position = "relative" } } s.appendChild(G); no_type_restriction: for (v = 0; v < t.length; v++) { u = t[v].extensions.split(/,/); for (D = 0; D < u.length; D++) { if (u[D] === "*") { C = []; break no_type_restriction } B = j.mimeTypes[u[D]]; if (B && j.inArray(B, C) === -1) { C.push(B) } } } G.innerHTML = '<input id="' + p.id + '_html5"  style="font-size:999px" type="file" accept="' + C.join(",") + '" ' + (p.settings.multi_selection && p.features.multi_selection ? 'multiple="multiple"' : "") + " />"; G.scrollTop = 100; E = k.getElementById(p.id + "_html5"); if (w.features.triggerDialog) { j.extend(E.style, { position: "absolute", width: "100%", height: "100%" }) } else { j.extend(E.style, { cssFloat: "right", styleFloat: "right" }) } E.onchange = function () { o(this.files); this.value = "" }; F = k.getElementById(w.settings.browse_button); if (F) { var z = w.settings.browse_button_hover, A = w.settings.browse_button_active, x = w.features.triggerDialog ? F : G; if (z) { j.addEvent(x, "mouseover", function () { j.addClass(F, z) }, w.id); j.addEvent(x, "mouseout", function () { j.removeClass(F, z) }, w.id) } if (A) { j.addEvent(x, "mousedown", function () { j.addClass(F, A) }, w.id); j.addEvent(k.body, "mouseup", function () { j.removeClass(F, A) }, w.id) } if (w.features.triggerDialog) { j.addEvent(F, "click", function (H) { var y = k.getElementById(w.id + "_html5"); if (y && !y.disabled) { y.click() } H.preventDefault() }, w.id) } } }); p.bind("PostInit", function () { var s = k.getElementById(p.settings.drop_element); if (s) { if (g) { j.addEvent(s, "dragenter", function (w) { var v, t, u; v = k.getElementById(p.id + "_drop"); if (!v) { v = k.createElement("input"); v.setAttribute("type", "file"); v.setAttribute("id", p.id + "_drop"); v.setAttribute("multiple", "multiple"); j.addEvent(v, "change", function () { o(this.files); j.removeEvent(v, "change", p.id); v.parentNode.removeChild(v) }, p.id); s.appendChild(v) } t = j.getPos(s, k.getElementById(p.settings.container)); u = j.getSize(s); if (j.getStyle(s, "position") === "static") { j.extend(s.style, { position: "relative" }) } j.extend(v.style, { position: "absolute", display: "block", top: 0, left: 0, width: u.w + "px", height: u.h + "px", opacity: 0 }) }, p.id); return } j.addEvent(s, "dragover", function (t) { t.preventDefault() }, p.id); j.addEvent(s, "drop", function (u) { var t = u.dataTransfer; if (t && t.files) { o(t.files) } u.preventDefault() }, p.id) } }); p.bind("Refresh", function (s) { var t, u, v, x, w; t = k.getElementById(p.settings.browse_button); if (t) { u = j.getPos(t, k.getElementById(s.settings.container)); v = j.getSize(t); x = k.getElementById(p.id + "_html5_container"); j.extend(x.style, { top: u.y + "px", left: u.x + "px", width: v.w + "px", height: v.h + "px" }); if (p.features.triggerDialog) { if (j.getStyle(t, "position") === "static") { j.extend(t.style, { position: "relative" }) } w = parseInt(j.getStyle(t, "z-index"), 10); if (isNaN(w)) { w = 0 } j.extend(t.style, { zIndex: w }); j.extend(x.style, { zIndex: w - 1 }) } } }); p.bind("DisableBrowse", function (s, u) { var t = k.getElementById(s.id + "_html5"); if (t) { t.disabled = u } }); p.bind("CancelUpload", function () { if (q && q.abort) { q.abort() } }); p.bind("UploadFile", function (s, u) { var v = s.settings, y, t; function x(A, D, z) { var B; if (File.prototype.slice) { try { A.slice(); return A.slice(D, z) } catch (C) { return A.slice(D, z - D) } } else { if (B = File.prototype.webkitSlice || File.prototype.mozSlice) { return B.call(A, D, z) } else { return null } } } function w(A) { var D = 0, C = 0, z = ("FileReader" in h) ? new FileReader : null; function B() { var I, M, K, L, H, J, F, E = s.settings.url; function G(V) { var T = 0, N = "----pluploadboundary" + j.guid(), O, P = "--", U = "\r\n", R = ""; q = new XMLHttpRequest; if (q.upload) { q.upload.onprogress = function (W) { u.loaded = Math.min(u.size, C + W.loaded - T); s.trigger("UploadProgress", u) } } q.onreadystatechange = function () { var W, Y; if (q.readyState == 4 && s.state !== j.STOPPED) { try { W = q.status } catch (X) { W = 0 } if (W >= 400) { s.trigger("Error", { code: j.HTTP_ERROR, message: j.translate("HTTP Error."), file: u, status: W }) } else { if (K) { Y = { chunk: D, chunks: K, response: q.responseText, status: W }; s.trigger("ChunkUploaded", u, Y); C += J; if (Y.cancelled) { u.status = j.FAILED; return } u.loaded = Math.min(u.size, (D + 1) * H) } else { u.loaded = u.size } s.trigger("UploadProgress", u); V = I = O = R = null; if (!K || ++D >= K) { u.status = j.DONE; s.trigger("FileUploaded", u, { response: q.responseText, status: W }) } else { B() } } } }; if (s.settings.multipart && n.multipart) { L.name = u.target_name || u.name; q.open("post", E, true); j.each(s.settings.headers, function (X, W) { q.setRequestHeader(W, X) }); if (typeof (V) !== "string" && !!h.FormData) { O = new FormData(); j.each(j.extend(L, s.settings.multipart_params), function (X, W) { O.append(W, X) }); O.append(s.settings.file_data_name, V); q.send(O); return } if (typeof (V) === "string") { q.setRequestHeader("Content-Type", "multipart/form-data; boundary=" + N); j.each(j.extend(L, s.settings.multipart_params), function (X, W) { R += P + N + U + 'Content-Disposition: form-data; name="' + W + '"' + U + U; R += unescape(encodeURIComponent(X)) + U }); F = j.mimeTypes[u.name.replace(/^.+\.([^.]+)/, "$1").toLowerCase()] || "application/octet-stream"; R += P + N + U + 'Content-Disposition: form-data; name="' + s.settings.file_data_name + '"; filename="' + unescape(encodeURIComponent(u.name)) + '"' + U + "Content-Type: " + F + U + U + V + U + P + N + P + U; T = R.length - V.length; V = R; if (q.sendAsBinary) { q.sendAsBinary(V) } else { if (n.canSendBinary) { var S = new Uint8Array(V.length); for (var Q = 0; Q < V.length; Q++) { S[Q] = (V.charCodeAt(Q) & 255) } q.send(S.buffer) } } return } } E = j.buildUrl(s.settings.url, j.extend(L, s.settings.multipart_params)); q.open("post", E, true); q.setRequestHeader("Content-Type", "application/octet-stream"); j.each(s.settings.headers, function (X, W) { q.setRequestHeader(W, X) }); q.send(V) } if (u.status == j.DONE || u.status == j.FAILED || s.state == j.STOPPED) { return } L = { name: u.target_name || u.name }; if (v.chunk_size && u.size > v.chunk_size && (n.chunks || typeof (A) == "string")) { H = v.chunk_size; K = Math.ceil(u.size / H); J = Math.min(H, u.size - (D * H)); if (typeof (A) == "string") { I = A.substring(D * H, D * H + J) } else { I = x(A, D * H, D * H + J) } L.chunk = D; L.chunks = K } else { J = u.size; I = A } if (s.settings.multipart && n.multipart && typeof (I) !== "string" && z && n.cantSendBlobInFormData && n.chunks && s.settings.chunk_size) { z.onload = function () { G(z.result) }; z.readAsBinaryString(I) } else { G(I) } } B() } y = c[u.id]; if (n.jpgresize && s.settings.resize && /\.(png|jpg|jpeg)$/i.test(u.name)) { d.call(s, u, s.settings.resize, /\.png$/i.test(u.name) ? "image/png" : "image/jpeg", function (z) { if (z.success) { u.size = z.data.length; w(z.data) } else { if (n.chunks) { w(y) } else { l(y, w) } } }) } else { if (!n.chunks && n.jpgresize) { l(y, w) } else { w(y) } } }); p.bind("Destroy", function (s) { var u, v, t = k.body, w = { inputContainer: s.id + "_html5_container", inputFile: s.id + "_html5", browseButton: s.settings.browse_button, dropElm: s.settings.drop_element }; for (u in w) { v = k.getElementById(w[u]); if (v) { j.removeAllEvents(v, s.id) } } j.removeAllEvents(k.body, s.id); if (s.settings.container) { t = k.getElementById(s.settings.container) } t.removeChild(k.getElementById(w.inputContainer)) }); r({ success: true }) } }); function b() { var q = false, o; function r(t, v) { var s = q ? 0 : -8 * (v - 1), w = 0, u; for (u = 0; u < v; u++) { w |= (o.charCodeAt(t + u) << Math.abs(s + u * 8)) } return w } function n(u, s, t) { var t = arguments.length === 3 ? t : o.length - s - 1; o = o.substr(0, s) + u + o.substr(t + s) } function p(t, u, w) { var x = "", s = q ? 0 : -8 * (w - 1), v; for (v = 0; v < w; v++) { x += String.fromCharCode((u >> Math.abs(s + v * 8)) & 255) } n(x, t, w) } return { II: function (s) { if (s === e) { return q } else { q = s } }, init: function (s) { q = false; o = s }, SEGMENT: function (s, u, t) { switch (arguments.length) { case 1: return o.substr(s, o.length - s - 1); case 2: return o.substr(s, u); case 3: n(t, s, u); break; default: return o } }, BYTE: function (s) { return r(s, 1) }, SHORT: function (s) { return r(s, 2) }, LONG: function (s, t) { if (t === e) { return r(s, 4) } else { p(s, t, 4) } }, SLONG: function (s) { var t = r(s, 4); return (t > 2147483647 ? t - 4294967296 : t) }, STRING: function (s, t) { var u = ""; for (t += s; s < t; s++) { u += String.fromCharCode(r(s, 1)) } return u } } } function f(s) { var u = { 65505: { app: "EXIF", name: "APP1", signature: "Exif\0" }, 65506: { app: "ICC", name: "APP2", signature: "ICC_PROFILE\0" }, 65517: { app: "IPTC", name: "APP13", signature: "Photoshop 3.0\0" } }, t = [], r, n, p = e, q = 0, o; r = new b(); r.init(s); if (r.SHORT(0) !== 65496) { return } n = 2; o = Math.min(1048576, s.length); while (n <= o) { p = r.SHORT(n); if (p >= 65488 && p <= 65495) { n += 2; continue } if (p === 65498 || p === 65497) { break } q = r.SHORT(n + 2) + 2; if (u[p] && r.STRING(n + 4, u[p].signature.length) === u[p].signature) { t.push({ hex: p, app: u[p].app.toUpperCase(), name: u[p].name.toUpperCase(), start: n, length: q, segment: r.SEGMENT(n, q) }) } n += q } r.init(null); return { headers: t, restore: function (y) { r.init(y); var w = new f(y); if (!w.headers) { return false } for (var x = w.headers.length; x > 0; x--) { var z = w.headers[x - 1]; r.SEGMENT(z.start, z.length, "") } w.purge(); n = r.SHORT(2) == 65504 ? 4 + r.SHORT(4) : 2; for (var x = 0, v = t.length; x < v; x++) { r.SEGMENT(n, 0, t[x].segment); n += t[x].length } return r.SEGMENT() }, get: function (x) { var y = []; for (var w = 0, v = t.length; w < v; w++) { if (t[w].app === x.toUpperCase()) { y.push(t[w].segment) } } return y }, set: function (y, x) { var z = []; if (typeof (x) === "string") { z.push(x) } else { z = x } for (var w = ii = 0, v = t.length; w < v; w++) { if (t[w].app === y.toUpperCase()) { t[w].segment = z[ii]; t[w].length = z[ii].length; ii++ } if (ii >= z.length) { break } } }, purge: function () { t = []; r.init(null) } } } function a() { var q, n, o = {}, t; q = new b(); n = { tiff: { 274: "Orientation", 34665: "ExifIFDPointer", 34853: "GPSInfoIFDPointer" }, exif: { 36864: "ExifVersion", 40961: "ColorSpace", 40962: "PixelXDimension", 40963: "PixelYDimension", 36867: "DateTimeOriginal", 33434: "ExposureTime", 33437: "FNumber", 34855: "ISOSpeedRatings", 37377: "ShutterSpeedValue", 37378: "ApertureValue", 37383: "MeteringMode", 37384: "LightSource", 37385: "Flash", 41986: "ExposureMode", 41987: "WhiteBalance", 41990: "SceneCaptureType", 41988: "DigitalZoomRatio", 41992: "Contrast", 41993: "Saturation", 41994: "Sharpness" }, gps: { 0: "GPSVersionID", 1: "GPSLatitudeRef", 2: "GPSLatitude", 3: "GPSLongitudeRef", 4: "GPSLongitude" } }; t = { ColorSpace: { 1: "sRGB", 0: "Uncalibrated" }, MeteringMode: { 0: "Unknown", 1: "Average", 2: "CenterWeightedAverage", 3: "Spot", 4: "MultiSpot", 5: "Pattern", 6: "Partial", 255: "Other" }, LightSource: { 1: "Daylight", 2: "Fliorescent", 3: "Tungsten", 4: "Flash", 9: "Fine weather", 10: "Cloudy weather", 11: "Shade", 12: "Daylight fluorescent (D 5700 - 7100K)", 13: "Day white fluorescent (N 4600 -5400K)", 14: "Cool white fluorescent (W 3900 - 4500K)", 15: "White fluorescent (WW 3200 - 3700K)", 17: "Standard light A", 18: "Standard light B", 19: "Standard light C", 20: "D55", 21: "D65", 22: "D75", 23: "D50", 24: "ISO studio tungsten", 255: "Other" }, Flash: { 0: "Flash did not fire.", 1: "Flash fired.", 5: "Strobe return light not detected.", 7: "Strobe return light detected.", 9: "Flash fired, compulsory flash mode", 13: "Flash fired, compulsory flash mode, return light not detected", 15: "Flash fired, compulsory flash mode, return light detected", 16: "Flash did not fire, compulsory flash mode", 24: "Flash did not fire, auto mode", 25: "Flash fired, auto mode", 29: "Flash fired, auto mode, return light not detected", 31: "Flash fired, auto mode, return light detected", 32: "No flash function", 65: "Flash fired, red-eye reduction mode", 69: "Flash fired, red-eye reduction mode, return light not detected", 71: "Flash fired, red-eye reduction mode, return light detected", 73: "Flash fired, compulsory flash mode, red-eye reduction mode", 77: "Flash fired, compulsory flash mode, red-eye reduction mode, return light not detected", 79: "Flash fired, compulsory flash mode, red-eye reduction mode, return light detected", 89: "Flash fired, auto mode, red-eye reduction mode", 93: "Flash fired, auto mode, return light not detected, red-eye reduction mode", 95: "Flash fired, auto mode, return light detected, red-eye reduction mode" }, ExposureMode: { 0: "Auto exposure", 1: "Manual exposure", 2: "Auto bracket" }, WhiteBalance: { 0: "Auto white balance", 1: "Manual white balance" }, SceneCaptureType: { 0: "Standard", 1: "Landscape", 2: "Portrait", 3: "Night scene" }, Contrast: { 0: "Normal", 1: "Soft", 2: "Hard" }, Saturation: { 0: "Normal", 1: "Low saturation", 2: "High saturation" }, Sharpness: { 0: "Normal", 1: "Soft", 2: "Hard" }, GPSLatitudeRef: { N: "North latitude", S: "South latitude" }, GPSLongitudeRef: { E: "East longitude", W: "West longitude" } }; function p(u, C) { var w = q.SHORT(u), z, F, G, B, A, v, x, D, E = [], y = {}; for (z = 0; z < w; z++) { x = v = u + 12 * z + 2; G = C[q.SHORT(x)]; if (G === e) { continue } B = q.SHORT(x += 2); A = q.LONG(x += 2); x += 4; E = []; switch (B) { case 1: case 7: if (A > 4) { x = q.LONG(x) + o.tiffHeader } for (F = 0; F < A; F++) { E[F] = q.BYTE(x + F) } break; case 2: if (A > 4) { x = q.LONG(x) + o.tiffHeader } y[G] = q.STRING(x, A - 1); continue; case 3: if (A > 2) { x = q.LONG(x) + o.tiffHeader } for (F = 0; F < A; F++) { E[F] = q.SHORT(x + F * 2) } break; case 4: if (A > 1) { x = q.LONG(x) + o.tiffHeader } for (F = 0; F < A; F++) { E[F] = q.LONG(x + F * 4) } break; case 5: x = q.LONG(x) + o.tiffHeader; for (F = 0; F < A; F++) { E[F] = q.LONG(x + F * 4) / q.LONG(x + F * 4 + 4) } break; case 9: x = q.LONG(x) + o.tiffHeader; for (F = 0; F < A; F++) { E[F] = q.SLONG(x + F * 4) } break; case 10: x = q.LONG(x) + o.tiffHeader; for (F = 0; F < A; F++) { E[F] = q.SLONG(x + F * 4) / q.SLONG(x + F * 4 + 4) } break; default: continue } D = (A == 1 ? E[0] : E); if (t.hasOwnProperty(G) && typeof D != "object") { y[G] = t[G][D] } else { y[G] = D } } return y } function s() { var v = e, u = o.tiffHeader; q.II(q.SHORT(u) == 18761); if (q.SHORT(u += 2) !== 42) { return false } o.IFD0 = o.tiffHeader + q.LONG(u += 2); v = p(o.IFD0, n.tiff); o.exifIFD = ("ExifIFDPointer" in v ? o.tiffHeader + v.ExifIFDPointer : e); o.gpsIFD = ("GPSInfoIFDPointer" in v ? o.tiffHeader + v.GPSInfoIFDPointer : e); return true } function r(w, u, z) { var B, y, x, A = 0; if (typeof (u) === "string") { var v = n[w.toLowerCase()]; for (hex in v) { if (v[hex] === u) { u = hex; break } } } B = o[w.toLowerCase() + "IFD"]; y = q.SHORT(B); for (i = 0; i < y; i++) { x = B + 12 * i + 2; if (q.SHORT(x) == u) { A = x + 8; break } } if (!A) { return false } q.LONG(A, z); return true } return { init: function (u) { o = { tiffHeader: 10 }; if (u === e || !u.length) { return false } q.init(u); if (q.SHORT(0) === 65505 && q.STRING(4, 5).toUpperCase() === "EXIF\0") { return s() } return false }, EXIF: function () { var v; v = p(o.exifIFD, n.exif); if (v.ExifVersion && j.typeOf(v.ExifVersion) === "array") { for (var w = 0, u = ""; w < v.ExifVersion.length; w++) { u += String.fromCharCode(v.ExifVersion[w]) } v.ExifVersion = u } return v }, GPS: function () { var u; u = p(o.gpsIFD, n.gps); if (u.GPSVersionID) { u.GPSVersionID = u.GPSVersionID.join(".") } return u }, setExif: function (u, v) { if (u !== "PixelXDimension" && u !== "PixelYDimension") { return false } return r("exif", u, v) }, getBinary: function () { return q.SEGMENT() } } } })(window, document, plupload);
-});
-define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.html4-debug", [], function (require, exports) {
-    (function (d, a, b, c) { function e(f) { return a.getElementById(f) } b.runtimes.Html4 = b.addRuntime("html4", { getFeatures: function () { return { multipart: true, triggerDialog: (b.ua.gecko && d.FormData || b.ua.webkit) } }, init: function (f, g) { f.bind("Init", function (p) { var j = a.body, n, h = "javascript", k, x, q, z = [], r = /MSIE/.test(navigator.userAgent), t = [], m = p.settings.filters, o, l, s, w; no_type_restriction: for (o = 0; o < m.length; o++) { l = m[o].extensions.split(/,/); for (w = 0; w < l.length; w++) { if (l[w] === "*") { t = []; break no_type_restriction } s = b.mimeTypes[l[w]]; if (s && b.inArray(s, t) === -1) { t.push(s) } } } t = t.join(","); function v() { var B, y, i, A; q = b.guid(); z.push(q); B = a.createElement("form"); B.setAttribute("id", "form_" + q); B.setAttribute("method", "post"); B.setAttribute("enctype", "multipart/form-data"); B.setAttribute("encoding", "multipart/form-data"); B.setAttribute("target", p.id + "_iframe"); B.style.position = "absolute"; y = a.createElement("input"); y.setAttribute("id", "input_" + q); y.setAttribute("type", "file"); y.setAttribute("accept", t); y.setAttribute("size", 1); A = e(p.settings.browse_button); if (p.features.triggerDialog && A) { b.addEvent(e(p.settings.browse_button), "click", function (C) { if (!y.disabled) { y.click() } C.preventDefault() }, p.id) } b.extend(y.style, { width: "100%", height: "100%", opacity: 0, fontSize: "99px", cursor: "pointer" }); b.extend(B.style, { overflow: "hidden" }); i = p.settings.shim_bgcolor; if (i) { B.style.background = i } if (r) { b.extend(y.style, { filter: "alpha(opacity=0)" }) } b.addEvent(y, "change", function (F) { var D = F.target, C, E = [], G; if (D.value) { e("form_" + q).style.top = -1048575 + "px"; C = D.value.replace(/\\/g, "/"); C = C.substring(C.length, C.lastIndexOf("/") + 1); E.push(new b.File(q, C)); if (!p.features.triggerDialog) { b.removeAllEvents(B, p.id) } else { b.removeEvent(A, "click", p.id) } b.removeEvent(y, "change", p.id); v(); if (E.length) { f.trigger("FilesAdded", E) } } }, p.id); B.appendChild(y); j.appendChild(B); p.refresh() } function u() { var i = a.createElement("div"); i.innerHTML = '<iframe id="' + p.id + '_iframe" name="' + p.id + '_iframe" src="' + h + ':&quot;&quot;" style="display:none"></iframe>'; n = i.firstChild; j.appendChild(n); b.addEvent(n, "load", function (C) { var D = C.target, B, y; if (!k) { return } try { B = D.contentWindow.document || D.contentDocument || d.frames[D.id].document } catch (A) { p.trigger("Error", { code: b.SECURITY_ERROR, message: b.translate("Security error."), file: k }); return } y = B.body.innerHTML; if (y) { k.status = b.DONE; k.loaded = 1025; k.percent = 100; p.trigger("UploadProgress", k); p.trigger("FileUploaded", k, { response: y }) } }, p.id) } if (p.settings.container) { j = e(p.settings.container); if (b.getStyle(j, "position") === "static") { j.style.position = "relative" } } p.bind("UploadFile", function (i, A) { var B, y; if (A.status == b.DONE || A.status == b.FAILED || i.state == b.STOPPED) { return } B = e("form_" + A.id); y = e("input_" + A.id); y.setAttribute("name", i.settings.file_data_name); B.setAttribute("action", i.settings.url); b.each(b.extend({ name: A.target_name || A.name }, i.settings.multipart_params), function (E, C) { var D = a.createElement("input"); b.extend(D, { type: "hidden", name: C, value: E }); B.insertBefore(D, B.firstChild) }); k = A; e("form_" + q).style.top = -1048575 + "px"; B.submit() }); p.bind("FileUploaded", function (i) { i.refresh() }); p.bind("StateChanged", function (i) { if (i.state == b.STARTED) { u() } else { if (i.state == b.STOPPED) { d.setTimeout(function () { b.removeEvent(n, "load", i.id); if (n.parentNode) { n.parentNode.removeChild(n) } }, 0) } } b.each(i.files, function (A, y) { if (A.status === b.DONE || A.status === b.FAILED) { var B = e("form_" + A.id); if (B) { B.parentNode.removeChild(B) } } }) }); p.bind("Refresh", function (y) { var F, A, B, C, i, G, H, E, D; F = e(y.settings.browse_button); if (F) { i = b.getPos(F, e(y.settings.container)); G = b.getSize(F); H = e("form_" + q); E = e("input_" + q); b.extend(H.style, { top: i.y + "px", left: i.x + "px", width: G.w + "px", height: G.h + "px" }); if (y.features.triggerDialog) { if (b.getStyle(F, "position") === "static") { b.extend(F.style, { position: "relative" }) } D = parseInt(F.style.zIndex, 10); if (isNaN(D)) { D = 0 } b.extend(F.style, { zIndex: D }); b.extend(H.style, { zIndex: D - 1 }) } B = y.settings.browse_button_hover; C = y.settings.browse_button_active; A = y.features.triggerDialog ? F : H; if (B) { b.addEvent(A, "mouseover", function () { b.addClass(F, B) }, y.id); b.addEvent(A, "mouseout", function () { b.removeClass(F, B) }, y.id) } if (C) { b.addEvent(A, "mousedown", function () { b.addClass(F, C) }, y.id); b.addEvent(a.body, "mouseup", function () { b.removeClass(F, C) }, y.id) } } }); f.bind("FilesRemoved", function (y, B) { var A, C; for (A = 0; A < B.length; A++) { C = e("form_" + B[A].id); if (C) { C.parentNode.removeChild(C) } } }); f.bind("DisableBrowse", function (i, A) { var y = a.getElementById("input_" + q); if (y) { y.disabled = A } }); f.bind("Destroy", function (i) { var y, A, B, C = { inputContainer: "form_" + q, inputFile: "input_" + q, browseButton: i.settings.browse_button }; for (y in C) { A = e(C[y]); if (A) { b.removeAllEvents(A, i.id) } } b.removeAllEvents(a.body, i.id); b.each(z, function (E, D) { B = e("form_" + E); if (B) { j.removeChild(B) } }) }); v() }); g({ success: true }) } }) })(window, document, plupload);
-});
-define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.flash-debug", [], function (require, exports) {
-    (function (f, b, d, e) { var a = {}, g = {}; function c() { var h; try { h = navigator.plugins["Shockwave Flash"]; h = h.description } catch (j) { try { h = new ActiveXObject("ShockwaveFlash.ShockwaveFlash").GetVariable("$version") } catch (i) { h = "0.0" } } h = h.match(/\d+/g); return parseFloat(h[0] + "." + h[1]) } d.flash = { trigger: function (j, h, i) { setTimeout(function () { var m = a[j], l, k; if (m) { m.trigger("Flash:" + h, i) } }, 0) } }; d.runtimes.Flash = d.addRuntime("flash", { getFeatures: function () { return { jpgresize: true, pngresize: true, maxWidth: 8091, maxHeight: 8091, chunks: true, progress: true, multipart: true, multi_selection: true } }, init: function (m, o) { var k, l, h = 0, i = b.body; if (c() < 10) { o({ success: false }); return } g[m.id] = false; a[m.id] = m; k = b.getElementById(m.settings.browse_button); l = b.createElement("div"); l.id = m.id + "_flash_container"; d.extend(l.style, { position: "absolute", top: "0px", background: m.settings.shim_bgcolor || "transparent", zIndex: 99999, width: "100%", height: "100%" }); l.className = "plupload flash"; if (m.settings.container) { i = b.getElementById(m.settings.container); if (d.getStyle(i, "position") === "static") { i.style.position = "relative" } } i.appendChild(l); (function () { var p, q; p = '<object id="' + m.id + '_flash" type="application/x-shockwave-flash" data="' + m.settings.flash_swf_url + '" '; if (d.ua.ie) { p += 'classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" ' } p += 'width="100%" height="100%" style="outline:0"><param name="movie" value="' + m.settings.flash_swf_url + '" /><param name="flashvars" value="id=' + escape(m.id) + '" /><param name="wmode" value="transparent" /><param name="allowscriptaccess" value="always" /></object>'; if (d.ua.ie) { q = b.createElement("div"); l.appendChild(q); q.outerHTML = p; q = null } else { l.innerHTML = p } }()); function n() { return b.getElementById(m.id + "_flash") } function j() { if (h++ > 5000) { o({ success: false }); return } if (g[m.id] === false) { setTimeout(j, 1) } } j(); k = l = null; m.bind("Destroy", function (p) { var q; d.removeAllEvents(b.body, p.id); delete g[p.id]; delete a[p.id]; q = b.getElementById(p.id + "_flash_container"); if (q) { i.removeChild(q) } }); m.bind("Flash:Init", function () { var r = {}, q; try { n().setFileFilters(m.settings.filters, m.settings.multi_selection) } catch (p) { o({ success: false }); return } if (g[m.id]) { return } g[m.id] = true; m.bind("UploadFile", function (s, u) { var v = s.settings, t = m.settings.resize || {}; n().uploadFile(r[u.id], v.url, { name: u.target_name || u.name, mime: d.mimeTypes[u.name.replace(/^.+\.([^.]+)/, "$1").toLowerCase()] || "application/octet-stream", chunk_size: v.chunk_size, width: t.width, height: t.height, quality: t.quality, multipart: v.multipart, multipart_params: v.multipart_params || {}, file_data_name: v.file_data_name, format: /\.(jpg|jpeg)$/i.test(u.name) ? "jpg" : "png", headers: v.headers, urlstream_upload: v.urlstream_upload }) }); m.bind("CancelUpload", function () { n().cancelUpload() }); m.bind("Flash:UploadProcess", function (t, s) { var u = t.getFile(r[s.id]); if (u.status != d.FAILED) { u.loaded = s.loaded; u.size = s.size; t.trigger("UploadProgress", u) } }); m.bind("Flash:UploadChunkComplete", function (s, u) { var v, t = s.getFile(r[u.id]); v = { chunk: u.chunk, chunks: u.chunks, response: u.text }; s.trigger("ChunkUploaded", t, v); if (t.status !== d.FAILED && s.state !== d.STOPPED) { n().uploadNextChunk() } if (u.chunk == u.chunks - 1) { t.status = d.DONE; s.trigger("FileUploaded", t, { response: u.text }) } }); m.bind("Flash:SelectFiles", function (s, v) { var u, t, w = [], x; for (t = 0; t < v.length; t++) { u = v[t]; x = d.guid(); r[x] = u.id; r[u.id] = x; w.push(new d.File(x, u.name, u.size)) } if (w.length) { m.trigger("FilesAdded", w) } }); m.bind("Flash:SecurityError", function (s, t) { m.trigger("Error", { code: d.SECURITY_ERROR, message: d.translate("Security error."), details: t.message, file: m.getFile(r[t.id]) }) }); m.bind("Flash:GenericError", function (s, t) { m.trigger("Error", { code: d.GENERIC_ERROR, message: d.translate("Generic error."), details: t.message, file: m.getFile(r[t.id]) }) }); m.bind("Flash:IOError", function (s, t) { m.trigger("Error", { code: d.IO_ERROR, message: d.translate("IO error."), details: t.message, file: m.getFile(r[t.id]) }) }); m.bind("Flash:ImageError", function (s, t) { m.trigger("Error", { code: parseInt(t.code, 10), message: d.translate("Image error."), file: m.getFile(r[t.id]) }) }); m.bind("Flash:StageEvent:rollOver", function (s) { var t, u; t = b.getElementById(m.settings.browse_button); u = s.settings.browse_button_hover; if (t && u) { d.addClass(t, u) } }); m.bind("Flash:StageEvent:rollOut", function (s) { var t, u; t = b.getElementById(m.settings.browse_button); u = s.settings.browse_button_hover; if (t && u) { d.removeClass(t, u) } }); m.bind("Flash:StageEvent:mouseDown", function (s) { var t, u; t = b.getElementById(m.settings.browse_button); u = s.settings.browse_button_active; if (t && u) { d.addClass(t, u); d.addEvent(b.body, "mouseup", function () { d.removeClass(t, u) }, s.id) } }); m.bind("Flash:StageEvent:mouseUp", function (s) { var t, u; t = b.getElementById(m.settings.browse_button); u = s.settings.browse_button_active; if (t && u) { d.removeClass(t, u) } }); m.bind("Flash:ExifData", function (s, t) { m.trigger("ExifData", m.getFile(r[t.id]), t.data) }); m.bind("Flash:GpsData", function (s, t) { m.trigger("GpsData", m.getFile(r[t.id]), t.data) }); m.bind("QueueChanged", function (s) { m.refresh() }); m.bind("FilesRemoved", function (s, u) { var t; for (t = 0; t < u.length; t++) { n().removeFile(r[u[t].id]) } }); m.bind("StateChanged", function (s) { m.refresh() }); m.bind("Refresh", function (s) { var t, u, v; n().setFileFilters(m.settings.filters, m.settings.multi_selection); t = b.getElementById(s.settings.browse_button); if (t) { u = d.getPos(t, b.getElementById(s.settings.container)); v = d.getSize(t); d.extend(b.getElementById(s.id + "_flash_container").style, { top: u.y + "px", left: u.x + "px", width: v.w + "px", height: v.h + "px" }) } }); m.bind("DisableBrowse", function (s, t) { n().disableBrowse(t) }); o({ success: true }) }) } }) })(window, document, plupload);
+
+/**
+ * plupload.js
+ *
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under GPL License.
+ *
+ * License: http://www.plupload.com/license
+ * Contributing: http://www.plupload.com/contributing
+ * 1.5.4
+ */
+
+// JSLint defined globals
+/*global window:false, escape:false */
+
+(function() {
+    var count = 0, runtimes = [], i18n = {}, mimes = {},
+        xmlEncodeChars = {'<' : 'lt', '>' : 'gt', '&' : 'amp', '"' : 'quot', '\'' : '#39'},
+        xmlEncodeRegExp = /[<>&\"\']/g, undef, delay = window.setTimeout,
+        // A place to store references to event handlers
+        eventhash = {},
+        uid;
+
+    // IE W3C like event funcs
+    function preventDefault() {
+        this.returnValue = false;
+    }
+
+    function stopPropagation() {
+        this.cancelBubble = true;
+    }
+
+    // Parses the default mime types string into a mimes lookup map
+    (function(mime_data) {
+        var items = mime_data.split(/,/), i, y, ext;
+
+        for (i = 0; i < items.length; i += 2) {
+            ext = items[i + 1].split(/ /);
+
+            for (y = 0; y < ext.length; y++) {
+                mimes[ext[y]] = items[i];
+            }
+        }
+    })(
+        "application/msword,doc dot," +
+        "application/pdf,pdf," +
+        "application/pgp-signature,pgp," +
+        "application/postscript,ps ai eps," +
+        "application/rtf,rtf," +
+        "application/vnd.ms-excel,xls xlb," +
+        "application/vnd.ms-powerpoint,ppt pps pot," +
+        "application/zip,zip," +
+        "application/x-shockwave-flash,swf swfl," +
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document,docx," +
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.template,dotx," +
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,xlsx," +
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation,pptx," + 
+        "application/vnd.openxmlformats-officedocument.presentationml.template,potx," +
+        "application/vnd.openxmlformats-officedocument.presentationml.slideshow,ppsx," +
+        "application/x-javascript,js," +
+        "application/json,json," +
+        "audio/mpeg,mpga mpega mp2 mp3," +
+        "audio/x-wav,wav," +
+        "audio/mp4,m4a," +
+        "image/bmp,bmp," +
+        "image/gif,gif," +
+        "image/jpeg,jpeg jpg jpe," +
+        "image/photoshop,psd," +
+        "image/png,png," +
+        "image/svg+xml,svg svgz," +
+        "image/tiff,tiff tif," +
+        "text/plain,asc txt text diff log," +
+        "text/html,htm html xhtml," +
+        "text/css,css," +
+        "text/csv,csv," +
+        "text/rtf,rtf," +
+        "video/mpeg,mpeg mpg mpe," +
+        "video/quicktime,qt mov," +
+        "video/mp4,mp4," +
+        "video/x-m4v,m4v," +
+        "video/x-flv,flv," +
+        "video/x-ms-wmv,wmv," +
+        "video/avi,avi," +
+        "video/webm,webm," +
+        "video/vnd.rn-realvideo,rv," +
+        "application/vnd.oasis.opendocument.formula-template,otf," +
+        "application/octet-stream,exe"
+    );
+
+    /**
+     * Plupload class with some global constants and functions.
+     *
+     * @example
+     * // Encode entities
+     * console.log(plupload.xmlEncode("My string &lt;&gt;"));
+     *
+     * // Generate unique id
+     * console.log(plupload.guid());
+     *
+     * @static
+     * @class plupload
+     */
+    var plupload = {
+        /**
+         * Plupload version will be replaced on build.
+         */
+        VERSION : '1.5.4',
+
+        /**
+         * Inital state of the queue and also the state ones it's finished all it's uploads.
+         *
+         * @property STOPPED
+         * @final
+         */
+        STOPPED : 1,
+
+        /**
+         * Upload process is running
+         *
+         * @property STARTED
+         * @final
+         */
+        STARTED : 2,
+
+        /**
+         * File is queued for upload
+         *
+         * @property QUEUED
+         * @final
+         */
+        QUEUED : 1,
+
+        /**
+         * File is being uploaded
+         *
+         * @property UPLOADING
+         * @final
+         */
+        UPLOADING : 2,
+
+        /**
+         * File has failed to be uploaded
+         *
+         * @property FAILED
+         * @final
+         */
+        FAILED : 4,
+
+        /**
+         * File has been uploaded successfully
+         *
+         * @property DONE
+         * @final
+         */
+        DONE : 5,
+
+        // Error constants used by the Error event
+
+        /**
+         * Generic error for example if an exception is thrown inside Silverlight.
+         *
+         * @property GENERIC_ERROR
+         * @final
+         */
+        GENERIC_ERROR : -100,
+
+        /**
+         * HTTP transport error. For example if the server produces a HTTP status other than 200.
+         *
+         * @property HTTP_ERROR
+         * @final
+         */
+        HTTP_ERROR : -200,
+
+        /**
+         * Generic I/O error. For exampe if it wasn't possible to open the file stream on local machine.
+         *
+         * @property IO_ERROR
+         * @final
+         */
+        IO_ERROR : -300,
+
+        /**
+         * Generic I/O error. For exampe if it wasn't possible to open the file stream on local machine.
+         *
+         * @property SECURITY_ERROR
+         * @final
+         */
+        SECURITY_ERROR : -400,
+
+        /**
+         * Initialization error. Will be triggered if no runtime was initialized.
+         *
+         * @property INIT_ERROR
+         * @final
+         */
+        INIT_ERROR : -500,
+
+        /**
+         * File size error. If the user selects a file that is too large it will be blocked and an error of this type will be triggered.
+         *
+         * @property FILE_SIZE_ERROR
+         * @final
+         */
+        FILE_SIZE_ERROR : -600,
+
+        /**
+         * File extension error. If the user selects a file that isn't valid according to the filters setting.
+         *
+         * @property FILE_EXTENSION_ERROR
+         * @final
+         */
+        FILE_EXTENSION_ERROR : -601,
+        
+        /**
+         * Runtime will try to detect if image is proper one. Otherwise will throw this error.
+         *
+         * @property IMAGE_FORMAT_ERROR
+         * @final
+         */
+        IMAGE_FORMAT_ERROR : -700,
+        
+        /**
+         * While working on the image runtime will try to detect if the operation may potentially run out of memeory and will throw this error.
+         *
+         * @property IMAGE_MEMORY_ERROR
+         * @final
+         */
+        IMAGE_MEMORY_ERROR : -701,
+        
+        /**
+         * Each runtime has an upper limit on a dimension of the image it can handle. If bigger, will throw this error.
+         *
+         * @property IMAGE_DIMENSIONS_ERROR
+         * @final
+         */
+        IMAGE_DIMENSIONS_ERROR : -702,
+        
+
+        /**
+         * Mime type lookup table.
+         *
+         * @property mimeTypes
+         * @type Object
+         * @final
+         */
+        mimeTypes : mimes,
+        
+        /**
+         * In some cases sniffing is the only way around :(
+         */
+        ua: (function() {
+            var nav = navigator, userAgent = nav.userAgent, vendor = nav.vendor, webkit, opera, safari;
+            
+            webkit = /WebKit/.test(userAgent);
+            safari = webkit && vendor.indexOf('Apple') !== -1;
+            opera = window.opera && window.opera.buildNumber;
+            
+            return {
+                windows: navigator.platform.indexOf('Win') !== -1,
+                ie: !webkit && !opera && (/MSIE/gi).test(userAgent) && (/Explorer/gi).test(nav.appName),
+                webkit: webkit,
+                gecko: !webkit && /Gecko/.test(userAgent),
+                safari: safari,
+                opera: !!opera
+            };
+        }()),
+        
+        /**
+         * Gets the true type of the built-in object (better version of typeof).
+         * @credits Angus Croll (http://javascriptweblog.wordpress.com/)
+         *
+         * @param {Object} o Object to check.
+         * @return {String} Object [[Class]]
+         */
+        typeOf: function(o) {
+            return ({}).toString.call(o).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
+        },
+
+        /**
+         * Extends the specified object with another object.
+         *
+         * @method extend
+         * @param {Object} target Object to extend.
+         * @param {Object..} obj Multiple objects to extend with.
+         * @return {Object} Same as target, the extended object.
+         */
+        extend : function(target) {
+            plupload.each(arguments, function(arg, i) {
+                if (i > 0) {
+                    plupload.each(arg, function(value, key) {
+                        target[key] = value;
+                    });
+                }
+            });
+
+            return target;
+        },
+
+        /**
+         * Cleans the specified name from national characters (diacritics). The result will be a name with only a-z, 0-9 and _.
+         *
+         * @method cleanName
+         * @param {String} s String to clean up.
+         * @return {String} Cleaned string.
+         */
+        cleanName : function(name) {
+            var i, lookup;
+
+            // Replace diacritics
+            lookup = [
+                /[\300-\306]/g, 'A', /[\340-\346]/g, 'a', 
+                /\307/g, 'C', /\347/g, 'c',
+                /[\310-\313]/g, 'E', /[\350-\353]/g, 'e',
+                /[\314-\317]/g, 'I', /[\354-\357]/g, 'i',
+                /\321/g, 'N', /\361/g, 'n',
+                /[\322-\330]/g, 'O', /[\362-\370]/g, 'o',
+                /[\331-\334]/g, 'U', /[\371-\374]/g, 'u'
+            ];
+
+            for (i = 0; i < lookup.length; i += 2) {
+                name = name.replace(lookup[i], lookup[i + 1]);
+            }
+
+            // Replace whitespace
+            name = name.replace(/\s+/g, '_');
+
+            // Remove anything else
+            name = name.replace(/[^a-z0-9_\-\.]+/gi, '');
+
+            return name;
+        },
+
+        /**
+         * Adds a specific upload runtime like for example flash or gears.
+         *
+         * @method addRuntime
+         * @param {String} name Runtime name for example flash.
+         * @param {Object} obj Object containing init/destroy method.
+         */
+        addRuntime : function(name, runtime) {          
+            runtime.name = name;
+            runtimes[name] = runtime;
+            runtimes.push(runtime);
+
+            return runtime;
+        },
+
+        /**
+         * Generates an unique ID. This is 99.99% unique since it takes the current time and 5 random numbers.
+         * The only way a user would be able to get the same ID is if the two persons at the same exact milisecond manages
+         * to get 5 the same random numbers between 0-65535 it also uses a counter so each call will be guaranteed to be page unique.
+         * It's more probable for the earth to be hit with an ansteriod. You can also if you want to be 100% sure set the plupload.guidPrefix property
+         * to an user unique key.
+         *
+         * @method guid
+         * @return {String} Virtually unique id.
+         */
+        guid : function() {
+            var guid = new Date().getTime().toString(32), i;
+
+            for (i = 0; i < 5; i++) {
+                guid += Math.floor(Math.random() * 65535).toString(32);
+            }
+
+            return (plupload.guidPrefix || 'p') + guid + (count++).toString(32);
+        },
+
+        /**
+         * Builds a full url out of a base URL and an object with items to append as query string items.
+         *
+         * @param {String} url Base URL to append query string items to.
+         * @param {Object} items Name/value object to serialize as a querystring.
+         * @return {String} String with url + serialized query string items.
+         */
+        buildUrl : function(url, items) {
+            var query = '';
+
+            plupload.each(items, function(value, name) {
+                query += (query ? '&' : '') + encodeURIComponent(name) + '=' + encodeURIComponent(value);
+            });
+
+            if (query) {
+                url += (url.indexOf('?') > 0 ? '&' : '?') + query;
+            }
+
+            return url;
+        },
+
+        /**
+         * Executes the callback function for each item in array/object. If you return false in the
+         * callback it will break the loop.
+         *
+         * @param {Object} obj Object to iterate.
+         * @param {function} callback Callback function to execute for each item.
+         */
+        each : function(obj, callback) {
+            var length, key, i;
+
+            if (obj) {
+                length = obj.length;
+
+                if (length === undef) {
+                    // Loop object items
+                    for (key in obj) {
+                        if (obj.hasOwnProperty(key)) {
+                            if (callback(obj[key], key) === false) {
+                                return;
+                            }
+                        }
+                    }
+                } else {
+                    // Loop array items
+                    for (i = 0; i < length; i++) {
+                        if (callback(obj[i], i) === false) {
+                            return;
+                        }
+                    }
+                }
+            }
+        },
+
+        /**
+         * Formats the specified number as a size string for example 1024 becomes 1 KB.
+         *
+         * @method formatSize
+         * @param {Number} size Size to format as string.
+         * @return {String} Formatted size string.
+         */
+        formatSize : function(size) {
+            if (size === undef || /\D/.test(size)) {
+                return plupload.translate('N/A');
+            }
+            
+            // GB
+            if (size > 1073741824) {
+                return Math.round(size / 1073741824, 1) + " GB";
+            }
+
+            // MB
+            if (size > 1048576) {
+                return Math.round(size / 1048576, 1) + " MB";
+            }
+
+            // KB
+            if (size > 1024) {
+                return Math.round(size / 1024, 1) + " KB";
+            }
+
+            return size + " b";
+        },
+
+        /**
+         * Returns the absolute x, y position of an Element. The position will be returned in a object with x, y fields.
+         *
+         * @method getPos
+         * @param {Element} node HTML element or element id to get x, y position from.
+         * @param {Element} root Optional root element to stop calculations at.
+         * @return {object} Absolute position of the specified element object with x, y fields.
+         */
+         getPos : function(node, root) {
+            var x = 0, y = 0, parent, doc = document, nodeRect, rootRect;
+
+            node = node;
+            root = root || doc.body;
+
+            // Returns the x, y cordinate for an element on IE 6 and IE 7
+            function getIEPos(node) {
+                var bodyElm, rect, x = 0, y = 0;
+
+                if (node) {
+                    rect = node.getBoundingClientRect();
+                    bodyElm = doc.compatMode === "CSS1Compat" ? doc.documentElement : doc.body;
+                    x = rect.left + bodyElm.scrollLeft;
+                    y = rect.top + bodyElm.scrollTop;
+                }
+
+                return {
+                    x : x,
+                    y : y
+                };
+            }
+
+            // Use getBoundingClientRect on IE 6 and IE 7 but not on IE 8 in standards mode
+            if (node && node.getBoundingClientRect && ((navigator.userAgent.indexOf('MSIE') > 0) && (doc.documentMode < 8))) {
+                nodeRect = getIEPos(node);
+                rootRect = getIEPos(root);
+
+                return {
+                    x : nodeRect.x - rootRect.x,
+                    y : nodeRect.y - rootRect.y
+                };
+            }
+
+            parent = node;
+            while (parent && parent != root && parent.nodeType) {
+                x += parent.offsetLeft || 0;
+                y += parent.offsetTop || 0;
+                parent = parent.offsetParent;
+            }
+
+            parent = node.parentNode;
+            while (parent && parent != root && parent.nodeType) {
+                x -= parent.scrollLeft || 0;
+                y -= parent.scrollTop || 0;
+                parent = parent.parentNode;
+            }
+
+            return {
+                x : x,
+                y : y
+            };
+        },
+
+        /**
+         * Returns the size of the specified node in pixels.
+         *
+         * @param {Node} node Node to get the size of.
+         * @return {Object} Object with a w and h property.
+         */
+        getSize : function(node) {
+            return {
+                w : node.offsetWidth || node.clientWidth,
+                h : node.offsetHeight || node.clientHeight
+            };
+        },
+
+        /**
+         * Parses the specified size string into a byte value. For example 10kb becomes 10240.
+         *
+         * @method parseSize
+         * @param {String/Number} size String to parse or number to just pass through.
+         * @return {Number} Size in bytes.
+         */
+        parseSize : function(size) {
+            var mul;
+
+            if (typeof(size) == 'string') {
+                size = /^([0-9]+)([mgk]?)$/.exec(size.toLowerCase().replace(/[^0-9mkg]/g, ''));
+                mul = size[2];
+                size = +size[1];
+
+                if (mul == 'g') {
+                    size *= 1073741824;
+                }
+
+                if (mul == 'm') {
+                    size *= 1048576;
+                }
+
+                if (mul == 'k') {
+                    size *= 1024;
+                }
+            }
+
+            return size;
+        },
+
+        /**
+         * Encodes the specified string.
+         *
+         * @method xmlEncode
+         * @param {String} s String to encode.
+         * @return {String} Encoded string.
+         */
+        xmlEncode : function(str) {
+            return str ? ('' + str).replace(xmlEncodeRegExp, function(chr) {
+                return xmlEncodeChars[chr] ? '&' + xmlEncodeChars[chr] + ';' : chr;
+            }) : str;
+        },
+
+        /**
+         * Forces anything into an array.
+         *
+         * @method toArray
+         * @param {Object} obj Object with length field.
+         * @return {Array} Array object containing all items.
+         */
+        toArray : function(obj) {
+            var i, arr = [];
+
+            for (i = 0; i < obj.length; i++) {
+                arr[i] = obj[i];
+            }
+
+            return arr;
+        },
+        
+        /**
+         * Find an element in array and return it's index if present, otherwise return -1.
+         *
+         * @method inArray
+         * @param {mixed} needle Element to find
+         * @param {Array} array
+         * @return {Int} Index of the element, or -1 if not found
+         */
+        inArray : function(needle, array) {         
+            if (array) {
+                if (Array.prototype.indexOf) {
+                    return Array.prototype.indexOf.call(array, needle);
+                }
+            
+                for (var i = 0, length = array.length; i < length; i++) {
+                    if (array[i] === needle) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        },
+
+        /**
+         * Extends the language pack object with new items.
+         *
+         * @param {Object} pack Language pack items to add.
+         * @return {Object} Extended language pack object.
+         */
+        addI18n : function(pack) {
+            return plupload.extend(i18n, pack);
+        },
+
+        /**
+         * Translates the specified string by checking for the english string in the language pack lookup.
+         *
+         * @param {String} str String to look for.
+         * @return {String} Translated string or the input string if it wasn't found.
+         */
+        translate : function(str) {
+            return i18n[str] || str;
+        },
+        
+        /**
+         * Checks if object is empty.
+         *
+         * @param {Object} obj Object to check.
+         * @return {Boolean}
+         */
+        isEmptyObj : function(obj) {
+            if (obj === undef) return true;
+            
+            for (var prop in obj) {
+                return false;   
+            }
+            return true;
+        },
+        
+        /**
+         * Checks if specified DOM element has specified class.
+         *
+         * @param {Object} obj DOM element like object to add handler to.
+         * @param {String} name Class name
+         */
+        hasClass : function(obj, name) {
+            var regExp;
+        
+            if (obj.className == '') {
+                return false;
+            }
+
+            regExp = new RegExp("(^|\\s+)"+name+"(\\s+|$)");
+
+            return regExp.test(obj.className);
+        },
+        
+        /**
+         * Adds specified className to specified DOM element.
+         *
+         * @param {Object} obj DOM element like object to add handler to.
+         * @param {String} name Class name
+         */
+        addClass : function(obj, name) {
+            if (!plupload.hasClass(obj, name)) {
+                obj.className = obj.className == '' ? name : obj.className.replace(/\s+$/, '')+' '+name;
+            }
+        },
+        
+        /**
+         * Removes specified className from specified DOM element.
+         *
+         * @param {Object} obj DOM element like object to add handler to.
+         * @param {String} name Class name
+         */
+        removeClass : function(obj, name) {
+            var regExp = new RegExp("(^|\\s+)"+name+"(\\s+|$)");
+            
+            obj.className = obj.className.replace(regExp, function($0, $1, $2) {
+                return $1 === ' ' && $2 === ' ' ? ' ' : '';
+            });
+        },
+    
+        /**
+         * Returns a given computed style of a DOM element.
+         *
+         * @param {Object} obj DOM element like object.
+         * @param {String} name Style you want to get from the DOM element
+         */
+        getStyle : function(obj, name) {
+            if (obj.currentStyle) {
+                return obj.currentStyle[name];
+            } else if (window.getComputedStyle) {
+                return window.getComputedStyle(obj, null)[name];
+            }
+        },
+
+        /**
+         * Adds an event handler to the specified object and store reference to the handler
+         * in objects internal Plupload registry (@see removeEvent).
+         *
+         * @param {Object} obj DOM element like object to add handler to.
+         * @param {String} name Name to add event listener to.
+         * @param {Function} callback Function to call when event occurs.
+         * @param {String} (optional) key that might be used to add specifity to the event record.
+         */
+        addEvent : function(obj, name, callback) {
+            var func, events, types, key;
+            
+            // if passed in, event will be locked with this key - one would need to provide it to removeEvent
+            key = arguments[3];
+                        
+            name = name.toLowerCase();
+                        
+            // Initialize unique identifier if needed
+            if (uid === undef) {
+                uid = 'Plupload_' + plupload.guid();
+            }
+
+            // Add event listener
+            if (obj.addEventListener) {
+                func = callback;
+                
+                obj.addEventListener(name, func, false);
+            } else if (obj.attachEvent) {
+                
+                func = function() {
+                    var evt = window.event;
+
+                    if (!evt.target) {
+                        evt.target = evt.srcElement;
+                    }
+
+                    evt.preventDefault = preventDefault;
+                    evt.stopPropagation = stopPropagation;
+
+                    callback(evt);
+                };
+                obj.attachEvent('on' + name, func);
+            } 
+            
+            // Log event handler to objects internal Plupload registry
+            if (obj[uid] === undef) {
+                obj[uid] = plupload.guid();
+            }
+            
+            if (!eventhash.hasOwnProperty(obj[uid])) {
+                eventhash[obj[uid]] = {};
+            }
+            
+            events = eventhash[obj[uid]];
+            
+            if (!events.hasOwnProperty(name)) {
+                events[name] = [];
+            }
+                    
+            events[name].push({
+                func: func,
+                orig: callback, // store original callback for IE
+                key: key
+            });
+        },
+        
+        
+        /**
+         * Remove event handler from the specified object. If third argument (callback)
+         * is not specified remove all events with the specified name.
+         *
+         * @param {Object} obj DOM element to remove event listener(s) from.
+         * @param {String} name Name of event listener to remove.
+         * @param {Function|String} (optional) might be a callback or unique key to match.
+         */
+        removeEvent: function(obj, name) {
+            var type, callback, key;
+            
+            // match the handler either by callback or by key   
+            if (typeof(arguments[2]) == "function") {
+                callback = arguments[2];
+            } else {
+                key = arguments[2];
+            }
+                        
+            name = name.toLowerCase();
+            
+            if (obj[uid] && eventhash[obj[uid]] && eventhash[obj[uid]][name]) {
+                type = eventhash[obj[uid]][name];
+            } else {
+                return;
+            }
+            
+                
+            for (var i=type.length-1; i>=0; i--) {
+                // undefined or not, key should match           
+                if (type[i].key === key || type[i].orig === callback) {
+                                        
+                    if (obj.removeEventListener) {
+                        obj.removeEventListener(name, type[i].func, false);     
+                    } else if (obj.detachEvent) {
+                        obj.detachEvent('on'+name, type[i].func);
+                    }
+                    
+                    type[i].orig = null;
+                    type[i].func = null;
+                    
+                    type.splice(i, 1);
+                    
+                    // If callback was passed we are done here, otherwise proceed
+                    if (callback !== undef) {
+                        break;
+                    }
+                }           
+            }   
+            
+            // If event array got empty, remove it
+            if (!type.length) {
+                delete eventhash[obj[uid]][name];
+            }
+            
+            // If Plupload registry has become empty, remove it
+            if (plupload.isEmptyObj(eventhash[obj[uid]])) {
+                delete eventhash[obj[uid]];
+                
+                // IE doesn't let you remove DOM object property with - delete
+                try {
+                    delete obj[uid];
+                } catch(e) {
+                    obj[uid] = undef;
+                }
+            }
+        },
+        
+        
+        /**
+         * Remove all kind of events from the specified object
+         *
+         * @param {Object} obj DOM element to remove event listeners from.
+         * @param {String} (optional) unique key to match, when removing events.
+         */
+        removeAllEvents: function(obj) {
+            var key = arguments[1];
+            
+            if (obj[uid] === undef || !obj[uid]) {
+                return;
+            }
+            
+            plupload.each(eventhash[obj[uid]], function(events, name) {
+                plupload.removeEvent(obj, name, key);
+            });     
+        }
+    };
+    
+
+    /**
+     * Uploader class, an instance of this class will be created for each upload field.
+     *
+     * @example
+     * var uploader = new plupload.Uploader({
+     *     runtimes : 'gears,html5,flash',
+     *     browse_button : 'button_id'
+     * });
+     *
+     * uploader.bind('Init', function(up) {
+     *     alert('Supports drag/drop: ' + (!!up.features.dragdrop));
+     * });
+     *
+     * uploader.bind('FilesAdded', function(up, files) {
+     *     alert('Selected files: ' + files.length);
+     * });
+     *
+     * uploader.bind('QueueChanged', function(up) {
+     *     alert('Queued files: ' + uploader.files.length);
+     * });
+     *
+     * uploader.init();
+     *
+     * @class plupload.Uploader
+     */
+
+    /**
+     * Constructs a new uploader instance.
+     *
+     * @constructor
+     * @method Uploader
+     * @param {Object} settings Initialization settings, to be used by the uploader instance and runtimes.
+     */
+    plupload.Uploader = function(settings) {
+        var events = {}, total, files = [], startTime, disabled = false;
+
+        // Inital total state
+        total = new plupload.QueueProgress();
+
+        // Default settings
+        settings = plupload.extend({
+            chunk_size : 0,
+            multipart : true,
+            multi_selection : true,
+            file_data_name : 'file',
+            filters : []
+        }, settings);
+
+        // Private methods
+        function uploadNext() {
+            var file, count = 0, i;
+
+            if (this.state == plupload.STARTED) {
+                // Find first QUEUED file
+                for (i = 0; i < files.length; i++) {
+                    if (!file && files[i].status == plupload.QUEUED) {
+                        file = files[i];
+                        file.status = plupload.UPLOADING;
+                        if (this.trigger("BeforeUpload", file)) {
+                            this.trigger("UploadFile", file);
+                        }
+                    } else {
+                        count++;
+                    }
+                }
+
+                // All files are DONE or FAILED
+                if (count == files.length) {
+                    this.stop();
+                    this.trigger("UploadComplete", files);
+                }
+            }
+        }
+
+        function calc() {
+            var i, file;
+
+            // Reset stats
+            total.reset();
+
+            // Check status, size, loaded etc on all files
+            for (i = 0; i < files.length; i++) {
+                file = files[i];
+
+                if (file.size !== undef) {
+                    total.size += file.size;
+                    total.loaded += file.loaded;
+                } else {
+                    total.size = undef;
+                }
+
+                if (file.status == plupload.DONE) {
+                    total.uploaded++;
+                } else if (file.status == plupload.FAILED) {
+                    total.failed++;
+                } else {
+                    total.queued++;
+                }
+            }
+
+            // If we couldn't calculate a total file size then use the number of files to calc percent
+            if (total.size === undef) {
+                total.percent = files.length > 0 ? Math.ceil(total.uploaded / files.length * 100) : 0;
+            } else {
+                total.bytesPerSec = Math.ceil(total.loaded / ((+new Date() - startTime || 1) / 1000.0));
+                total.percent = total.size > 0 ? Math.ceil(total.loaded / total.size * 100) : 0;
+            }
+        }
+
+        // Add public methods
+        plupload.extend(this, {
+            /**
+             * Current state of the total uploading progress. This one can either be plupload.STARTED or plupload.STOPPED.
+             * These states are controlled by the stop/start methods. The default value is STOPPED.
+             *
+             * @property state
+             * @type Number
+             */
+            state : plupload.STOPPED,
+            
+            /**
+             * Current runtime name.
+             *
+             * @property runtime
+             * @type String
+             */
+            runtime: '',
+
+            /**
+             * Map of features that are available for the uploader runtime. Features will be filled
+             * before the init event is called, these features can then be used to alter the UI for the end user.
+             * Some of the current features that might be in this map is: dragdrop, chunks, jpgresize, pngresize.
+             *
+             * @property features
+             * @type Object
+             */
+            features : {},
+
+            /**
+             * Current upload queue, an array of File instances.
+             *
+             * @property files
+             * @type Array
+             * @see plupload.File
+             */
+            files : files,
+
+            /**
+             * Object with name/value settings.
+             *
+             * @property settings
+             * @type Object
+             */
+            settings : settings,
+
+            /**
+             * Total progess information. How many files has been uploaded, total percent etc.
+             *
+             * @property total
+             * @type plupload.QueueProgress
+             */
+            total : total,
+
+            /**
+             * Unique id for the Uploader instance.
+             *
+             * @property id
+             * @type String
+             */
+            id : plupload.guid(),
+
+            /**
+             * Initializes the Uploader instance and adds internal event listeners.
+             *
+             * @method init
+             */
+            init : function() {
+                var self = this, i, runtimeList, a, runTimeIndex = 0, items;
+
+                if (typeof(settings.preinit) == "function") {
+                    settings.preinit(self);
+                } else {
+                    plupload.each(settings.preinit, function(func, name) {
+                        self.bind(name, func);
+                    });
+                }
+
+                settings.page_url = settings.page_url || document.location.pathname.replace(/\/[^\/]+$/g, '/');
+
+                // If url is relative force it absolute to the current page
+                if (!/^(\w+:\/\/|\/)/.test(settings.url)) {
+                    settings.url = settings.page_url + settings.url;
+                }
+
+                // Convert settings
+                settings.chunk_size = plupload.parseSize(settings.chunk_size);
+                settings.max_file_size = plupload.parseSize(settings.max_file_size);
+
+                // Add files to queue
+                self.bind('FilesAdded', function(up, selected_files) {
+                    var i, file, count = 0, extensionsRegExp, filters = settings.filters;
+
+                    // Convert extensions to regexp
+                    if (filters && filters.length) {
+                        extensionsRegExp = [];
+                        
+                        plupload.each(filters, function(filter) {
+                            plupload.each(filter.extensions.split(/,/), function(ext) {
+                                if (/^\s*\*\s*$/.test(ext)) {
+                                    extensionsRegExp.push('\\.*');
+                                } else {
+                                    extensionsRegExp.push('\\.' + ext.replace(new RegExp('[' + ('/^$.*+?|()[]{}\\'.replace(/./g, '\\$&')) + ']', 'g'), '\\$&'));
+                                }
+                            });
+                        });
+                        
+                        extensionsRegExp = new RegExp(extensionsRegExp.join('|') + '$', 'i');
+                    }
+
+                    for (i = 0; i < selected_files.length; i++) {
+                        file = selected_files[i];
+                        file.loaded = 0;
+                        file.percent = 0;
+                        file.status = plupload.QUEUED;
+
+                        // Invalid file extension
+                        if (extensionsRegExp && !extensionsRegExp.test(file.name)) {
+                            up.trigger('Error', {
+                                code : plupload.FILE_EXTENSION_ERROR,
+                                message : plupload.translate('File extension error.'),
+                                file : file
+                            });
+
+                            continue;
+                        }
+
+                        // Invalid file size
+                        if (file.size !== undef && file.size > settings.max_file_size) {
+                            up.trigger('Error', {
+                                code : plupload.FILE_SIZE_ERROR,
+                                message : plupload.translate('File size error.'),
+                                file : file
+                            });
+
+                            continue;
+                        }
+
+                        // Add valid file to list
+                        files.push(file);
+                        count++;
+                    }
+
+                    // Only trigger QueueChanged event if any files where added
+                    if (count) {
+                        delay(function() {
+                            self.trigger("QueueChanged");
+                            self.refresh();
+                        }, 1);
+                    } else {
+                        return false; // Stop the FilesAdded event from immediate propagation
+                    }
+                });
+
+                // Generate unique target filenames
+                if (settings.unique_names) {
+                    self.bind("UploadFile", function(up, file) {
+                        var matches = file.name.match(/\.([^.]+)$/), ext = "tmp";
+
+                        if (matches) {
+                            ext = matches[1];
+                        }
+
+                        file.target_name = file.id + '.' + ext;
+                    });
+                }
+
+                self.bind('UploadProgress', function(up, file) {
+                    file.percent = file.size > 0 ? Math.ceil(file.loaded / file.size * 100) : 100;
+                    calc();
+                });
+
+                self.bind('StateChanged', function(up) {
+                    if (up.state == plupload.STARTED) {
+                        // Get start time to calculate bps
+                        startTime = (+new Date());
+                        
+                    } else if (up.state == plupload.STOPPED) {                      
+                        // Reset currently uploading files
+                        for (i = up.files.length - 1; i >= 0; i--) {
+                            if (up.files[i].status == plupload.UPLOADING) {
+                                up.files[i].status = plupload.QUEUED;
+                                calc();
+                            }
+                        }
+                    }
+                });
+
+                self.bind('QueueChanged', calc);
+
+                self.bind("Error", function(up, err) {
+                    // Set failed status if an error occured on a file
+                    if (err.file) {
+                        err.file.status = plupload.FAILED;
+                        calc();
+
+                        // Upload next file but detach it from the error event
+                        // since other custom listeners might want to stop the queue
+                        if (up.state == plupload.STARTED) {
+                            delay(function() {
+                                uploadNext.call(self);
+                            }, 1);
+                        }
+                    }
+                });
+
+                self.bind("FileUploaded", function(up, file) {
+                    file.status = plupload.DONE;
+                    file.loaded = file.size;
+                    up.trigger('UploadProgress', file);
+
+                    // Upload next file but detach it from the error event
+                    // since other custom listeners might want to stop the queue
+                    delay(function() {
+                        uploadNext.call(self);
+                    }, 1);
+                });
+
+                // Setup runtimeList
+                if (settings.runtimes) {
+                    runtimeList = [];
+                    items = settings.runtimes.split(/\s?,\s?/);
+
+                    for (i = 0; i < items.length; i++) {
+                        if (runtimes[items[i]]) {
+                            runtimeList.push(runtimes[items[i]]);
+                        }
+                    }
+                } else {
+                    runtimeList = runtimes;
+                }
+
+                // Call init on each runtime in sequence
+                function callNextInit() {
+                    var runtime = runtimeList[runTimeIndex++], features, requiredFeatures, i;
+
+                    if (runtime) {
+                        features = runtime.getFeatures();
+
+                        // Check if runtime supports required features
+                        requiredFeatures = self.settings.required_features;
+                        if (requiredFeatures) {
+                            requiredFeatures = requiredFeatures.split(',');
+
+                            for (i = 0; i < requiredFeatures.length; i++) {
+                                // Specified feature doesn't exist
+                                if (!features[requiredFeatures[i]]) {
+                                    callNextInit();
+                                    return;
+                                }
+                            }
+                        }
+
+                        // Try initializing the runtime
+                        runtime.init(self, function(res) {
+                            if (res && res.success) {
+                                // Successful initialization
+                                self.features = features;
+                                self.runtime = runtime.name;
+                                self.trigger('Init', {runtime : runtime.name});
+                                self.trigger('PostInit');
+                                self.refresh();
+                            } else {
+                                callNextInit();
+                            }
+                        });
+                    } else {
+                        // Trigger an init error if we run out of runtimes
+                        self.trigger('Error', {
+                            code : plupload.INIT_ERROR,
+                            message : plupload.translate('Init error.')
+                        });
+                    }
+                }
+
+                callNextInit();
+
+                if (typeof(settings.init) == "function") {
+                    settings.init(self);
+                } else {
+                    plupload.each(settings.init, function(func, name) {
+                        self.bind(name, func);
+                    });
+                }
+            },
+
+            /**
+             * Refreshes the upload instance by dispatching out a refresh event to all runtimes.
+             * This would for example reposition flash/silverlight shims on the page.
+             *
+             * @method refresh
+             */
+            refresh : function() {
+                this.trigger("Refresh");
+            },
+
+            /**
+             * Starts uploading the queued files.
+             *
+             * @method start
+             */
+            start : function() {
+                if (files.length && this.state != plupload.STARTED) {
+                    this.state = plupload.STARTED;
+                    this.trigger("StateChanged");   
+                    
+                    uploadNext.call(this);              
+                }
+            },
+
+            /**
+             * Stops the upload of the queued files.
+             *
+             * @method stop
+             */
+            stop : function() {
+                if (this.state != plupload.STOPPED) {
+                    this.state = plupload.STOPPED;  
+                    this.trigger("CancelUpload");               
+                    this.trigger("StateChanged");
+                }
+            },
+            
+            /** 
+             * Disables/enables browse button on request.
+             *
+             * @method disableBrowse
+             * @param {Boolean} disable Whether to disable or enable (default: true)
+             */
+            disableBrowse : function() {
+                disabled = arguments[0] !== undef ? arguments[0] : true;
+                this.trigger("DisableBrowse", disabled);
+            },
+
+            /**
+             * Returns the specified file object by id.
+             *
+             * @method getFile
+             * @param {String} id File id to look for.
+             * @return {plupload.File} File object or undefined if it wasn't found;
+             */
+            getFile : function(id) {
+                var i;
+
+                for (i = files.length - 1; i >= 0; i--) {
+                    if (files[i].id === id) {
+                        return files[i];
+                    }
+                }
+            },
+
+            /**
+             * Removes a specific file.
+             *
+             * @method removeFile
+             * @param {plupload.File} file File to remove from queue.
+             */
+            removeFile : function(file) {
+                var i;
+
+                for (i = files.length - 1; i >= 0; i--) {
+                    if (files[i].id === file.id) {
+                        return this.splice(i, 1)[0];
+                    }
+                }
+            },
+
+            /**
+             * Removes part of the queue and returns the files removed. This will also trigger the FilesRemoved and QueueChanged events.
+             *
+             * @method splice
+             * @param {Number} start (Optional) Start index to remove from.
+             * @param {Number} length (Optional) Lengh of items to remove.
+             * @return {Array} Array of files that was removed.
+             */
+            splice : function(start, length) {
+                var removed;
+
+                // Splice and trigger events
+                removed = files.splice(start === undef ? 0 : start, length === undef ? files.length : length);
+
+                this.trigger("FilesRemoved", removed);
+                this.trigger("QueueChanged");
+
+                return removed;
+            },
+
+            /**
+             * Dispatches the specified event name and it's arguments to all listeners.
+             *
+             *
+             * @method trigger
+             * @param {String} name Event name to fire.
+             * @param {Object..} Multiple arguments to pass along to the listener functions.
+             */
+            trigger : function(name) {
+                var list = events[name.toLowerCase()], i, args;
+
+                // console.log(name, arguments);
+
+                if (list) {
+                    // Replace name with sender in args
+                    args = Array.prototype.slice.call(arguments);
+                    args[0] = this;
+
+                    // Dispatch event to all listeners
+                    for (i = 0; i < list.length; i++) {
+                        // Fire event, break chain if false is returned
+                        if (list[i].func.apply(list[i].scope, args) === false) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            },
+            
+            /**
+             * Check whether uploader has any listeners to the specified event.
+             *
+             * @method hasEventListener
+             * @param {String} name Event name to check for.
+             */
+            hasEventListener : function(name) {
+                return !!events[name.toLowerCase()];
+            },
+
+            /**
+             * Adds an event listener by name.
+             *
+             * @method bind
+             * @param {String} name Event name to listen for.
+             * @param {function} func Function to call ones the event gets fired.
+             * @param {Object} scope Optional scope to execute the specified function in.
+             */
+            bind : function(name, func, scope) {
+                var list;
+
+                name = name.toLowerCase();
+                list = events[name] || [];
+                list.push({func : func, scope : scope || this});
+                events[name] = list;
+            },
+
+            /**
+             * Removes the specified event listener.
+             *
+             * @method unbind
+             * @param {String} name Name of event to remove.
+             * @param {function} func Function to remove from listener.
+             */
+            unbind : function(name) {
+                name = name.toLowerCase();
+
+                var list = events[name], i, func = arguments[1];
+
+                if (list) {
+                    if (func !== undef) {
+                        for (i = list.length - 1; i >= 0; i--) {
+                            if (list[i].func === func) {
+                                list.splice(i, 1);
+                                    break;
+                            }
+                        }
+                    } else {
+                        list = [];
+                    }
+
+                    // delete event list if it has become empty
+                    if (!list.length) {
+                        delete events[name];
+                    }
+                }
+            },
+
+            /**
+             * Removes all event listeners.
+             *
+             * @method unbindAll
+             */
+            unbindAll : function() {
+                var self = this;
+                
+                plupload.each(events, function(list, name) {
+                    self.unbind(name);
+                });
+            },
+            
+            /**
+             * Destroys Plupload instance and cleans after itself.
+             *
+             * @method destroy
+             */
+            destroy : function() {  
+                this.stop();                        
+                this.trigger('Destroy');
+                
+                // Clean-up after uploader itself
+                this.unbindAll();
+            }
+
+            /**
+             * Fires when the current RunTime has been initialized.
+             *
+             * @event Init
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             */
+
+            /**
+             * Fires after the init event incase you need to perform actions there.
+             *
+             * @event PostInit
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             */
+
+            /**
+             * Fires when the silverlight/flash or other shim needs to move.
+             *
+             * @event Refresh
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             */
+    
+            /**
+             * Fires when the overall state is being changed for the upload queue.
+             *
+             * @event StateChanged
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             */
+
+            /**
+             * Fires when a file is to be uploaded by the runtime.
+             *
+             * @event UploadFile
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {plupload.File} file File to be uploaded.
+             */
+
+            /**
+             * Fires when just before a file is uploaded. This event enables you to override settings
+             * on the uploader instance before the file is uploaded.
+             *
+             * @event BeforeUpload
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {plupload.File} file File to be uploaded.
+             */
+
+            /**
+             * Fires when the file queue is changed. In other words when files are added/removed to the files array of the uploader instance.
+             *
+             * @event QueueChanged
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             */
+    
+            /**
+             * Fires while a file is being uploaded. Use this event to update the current file upload progress.
+             *
+             * @event UploadProgress
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {plupload.File} file File that is currently being uploaded.
+             */
+
+            /**
+             * Fires while a file was removed from queue.
+             *
+             * @event FilesRemoved
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {Array} files Array of files that got removed.
+             */
+
+            /**
+             * Fires while when the user selects files to upload.
+             *
+             * @event FilesAdded
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {Array} files Array of file objects that was added to queue/selected by the user.
+             */
+
+            /**
+             * Fires when a file is successfully uploaded.
+             *
+             * @event FileUploaded
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {plupload.File} file File that was uploaded.
+             * @param {Object} response Object with response properties.
+             */
+
+            /**
+             * Fires when file chunk is uploaded.
+             *
+             * @event ChunkUploaded
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {plupload.File} file File that the chunk was uploaded for.
+             * @param {Object} response Object with response properties.
+             */
+
+            /**
+             * Fires when all files in a queue are uploaded.
+             *
+             * @event UploadComplete
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {Array} files Array of file objects that was added to queue/selected by the user.
+             */
+
+            /**
+             * Fires when a error occurs.
+             *
+             * @event Error
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             * @param {Object} error Contains code, message and sometimes file and other details.
+             */
+             
+             /**
+             * Fires when destroy method is called.
+             *
+             * @event Destroy
+             * @param {plupload.Uploader} uploader Uploader instance sending the event.
+             */
+        });
+    };
+
+    /**
+     * File instance.
+     *
+     * @class plupload.File
+     * @param {String} name Name of the file.
+     * @param {Number} size File size.
+     */
+
+    /**
+     * Constructs a new file instance.
+     *
+     * @constructor
+     * @method File
+     * @param {String} id Unique file id.
+     * @param {String} name File name.
+     * @param {Number} size File size in bytes.
+     */
+    plupload.File = function(id, name, size) {
+        var self = this; // Setup alias for self to reduce code size when it's compressed
+
+        /**
+         * File id this is a globally unique id for the specific file.
+         *
+         * @property id
+         * @type String
+         */
+        self.id = id;
+
+        /**
+         * File name for example "myfile.gif".
+         *
+         * @property name
+         * @type String
+         */
+        self.name = name;
+
+        /**
+         * File size in bytes.
+         *
+         * @property size
+         * @type Number
+         */
+        self.size = size;
+
+        /**
+         * Number of bytes uploaded of the files total size.
+         *
+         * @property loaded
+         * @type Number
+         */
+        self.loaded = 0;
+
+        /**
+         * Number of percentage uploaded of the file.
+         *
+         * @property percent
+         * @type Number
+         */
+        self.percent = 0;
+
+        /**
+         * Status constant matching the plupload states QUEUED, UPLOADING, FAILED, DONE.
+         *
+         * @property status
+         * @type Number
+         * @see plupload
+         */
+        self.status = 0;
+    };
+
+    /**
+     * Runtime class gets implemented by each upload runtime.
+     *
+     * @class plupload.Runtime
+     * @static
+     */
+    plupload.Runtime = function() {
+        /**
+         * Returns a list of supported features for the runtime.
+         *
+         * @return {Object} Name/value object with supported features.
+         */
+        this.getFeatures = function() {
+        };
+
+        /**
+         * Initializes the upload runtime. This method should add necessary items to the DOM and register events needed for operation. 
+         *
+         * @method init
+         * @param {plupload.Uploader} uploader Uploader instance that needs to be initialized.
+         * @param {function} callback Callback function to execute when the runtime initializes or fails to initialize. If it succeeds an object with a parameter name success will be set to true.
+         */
+        this.init = function(uploader, callback) {
+        };
+    };
+
+    /**
+     * Runtime class gets implemented by each upload runtime.
+     *
+     * @class plupload.QueueProgress
+     */
+
+    /**
+     * Constructs a queue progress.
+     *
+     * @constructor
+     * @method QueueProgress
+     */
+     plupload.QueueProgress = function() {
+        var self = this; // Setup alias for self to reduce code size when it's compressed
+
+        /**
+         * Total queue file size.
+         *
+         * @property size
+         * @type Number
+         */
+        self.size = 0;
+
+        /**
+         * Total bytes uploaded.
+         *
+         * @property loaded
+         * @type Number
+         */
+        self.loaded = 0;
+
+        /**
+         * Number of files uploaded.
+         *
+         * @property uploaded
+         * @type Number
+         */
+        self.uploaded = 0;
+
+        /**
+         * Number of files failed to upload.
+         *
+         * @property failed
+         * @type Number
+         */
+        self.failed = 0;
+
+        /**
+         * Number of files yet to be uploaded.
+         *
+         * @property queued
+         * @type Number
+         */
+        self.queued = 0;
+
+        /**
+         * Total percent of the uploaded bytes.
+         *
+         * @property percent
+         * @type Number
+         */
+        self.percent = 0;
+
+        /**
+         * Bytes uploaded per second.
+         *
+         * @property bytesPerSec
+         * @type Number
+         */
+        self.bytesPerSec = 0;
+
+        /**
+         * Resets the progress to it's initial values.
+         *
+         * @method reset
+         */
+        self.reset = function() {
+            self.size = self.loaded = self.uploaded = self.failed = self.queued = self.percent = self.bytesPerSec = 0;
+        };
+    };
+
+    // Create runtimes namespace
+    plupload.runtimes = {};
+
+    // Expose plupload namespace
+    window.plupload = plupload;
+})();
+
 });
 define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.cn-debug", [], function (require, exports) {
     // Chinese
@@ -9466,8 +12539,8 @@ define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.cn-debug", 
         'Stop upload': '停止上传',
         'Start Upload': '开始上传',
         'Start upload': '开始上传',
-        'Add files': '添加文件',
-        'Add files.': '添加文件',
+        'Add files': '选取图片',
+        'Add files.': '选取图片',
         'Stop current upload': '停止当前的上传',
         'Start uploading queue': '开始上传队列',
         'Uploaded %d/%d files': '上传文件 %d/%d',
@@ -9492,11 +12565,3082 @@ define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.cn-debug", 
         'Error: Invalid file extension: ': '错误: 不被允许的文件类型: '
     });
 });
-define("product/guoqude/1.0.0/front_net/module/plupload/amd/jquery.plupload.queue-debug", [], function (require, exports) {
-    return function (jQuery) {
-        (function (c) { var d = {}; function a(e) { return plupload.translate(e) || e } function b(f, e) { e.contents().each(function (g, h) { h = c(h); if (!h.is(".plupload")) { h.remove() } }); e.prepend('<div class="plupload_wrapper plupload_scroll"><div id="' + f + '_container" class="plupload_container"><div class="plupload"><div class="plupload_header"><div class="plupload_header_content"><div class="plupload_header_title">' + a("Select files") + '</div><div class="plupload_header_text">' + a("Add files to the upload queue and click the start button.") + '</div></div></div><div class="plupload_content"><div class="plupload_filelist_header"><div class="plupload_file_name">' + a("Filename") + '</div><div class="plupload_file_action">&nbsp;</div><div class="plupload_file_status"><span>' + a("Status") + '</span></div><div class="plupload_file_size">' + a("Size") + '</div><div class="plupload_clearer">&nbsp;</div></div><ul id="' + f + '_filelist" class="plupload_filelist"></ul><div class="plupload_filelist_footer"><div class="plupload_file_name"><div class="plupload_buttons"><a href="#" class="plupload_button plupload_add">' + a("Add files") + '</a><a href="#" class="plupload_button plupload_start">' + a("Start upload") + '</a></div><span class="plupload_upload_status"></span></div><div class="plupload_file_action"></div><div class="plupload_file_status"><span class="plupload_total_status">0%</span></div><div class="plupload_file_size"><span class="plupload_total_file_size">0 b</span></div><div class="plupload_progress"><div class="plupload_progress_container"><div class="plupload_progress_bar"></div></div></div><div class="plupload_clearer">&nbsp;</div></div></div></div></div><input type="hidden" id="' + f + '_count" name="' + f + '_count" value="0" /></div>') } c.fn.pluploadQueue = function (e) { if (e) { this.each(function () { var j, i, k; i = c(this); k = i.attr("id"); if (!k) { k = plupload.guid(); i.attr("id", k) } j = new plupload.Uploader(c.extend({ dragdrop: true, container: k }, e)); d[k] = j; function h(l) { var n; if (l.status == plupload.DONE) { n = "plupload_done" } if (l.status == plupload.FAILED) { n = "plupload_failed" } if (l.status == plupload.QUEUED) { n = "plupload_delete" } if (l.status == plupload.UPLOADING) { n = "plupload_uploading" } var m = c("#" + l.id).attr("class", n).find("a").css("display", "block"); if (l.hint) { m.attr("title", l.hint) } } function f() { c("span.plupload_total_status", i).html(j.total.percent + "%"); c("div.plupload_progress_bar", i).css("width", j.total.percent + "%"); c("span.plupload_upload_status", i).text(a("Uploaded %d/%d files").replace(/%d\/%d/, j.total.uploaded + "/" + j.files.length)) } function g() { var m = c("ul.plupload_filelist", i).html(""), n = 0, l; c.each(j.files, function (p, o) { l = ""; if (o.status == plupload.DONE) { if (o.target_name) { l += '<input type="hidden" name="' + k + "_" + n + '_tmpname" value="' + plupload.xmlEncode(o.target_name) + '" />' } l += '<input type="hidden" name="' + k + "_" + n + '_name" value="' + plupload.xmlEncode(o.name) + '" />'; l += '<input type="hidden" name="' + k + "_" + n + '_status" value="' + (o.status == plupload.DONE ? "done" : "failed") + '" />'; n++; c("#" + k + "_count").val(n) } m.append('<li id="' + o.id + '"><div class="plupload_file_name"><span>' + o.name + '</span></div><div class="plupload_file_action"><a href="#"></a></div><div class="plupload_file_status">' + o.percent + '%</div><div class="plupload_file_size">' + plupload.formatSize(o.size) + '</div><div class="plupload_clearer">&nbsp;</div>' + l + "</li>"); h(o); c("#" + o.id + ".plupload_delete a").click(function (q) { c("#" + o.id).remove(); j.removeFile(o); q.preventDefault() }) }); c("span.plupload_total_file_size", i).html(plupload.formatSize(j.total.size)); if (j.total.queued === 0) { c("span.plupload_add_text", i).text(a("Add files.")) } else { c("span.plupload_add_text", i).text(j.total.queued + " files queued.") } c("a.plupload_start", i).toggleClass("plupload_disabled", j.files.length == (j.total.uploaded + j.total.failed)); m[0].scrollTop = m[0].scrollHeight; f(); if (!j.files.length && j.features.dragdrop && j.settings.dragdrop) { c("#" + k + "_filelist").append('<li class="plupload_droptext">' + a("Drag files here.") + "</li>") } } j.bind("UploadFile", function (l, m) { c("#" + m.id).addClass("plupload_current_file") }); j.bind("Init", function (l, m) { b(k, i); if (!e.unique_names && e.rename) { c("#" + k + "_filelist div.plupload_file_name span", i).live("click", function (s) { var q = c(s.target), o, r, n, p = ""; o = l.getFile(q.parents("li")[0].id); n = o.name; r = /^(.+)(\.[^.]+)$/.exec(n); if (r) { n = r[1]; p = r[2] } q.hide().after('<input type="text" />'); q.next().val(n).focus().blur(function () { q.show().next().remove() }).keydown(function (u) { var t = c(this); if (u.keyCode == 13) { u.preventDefault(); o.name = t.val() + p; q.text(o.name); t.blur() } }) }) } c("a.plupload_add", i).attr("id", k + "_browse"); l.settings.browse_button = k + "_browse"; if (l.features.dragdrop && l.settings.dragdrop) { l.settings.drop_element = k + "_filelist"; c("#" + k + "_filelist").append('<li class="plupload_droptext">' + a("Drag files here.") + "</li>") } c("#" + k + "_container").attr("title", "Using runtime: " + m.runtime); c("a.plupload_start", i).click(function (n) { if (!c(this).hasClass("plupload_disabled")) { j.start() } n.preventDefault() }); c("a.plupload_stop", i).click(function (n) { n.preventDefault(); j.stop() }); c("a.plupload_start", i).addClass("plupload_disabled") }); j.init(); j.bind("Error", function (l, o) { var m = o.file, n; if (m) { n = o.message; if (o.details) { n += " (" + o.details + ")" } if (o.code == plupload.FILE_SIZE_ERROR) { alert(a("Error: File too large: ") + m.name) } if (o.code == plupload.FILE_EXTENSION_ERROR) { alert(a("Error: Invalid file extension: ") + m.name) } m.hint = n; c("#" + m.id).attr("class", "plupload_failed").find("a").css("display", "block").attr("title", n) } }); j.bind("StateChanged", function () { if (j.state === plupload.STARTED) { c("li.plupload_delete a,div.plupload_buttons", i).hide(); c("span.plupload_upload_status,div.plupload_progress,a.plupload_stop", i).css("display", "block"); c("span.plupload_upload_status", i).text("Uploaded " + j.total.uploaded + "/" + j.files.length + " files"); if (e.multiple_queues) { c("span.plupload_total_status,span.plupload_total_file_size", i).show() } } else { g(); c("a.plupload_stop,div.plupload_progress", i).hide(); c("a.plupload_delete", i).css("display", "block") } }); j.bind("QueueChanged", g); j.bind("FileUploaded", function (l, m) { h(m) }); j.bind("UploadProgress", function (l, m) { c("#" + m.id + " div.plupload_file_status", i).html(m.percent + "%"); h(m); f(); if (e.multiple_queues && j.total.uploaded + j.total.failed == j.files.length) { c(".plupload_buttons,.plupload_upload_status", i).css("display", "inline"); c(".plupload_start", i).addClass("plupload_disabled"); c("span.plupload_total_status,span.plupload_total_file_size", i).hide() } }); if (e.setup) { e.setup(j) } }); return this } else { return d[c(this[0]).attr("id")] } } })(jQuery);
+define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.html5-debug", [], function (require, exports) {
+
+/**
+ * plupload.html5.js
+ *
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under GPL License.
+ *
+ * License: http://www.plupload.com/license
+ * Contributing: http://www.plupload.com/contributing
+ */
+
+// JSLint defined globals
+/*global plupload:false, File:false, window:false, atob:false, FormData:false, FileReader:false, ArrayBuffer:false, Uint8Array:false, BlobBuilder:false, unescape:false */
+
+(function(window, document, plupload, undef) {
+    var html5files = {}, // queue of original File objects
+        fakeSafariDragDrop;
+
+    function readFileAsDataURL(file, callback) {
+        var reader;
+
+        // Use FileReader if it's available
+        if ("FileReader" in window) {
+            reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function() {
+                callback(reader.result);
+            };
+        } else {
+            return callback(file.getAsDataURL());
+        }
     }
+
+    function readFileAsBinary(file, callback) {
+        var reader;
+
+        // Use FileReader if it's available
+        if ("FileReader" in window) {
+            reader = new FileReader();
+            reader.readAsBinaryString(file);
+            reader.onload = function() {
+                callback(reader.result);
+            };
+        } else {
+            return callback(file.getAsBinary());
+        }
+    }
+
+    function scaleImage(file, resize, mime, callback) {
+        var canvas, context, img, scale,
+            up = this;
+            
+        readFileAsDataURL(html5files[file.id], function(data) {
+            // Setup canvas and context
+            canvas = document.createElement("canvas");
+            canvas.style.display = 'none';
+            document.body.appendChild(canvas);
+            context = canvas.getContext('2d');
+
+            // Load image
+            img = new Image();
+            img.onerror = img.onabort = function() {
+                // Failed to load, the image may be invalid
+                callback({success : false});
+            };
+            img.onload = function() {
+                var width, height, percentage, jpegHeaders, exifParser;
+                
+                if (!resize['width']) {
+                    resize['width'] = img.width;
+                }
+                
+                if (!resize['height']) {
+                    resize['height'] = img.height;  
+                }
+                
+                scale = Math.min(resize.width / img.width, resize.height / img.height);
+
+                if (scale < 1 || (scale === 1 && mime === 'image/jpeg')) {
+                    width = Math.round(img.width * scale);
+                    height = Math.round(img.height * scale);
+
+                    // Scale image and canvas
+                    canvas.width = width;
+                    canvas.height = height;
+                    context.drawImage(img, 0, 0, width, height);
+                    
+                    // Preserve JPEG headers
+                    if (mime === 'image/jpeg') {
+                        jpegHeaders = new JPEG_Headers(atob(data.substring(data.indexOf('base64,') + 7)));
+                        if (jpegHeaders['headers'] && jpegHeaders['headers'].length) {
+                            exifParser = new ExifParser();          
+                                            
+                            if (exifParser.init(jpegHeaders.get('exif')[0])) {
+                                // Set new width and height
+                                exifParser.setExif('PixelXDimension', width);
+                                exifParser.setExif('PixelYDimension', height);
+                                                                                            
+                                // Update EXIF header
+                                jpegHeaders.set('exif', exifParser.getBinary());
+                                
+                                // trigger Exif events only if someone listens to them
+                                if (up.hasEventListener('ExifData')) {
+                                    up.trigger('ExifData', file, exifParser.EXIF());
+                                }
+                                
+                                if (up.hasEventListener('GpsData')) {
+                                    up.trigger('GpsData', file, exifParser.GPS());
+                                }
+                            }
+                        }
+                        
+                        if (resize['quality']) {                            
+                            // Try quality property first
+                            try {
+                                data = canvas.toDataURL(mime, resize['quality'] / 100); 
+                            } catch (e) {
+                                data = canvas.toDataURL(mime);  
+                            }
+                        }
+                    } else {
+                        data = canvas.toDataURL(mime);
+                    }
+
+                    // Remove data prefix information and grab the base64 encoded data and decode it
+                    data = data.substring(data.indexOf('base64,') + 7);
+                    data = atob(data);
+
+                    // Restore JPEG headers if applicable
+                    if (jpegHeaders && jpegHeaders['headers'] && jpegHeaders['headers'].length) {
+                        data = jpegHeaders.restore(data);
+                        jpegHeaders.purge(); // free memory
+                    }
+
+                    // Remove canvas and execute callback with decoded image data
+                    canvas.parentNode.removeChild(canvas);
+                    callback({success : true, data : data});
+                } else {
+                    // Image does not need to be resized
+                    callback({success : false});
+                }
+            };
+
+            img.src = data;
+        });
+    }
+
+    /**
+     * HMTL5 implementation. This runtime supports these features: dragdrop, jpgresize, pngresize.
+     *
+     * @static
+     * @class plupload.runtimes.Html5
+     * @extends plupload.Runtime
+     */
+    plupload.runtimes.Html5 = plupload.addRuntime("html5", {
+        /**
+         * Returns a list of supported features for the runtime.
+         *
+         * @return {Object} Name/value object with supported features.
+         */
+        getFeatures : function() {
+            var xhr, hasXhrSupport, hasProgress, canSendBinary, dataAccessSupport, sliceSupport;
+
+            hasXhrSupport = hasProgress = dataAccessSupport = sliceSupport = false;
+            
+            if (window.XMLHttpRequest) {
+                xhr = new XMLHttpRequest();
+                hasProgress = !!xhr.upload;
+                hasXhrSupport = !!(xhr.sendAsBinary || xhr.upload);
+            }
+
+            // Check for support for various features
+            if (hasXhrSupport) {
+                canSendBinary = !!(xhr.sendAsBinary || (window.Uint8Array && window.ArrayBuffer));
+                
+                // Set dataAccessSupport only for Gecko since BlobBuilder and XHR doesn't handle binary data correctly              
+                dataAccessSupport = !!(File && (File.prototype.getAsDataURL || window.FileReader) && canSendBinary);
+                sliceSupport = !!(File && (File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice)); 
+            }
+
+            // sniff out Safari for Windows and fake drag/drop
+            fakeSafariDragDrop = plupload.ua.safari && plupload.ua.windows;
+
+            return {
+                html5: hasXhrSupport, // This is a special one that we check inside the init call
+                dragdrop: (function() {
+                    // this comes directly from Modernizr: http://www.modernizr.com/
+                    var div = document.createElement('div');
+                    return ('draggable' in div) || ('ondragstart' in div && 'ondrop' in div);
+                }()),
+                jpgresize: dataAccessSupport,
+                pngresize: dataAccessSupport,
+                multipart: dataAccessSupport || !!window.FileReader || !!window.FormData,
+                canSendBinary: canSendBinary,
+                // gecko 2/5/6 can't send blob with FormData: https://bugzilla.mozilla.org/show_bug.cgi?id=649150 
+                cantSendBlobInFormData: !!(plupload.ua.gecko && window.FormData && window.FileReader && !FileReader.prototype.readAsArrayBuffer),
+                progress: hasProgress,
+                chunks: sliceSupport,
+                // Safari on Windows has problems when selecting multiple files
+                multi_selection: !(plupload.ua.safari && plupload.ua.windows),
+                // WebKit and Gecko 2+ can trigger file dialog progrmmatically
+                triggerDialog: (plupload.ua.gecko && window.FormData || plupload.ua.webkit) 
+            };
+        },
+
+        /**
+         * Initializes the upload runtime.
+         *
+         * @method init
+         * @param {plupload.Uploader} uploader Uploader instance that needs to be initialized.
+         * @param {function} callback Callback to execute when the runtime initializes or fails to initialize. If it succeeds an object with a parameter name success will be set to true.
+         */
+        init : function(uploader, callback) {
+            var features, xhr;
+
+            function addSelectedFiles(native_files) {
+                var file, i, files = [], id, fileNames = {};
+
+                // Add the selected files to the file queue
+                for (i = 0; i < native_files.length; i++) {
+                    file = native_files[i];
+                                        
+                    // Safari on Windows will add first file from dragged set multiple times
+                    // @see: https://bugs.webkit.org/show_bug.cgi?id=37957
+                    if (fileNames[file.name]) {
+                        continue;
+                    }
+                    fileNames[file.name] = true;
+
+                    // Store away gears blob internally
+                    id = plupload.guid();
+                    html5files[id] = file;
+
+                    // Expose id, name and size
+                    files.push(new plupload.File(id, file.fileName || file.name, file.fileSize || file.size)); // fileName / fileSize depricated
+                }
+
+                // Trigger FilesAdded event if we added any
+                if (files.length) {
+                    uploader.trigger("FilesAdded", files);
+                }
+            }
+
+            // No HTML5 upload support
+            features = this.getFeatures();
+            if (!features.html5) {
+                callback({success : false});
+                return;
+            }
+
+            uploader.bind("Init", function(up) {
+                var inputContainer, browseButton, mimes = [], i, y, filters = up.settings.filters, ext, type, container = document.body, inputFile;
+
+                // Create input container and insert it at an absolute position within the browse button
+                inputContainer = document.createElement('div');
+                inputContainer.id = up.id + '_html5_container';
+
+                plupload.extend(inputContainer.style, {
+                    position : 'absolute',
+                    background : uploader.settings.shim_bgcolor || 'transparent',
+                    width : '100px',
+                    height : '100px',
+                    overflow : 'hidden',
+                    zIndex : 99999,
+                    opacity : uploader.settings.shim_bgcolor ? '' : 0 // Force transparent if bgcolor is undefined
+                });
+                inputContainer.className = 'plupload html5';
+
+                if (uploader.settings.container) {
+                    container = document.getElementById(uploader.settings.container);
+                    if (plupload.getStyle(container, 'position') === 'static') {
+                        container.style.position = 'relative';
+                    }
+                }
+
+                container.appendChild(inputContainer);
+                
+                // Convert extensions to mime types list
+                no_type_restriction:
+                for (i = 0; i < filters.length; i++) {
+                    ext = filters[i].extensions.split(/,/);
+
+                    for (y = 0; y < ext.length; y++) {
+                        
+                        // If there's an asterisk in the list, then accept attribute is not required
+                        if (ext[y] === '*') {
+                            mimes = [];
+                            break no_type_restriction;
+                        }
+                        
+                        type = plupload.mimeTypes[ext[y]];
+
+                        if (type && plupload.inArray(type, mimes) === -1) {
+                            mimes.push(type);
+                        }
+                    }
+                }
+
+
+                // Insert the input inside the input container
+                inputContainer.innerHTML = '<input id="' + uploader.id + '_html5" ' + ' style="font-size:999px"' +
+                                            ' type="file" accept="' + mimes.join(',') + '" ' +
+                                            (uploader.settings.multi_selection && uploader.features.multi_selection ? 'multiple="multiple"' : '') + ' />';
+
+                inputContainer.scrollTop = 100;
+                inputFile = document.getElementById(uploader.id + '_html5');
+                
+                if (up.features.triggerDialog) {
+                    plupload.extend(inputFile.style, {
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%'
+                    });
+                } else {
+                    // shows arrow cursor instead of the text one, bit more logical
+                    plupload.extend(inputFile.style, {
+                        cssFloat: 'right', 
+                        styleFloat: 'right'
+                    });
+                }
+                
+                inputFile.onchange = function() {
+                    // Add the selected files from file input
+                    addSelectedFiles(this.files);
+                    
+                    // Clearing the value enables the user to select the same file again if they want to
+                    this.value = '';
+                };
+                
+                /* Since we have to place input[type=file] on top of the browse_button for some browsers (FF, Opera),
+                browse_button loses interactivity, here we try to neutralize this issue highlighting browse_button
+                with a special classes
+                TODO: needs to be revised as things will change */
+                browseButton = document.getElementById(up.settings.browse_button);
+                if (browseButton) {             
+                    var hoverClass = up.settings.browse_button_hover,
+                        activeClass = up.settings.browse_button_active,
+                        topElement = up.features.triggerDialog ? browseButton : inputContainer;
+                    
+                    if (hoverClass) {
+                        plupload.addEvent(topElement, 'mouseover', function() {
+                            plupload.addClass(browseButton, hoverClass);    
+                        }, up.id);
+                        plupload.addEvent(topElement, 'mouseout', function() {
+                            plupload.removeClass(browseButton, hoverClass); 
+                        }, up.id);
+                    }
+                    
+                    if (activeClass) {
+                        plupload.addEvent(topElement, 'mousedown', function() {
+                            plupload.addClass(browseButton, activeClass);   
+                        }, up.id);
+                        plupload.addEvent(document.body, 'mouseup', function() {
+                            plupload.removeClass(browseButton, activeClass);    
+                        }, up.id);
+                    }
+
+                    // Route click event to the input[type=file] element for supporting browsers
+                    if (up.features.triggerDialog) {
+                        plupload.addEvent(browseButton, 'click', function(e) {
+                            var input = document.getElementById(up.id + '_html5');
+                            if (input && !input.disabled) { // for some reason FF (up to 8.0.1 so far) lets to click disabled input[type=file]
+                                input.click();
+                            }
+                            e.preventDefault();
+                        }, up.id); 
+                    }
+                }
+            });
+
+            // Add drop handler
+            uploader.bind("PostInit", function() {
+                var dropElm = document.getElementById(uploader.settings.drop_element);
+
+                if (dropElm) {
+                    // Lets fake drag/drop on Safari by moving a input type file in front of the mouse pointer when we drag into the drop zone
+                    // TODO: Remove this logic once Safari has official drag/drop support
+                    if (fakeSafariDragDrop) {
+                        plupload.addEvent(dropElm, 'dragenter', function(e) {
+                            var dropInputElm, dropPos, dropSize;
+
+                            // Get or create drop zone
+                            dropInputElm = document.getElementById(uploader.id + "_drop");
+                            if (!dropInputElm) {
+                                dropInputElm = document.createElement("input");
+                                dropInputElm.setAttribute('type', "file");
+                                dropInputElm.setAttribute('id', uploader.id + "_drop");
+                                dropInputElm.setAttribute('multiple', 'multiple');
+
+                                plupload.addEvent(dropInputElm, 'change', function() {
+                                    // Add the selected files from file input
+                                    addSelectedFiles(this.files);
+                                                                        
+                                    // Remove input element
+                                    plupload.removeEvent(dropInputElm, 'change', uploader.id);
+                                    dropInputElm.parentNode.removeChild(dropInputElm);                                  
+                                }, uploader.id);
+                                
+                                dropElm.appendChild(dropInputElm);
+                            }
+
+                            dropPos = plupload.getPos(dropElm, document.getElementById(uploader.settings.container));
+                            dropSize = plupload.getSize(dropElm);
+                            
+                            if (plupload.getStyle(dropElm, 'position') === 'static') {
+                                plupload.extend(dropElm.style, {
+                                    position : 'relative'
+                                });
+                            }
+              
+                            plupload.extend(dropInputElm.style, {
+                                position : 'absolute',
+                                display : 'block',
+                                top : 0,
+                                left : 0,
+                                width : dropSize.w + 'px',
+                                height : dropSize.h + 'px',
+                                opacity : 0
+                            });                         
+                        }, uploader.id);
+
+                        return;
+                    }
+
+                    // Block browser default drag over
+                    plupload.addEvent(dropElm, 'dragover', function(e) {
+                        e.preventDefault();
+                    }, uploader.id);
+
+                    // Attach drop handler and grab files
+                    plupload.addEvent(dropElm, 'drop', function(e) {
+                        var dataTransfer = e.dataTransfer;
+
+                        // Add dropped files
+                        if (dataTransfer && dataTransfer.files) {
+                            addSelectedFiles(dataTransfer.files);
+                        }
+
+                        e.preventDefault();
+                    }, uploader.id);
+                }
+            });
+
+            uploader.bind("Refresh", function(up) {
+                var browseButton, browsePos, browseSize, inputContainer, zIndex;
+                    
+                browseButton = document.getElementById(uploader.settings.browse_button);
+                if (browseButton) {
+                    browsePos = plupload.getPos(browseButton, document.getElementById(up.settings.container));
+                    browseSize = plupload.getSize(browseButton);
+                    inputContainer = document.getElementById(uploader.id + '_html5_container');
+    
+                    plupload.extend(inputContainer.style, {
+                        top : browsePos.y + 'px',
+                        left : browsePos.x + 'px',
+                        width : browseSize.w + 'px',
+                        height : browseSize.h + 'px'
+                    });
+                    
+                    // for WebKit place input element underneath the browse button and route onclick event 
+                    // TODO: revise when browser support for this feature will change
+                    if (uploader.features.triggerDialog) {
+                        if (plupload.getStyle(browseButton, 'position') === 'static') {
+                            plupload.extend(browseButton.style, {
+                                position : 'relative'
+                            });
+                        }
+                        
+                        zIndex = parseInt(plupload.getStyle(browseButton, 'z-index'), 10);
+                        if (isNaN(zIndex)) {
+                            zIndex = 0;
+                        }                       
+                            
+                        plupload.extend(browseButton.style, {
+                            zIndex : zIndex
+                        });                     
+                                            
+                        plupload.extend(inputContainer.style, {
+                            zIndex : zIndex - 1
+                        });
+                    }               
+                }
+            });
+            
+            uploader.bind("DisableBrowse", function(up, disabled) {
+                var input = document.getElementById(up.id + '_html5');
+                if (input) {
+                    input.disabled = disabled;  
+                }
+            });
+            
+            uploader.bind("CancelUpload", function() {
+                if (xhr && xhr.abort) {
+                    xhr.abort();    
+                }
+            });
+
+            uploader.bind("UploadFile", function(up, file) {
+                var settings = up.settings, nativeFile, resize;
+                    
+                function w3cBlobSlice(blob, start, end) {
+                    var blobSlice;
+                    
+                    if (File.prototype.slice) {
+                        try {
+                            blob.slice();   // depricated version will throw WRONG_ARGUMENTS_ERR exception
+                            return blob.slice(start, end);
+                        } catch (e) {
+                            // depricated slice method
+                            return blob.slice(start, end - start); 
+                        }
+                    // slice method got prefixed: https://bugzilla.mozilla.org/show_bug.cgi?id=649672   
+                    } else if (blobSlice = File.prototype.webkitSlice || File.prototype.mozSlice) {
+                        return blobSlice.call(blob, start, end);    
+                    } else {
+                        return null; // or throw some exception 
+                    }
+                }   
+
+                function sendBinaryBlob(blob) {
+                    var chunk = 0, loaded = 0,
+                        fr = ("FileReader" in window) ? new FileReader : null;
+                        
+
+                    function uploadNextChunk() {
+                        var chunkBlob, br, chunks, args, chunkSize, curChunkSize, mimeType, url = up.settings.url;                                                  
+
+                        
+                        function prepareAndSend(bin) {
+                            var multipartDeltaSize = 0,
+                                boundary = '----pluploadboundary' + plupload.guid(), formData, dashdash = '--', crlf = '\r\n', multipartBlob = '';
+                                
+                            xhr = new XMLHttpRequest;
+                                                            
+                            // Do we have upload progress support
+                            if (xhr.upload) {
+                                xhr.upload.onprogress = function(e) {
+                                    file.loaded = Math.min(file.size, loaded + e.loaded - multipartDeltaSize); // Loaded can be larger than file size due to multipart encoding
+                                    up.trigger('UploadProgress', file);
+                                };
+                            }
+    
+                            xhr.onreadystatechange = function() {
+                                var httpStatus, chunkArgs;
+                                                                    
+                                if (xhr.readyState == 4 && up.state !== plupload.STOPPED) {
+                                    // Getting the HTTP status might fail on some Gecko versions
+                                    try {
+                                        httpStatus = xhr.status;
+                                    } catch (ex) {
+                                        httpStatus = 0;
+                                    }
+    
+                                    // Is error status
+                                    if (httpStatus >= 400) {
+                                        up.trigger('Error', {
+                                            code : plupload.HTTP_ERROR,
+                                            message : plupload.translate('HTTP Error.'),
+                                            file : file,
+                                            status : httpStatus
+                                        });
+                                    } else {
+                                        // Handle chunk response
+                                        if (chunks) {
+                                            chunkArgs = {
+                                                chunk : chunk,
+                                                chunks : chunks,
+                                                response : xhr.responseText,
+                                                status : httpStatus
+                                            };
+    
+                                            up.trigger('ChunkUploaded', file, chunkArgs);
+                                            loaded += curChunkSize;
+    
+                                            // Stop upload
+                                            if (chunkArgs.cancelled) {
+                                                file.status = plupload.FAILED;
+                                                return;
+                                            }
+    
+                                            file.loaded = Math.min(file.size, (chunk + 1) * chunkSize);
+                                        } else {
+                                            file.loaded = file.size;
+                                        }
+    
+                                        up.trigger('UploadProgress', file);
+                                        
+                                        bin = chunkBlob = formData = multipartBlob = null; // Free memory
+                                        
+                                        // Check if file is uploaded
+                                        if (!chunks || ++chunk >= chunks) {
+                                            file.status = plupload.DONE;
+                                                                                        
+                                            up.trigger('FileUploaded', file, {
+                                                response : xhr.responseText,
+                                                status : httpStatus
+                                            });                                     
+                                        } else {                                        
+                                            // Still chunks left
+                                            uploadNextChunk();
+                                        }
+                                    }                                                                   
+                                }
+                            };
+                            
+    
+                            // Build multipart request
+                            if (up.settings.multipart && features.multipart) {
+                                
+                                args.name = file.target_name || file.name;
+                                
+                                xhr.open("post", url, true);
+                                
+                                // Set custom headers
+                                plupload.each(up.settings.headers, function(value, name) {
+                                    xhr.setRequestHeader(name, value);
+                                });
+                                
+                                
+                                // if has FormData support like Chrome 6+, Safari 5+, Firefox 4, use it
+                                if (typeof(bin) !== 'string' && !!window.FormData) {
+                                    formData = new FormData();
+    
+                                    // Add multipart params
+                                    plupload.each(plupload.extend(args, up.settings.multipart_params), function(value, name) {
+                                        formData.append(name, value);
+                                    });
+    
+                                    // Add file and send it
+                                    formData.append(up.settings.file_data_name, bin);                               
+                                    xhr.send(formData);
+    
+                                    return;
+                                }  // if no FormData we can still try to send it directly as last resort (see below)
+                                
+                                
+                                if (typeof(bin) === 'string') {
+                                    // Trying to send the whole thing as binary...
+        
+                                    // multipart request
+                                    xhr.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
+        
+                                    // append multipart parameters
+                                    plupload.each(plupload.extend(args, up.settings.multipart_params), function(value, name) {
+                                        multipartBlob += dashdash + boundary + crlf +
+                                            'Content-Disposition: form-data; name="' + name + '"' + crlf + crlf;
+        
+                                        multipartBlob += unescape(encodeURIComponent(value)) + crlf;
+                                    });
+        
+                                    mimeType = plupload.mimeTypes[file.name.replace(/^.+\.([^.]+)/, '$1').toLowerCase()] || 'application/octet-stream';
+        
+                                    // Build RFC2388 blob
+                                    multipartBlob += dashdash + boundary + crlf +
+                                        'Content-Disposition: form-data; name="' + up.settings.file_data_name + '"; filename="' + unescape(encodeURIComponent(file.name)) + '"' + crlf +
+                                        'Content-Type: ' + mimeType + crlf + crlf +
+                                        bin + crlf +
+                                        dashdash + boundary + dashdash + crlf;
+        
+                                    multipartDeltaSize = multipartBlob.length - bin.length;
+                                    bin = multipartBlob;
+                                
+                            
+                                    if (xhr.sendAsBinary) { // Gecko
+                                        xhr.sendAsBinary(bin);
+                                    } else if (features.canSendBinary) { // WebKit with typed arrays support
+                                        var ui8a = new Uint8Array(bin.length);
+                                        for (var i = 0; i < bin.length; i++) {
+                                            ui8a[i] = (bin.charCodeAt(i) & 0xff);
+                                        }
+                                        xhr.send(ui8a.buffer);
+                                    }
+                                    return; // will return from here only if shouldn't send binary
+                                }                           
+                            }
+                            
+                            // if no multipart, or last resort, send as binary stream
+                            url = plupload.buildUrl(up.settings.url, plupload.extend(args, up.settings.multipart_params));
+                            
+                            xhr.open("post", url, true);
+                            
+                            xhr.setRequestHeader('Content-Type', 'application/octet-stream'); // Binary stream header
+                                
+                            // Set custom headers
+                            plupload.each(up.settings.headers, function(value, name) {
+                                xhr.setRequestHeader(name, value);
+                            });
+                                                
+                            xhr.send(bin); 
+                        } // prepareAndSend
+
+
+                        // File upload finished
+                        if (file.status == plupload.DONE || file.status == plupload.FAILED || up.state == plupload.STOPPED) {
+                            return;
+                        }
+
+                        // Standard arguments
+                        args = {name : file.target_name || file.name};
+
+                        // Only add chunking args if needed
+                        if (settings.chunk_size && file.size > settings.chunk_size && (features.chunks || typeof(blob) == 'string')) { // blob will be of type string if it was loaded in memory 
+                            chunkSize = settings.chunk_size;
+                            chunks = Math.ceil(file.size / chunkSize);
+                            curChunkSize = Math.min(chunkSize, file.size - (chunk * chunkSize));
+
+                            // Blob is string so we need to fake chunking, this is not
+                            // ideal since the whole file is loaded into memory
+                            if (typeof(blob) == 'string') {
+                                chunkBlob = blob.substring(chunk * chunkSize, chunk * chunkSize + curChunkSize);
+                            } else {
+                                // Slice the chunk
+                                chunkBlob = w3cBlobSlice(blob, chunk * chunkSize, chunk * chunkSize + curChunkSize);
+                            }
+
+                            // Setup query string arguments
+                            args.chunk = chunk;
+                            args.chunks = chunks;
+                        } else {
+                            curChunkSize = file.size;
+                            chunkBlob = blob;
+                        }
+                        
+                        // workaround Gecko 2,5,6 FormData+Blob bug: https://bugzilla.mozilla.org/show_bug.cgi?id=649150
+                        if (up.settings.multipart && features.multipart && typeof(chunkBlob) !== 'string' && fr && features.cantSendBlobInFormData && features.chunks && up.settings.chunk_size) { // Gecko 2,5,6
+                            fr.onload = function() {
+                                prepareAndSend(fr.result);
+                            }
+                            fr.readAsBinaryString(chunkBlob);
+                        } else {
+                            prepareAndSend(chunkBlob);
+                        }
+                            
+                    }
+
+                    // Start uploading chunks
+                    uploadNextChunk();
+                }
+
+                nativeFile = html5files[file.id];
+                                
+                // Resize image if it's a supported format and resize is enabled
+                if (features.jpgresize && up.settings.resize && /\.(png|jpg|jpeg)$/i.test(file.name)) {
+                    scaleImage.call(up, file, up.settings.resize, /\.png$/i.test(file.name) ? 'image/png' : 'image/jpeg', function(res) {
+                        // If it was scaled send the scaled image if it failed then
+                        // send the raw image and let the server do the scaling
+                        if (res.success) {
+                            file.size = res.data.length;
+                            sendBinaryBlob(res.data);
+                        } else if (features.chunks) {
+                            sendBinaryBlob(nativeFile); 
+                        } else {
+                            readFileAsBinary(nativeFile, sendBinaryBlob); // for browsers not supporting File.slice (e.g. FF3.6)
+                        }
+                    });
+                // if there's no way to slice file without preloading it in memory, preload it
+                } else if (!features.chunks && features.jpgresize) { 
+                    readFileAsBinary(nativeFile, sendBinaryBlob); 
+                } else {
+                    sendBinaryBlob(nativeFile); 
+                }
+            });
+            
+            
+            uploader.bind('Destroy', function(up) {
+                var name, element, container = document.body,
+                    elements = {
+                        inputContainer: up.id + '_html5_container',
+                        inputFile: up.id + '_html5',
+                        browseButton: up.settings.browse_button,
+                        dropElm: up.settings.drop_element
+                    };
+
+                // Unbind event handlers
+                for (name in elements) {
+                    element = document.getElementById(elements[name]);
+                    if (element) {
+                        plupload.removeAllEvents(element, up.id);
+                    }
+                }
+                plupload.removeAllEvents(document.body, up.id);
+                
+                if (up.settings.container) {
+                    container = document.getElementById(up.settings.container);
+                }
+                
+                // Remove mark-up
+                container.removeChild(document.getElementById(elements.inputContainer));
+            });
+
+            callback({success : true});
+        }
+    });
+    
+    function BinaryReader() {
+        var II = false, bin;
+
+        // Private functions
+        function read(idx, size) {
+            var mv = II ? 0 : -8 * (size - 1), sum = 0, i;
+
+            for (i = 0; i < size; i++) {
+                sum |= (bin.charCodeAt(idx + i) << Math.abs(mv + i*8));
+            }
+
+            return sum;
+        }
+
+        function putstr(segment, idx, length) {
+            var length = arguments.length === 3 ? length : bin.length - idx - 1;
+            
+            bin = bin.substr(0, idx) + segment + bin.substr(length + idx);
+        }
+
+        function write(idx, num, size) {
+            var str = '', mv = II ? 0 : -8 * (size - 1), i;
+
+            for (i = 0; i < size; i++) {
+                str += String.fromCharCode((num >> Math.abs(mv + i*8)) & 255);
+            }
+
+            putstr(str, idx, size);
+        }
+
+        // Public functions
+        return {
+            II: function(order) {
+                if (order === undef) {
+                    return II;
+                } else {
+                    II = order;
+                }
+            },
+
+            init: function(binData) {
+                II = false;
+                bin = binData;
+            },
+
+            SEGMENT: function(idx, length, segment) {               
+                switch (arguments.length) {
+                    case 1: 
+                        return bin.substr(idx, bin.length - idx - 1);
+                    case 2: 
+                        return bin.substr(idx, length);
+                    case 3: 
+                        putstr(segment, idx, length);
+                        break;
+                    default: return bin;    
+                }
+            },
+
+            BYTE: function(idx) {
+                return read(idx, 1);
+            },
+
+            SHORT: function(idx) {
+                return read(idx, 2);
+            },
+
+            LONG: function(idx, num) {
+                if (num === undef) {
+                    return read(idx, 4);
+                } else {
+                    write(idx, num, 4);
+                }
+            },
+
+            SLONG: function(idx) { // 2's complement notation
+                var num = read(idx, 4);
+
+                return (num > 2147483647 ? num - 4294967296 : num);
+            },
+
+            STRING: function(idx, size) {
+                var str = '';
+
+                for (size += idx; idx < size; idx++) {
+                    str += String.fromCharCode(read(idx, 1));
+                }
+
+                return str;
+            }
+        };
+    }
+    
+    function JPEG_Headers(data) {
+        
+        var markers = {
+                0xFFE1: {
+                    app: 'EXIF',
+                    name: 'APP1',
+                    signature: "Exif\0" 
+                },
+                0xFFE2: {
+                    app: 'ICC',
+                    name: 'APP2',
+                    signature: "ICC_PROFILE\0" 
+                },
+                0xFFED: {
+                    app: 'IPTC',
+                    name: 'APP13',
+                    signature: "Photoshop 3.0\0" 
+                }
+            },
+            headers = [], read, idx, marker = undef, length = 0, limit;
+            
+        
+        read = new BinaryReader();
+        read.init(data);
+                
+        // Check if data is jpeg
+        if (read.SHORT(0) !== 0xFFD8) {
+            return;
+        }
+        
+        idx = 2;
+        limit = Math.min(1048576, data.length); 
+            
+        while (idx <= limit) {
+            marker = read.SHORT(idx);
+            
+            // omit RST (restart) markers
+            if (marker >= 0xFFD0 && marker <= 0xFFD7) {
+                idx += 2;
+                continue;
+            }
+            
+            // no headers allowed after SOS marker
+            if (marker === 0xFFDA || marker === 0xFFD9) {
+                break;  
+            }   
+            
+            length = read.SHORT(idx + 2) + 2;   
+            
+            if (markers[marker] && 
+                read.STRING(idx + 4, markers[marker].signature.length) === markers[marker].signature) {
+                headers.push({ 
+                    hex: marker,
+                    app: markers[marker].app.toUpperCase(),
+                    name: markers[marker].name.toUpperCase(),
+                    start: idx,
+                    length: length,
+                    segment: read.SEGMENT(idx, length)
+                });
+            }
+            idx += length;          
+        }
+                    
+        read.init(null); // free memory
+                        
+        return {
+            
+            headers: headers,
+            
+            restore: function(data) {
+                read.init(data);
+                
+                // Check if data is jpeg
+                var jpegHeaders = new JPEG_Headers(data);
+                
+                if (!jpegHeaders['headers']) {
+                    return false;
+                }   
+                
+                // Delete any existing headers that need to be replaced
+                for (var i = jpegHeaders['headers'].length; i > 0; i--) {
+                    var hdr = jpegHeaders['headers'][i - 1];
+                    read.SEGMENT(hdr.start, hdr.length, '')
+                }
+                jpegHeaders.purge();
+                
+                idx = read.SHORT(2) == 0xFFE0 ? 4 + read.SHORT(4) : 2;
+                                
+                for (var i = 0, max = headers.length; i < max; i++) {
+                    read.SEGMENT(idx, 0, headers[i].segment);                       
+                    idx += headers[i].length;
+                }
+                
+                return read.SEGMENT();
+            },
+            
+            get: function(app) {
+                var array = [];
+                                
+                for (var i = 0, max = headers.length; i < max; i++) {
+                    if (headers[i].app === app.toUpperCase()) {
+                        array.push(headers[i].segment);
+                    }
+                }
+                return array;
+            },
+            
+            set: function(app, segment) {
+                var array = [];
+                
+                if (typeof(segment) === 'string') {
+                    array.push(segment);    
+                } else {
+                    array = segment;    
+                }
+                
+                for (var i = ii = 0, max = headers.length; i < max; i++) {
+                    if (headers[i].app === app.toUpperCase()) {
+                        headers[i].segment = array[ii];
+                        headers[i].length = array[ii].length;
+                        ii++;
+                    }
+                    if (ii >= array.length) break;
+                }
+            },
+            
+            purge: function() {
+                headers = [];
+                read.init(null);
+            }
+        };      
+    }
+    
+    
+    function ExifParser() {
+        // Private ExifParser fields
+        var data, tags, offsets = {}, tagDescs;
+
+        data = new BinaryReader();
+
+        tags = {
+            tiff : {
+                /*
+                The image orientation viewed in terms of rows and columns.
+    
+                1 - The 0th row is at the visual top of the image, and the 0th column is the visual left-hand side.
+                2 - The 0th row is at the visual top of the image, and the 0th column is the visual left-hand side.
+                3 - The 0th row is at the visual top of the image, and the 0th column is the visual right-hand side.
+                4 - The 0th row is at the visual bottom of the image, and the 0th column is the visual right-hand side.
+                5 - The 0th row is at the visual bottom of the image, and the 0th column is the visual left-hand side.
+                6 - The 0th row is the visual left-hand side of the image, and the 0th column is the visual top.
+                7 - The 0th row is the visual right-hand side of the image, and the 0th column is the visual top.
+                8 - The 0th row is the visual right-hand side of the image, and the 0th column is the visual bottom.
+                9 - The 0th row is the visual left-hand side of the image, and the 0th column is the visual bottom.
+                */
+                0x0112: 'Orientation',
+                0x8769: 'ExifIFDPointer',
+                0x8825: 'GPSInfoIFDPointer'
+            },
+            exif : {
+                0x9000: 'ExifVersion',
+                0xA001: 'ColorSpace',
+                0xA002: 'PixelXDimension',
+                0xA003: 'PixelYDimension',
+                0x9003: 'DateTimeOriginal',
+                0x829A: 'ExposureTime',
+                0x829D: 'FNumber',
+                0x8827: 'ISOSpeedRatings',
+                0x9201: 'ShutterSpeedValue',
+                0x9202: 'ApertureValue' ,
+                0x9207: 'MeteringMode',
+                0x9208: 'LightSource',
+                0x9209: 'Flash',
+                0xA402: 'ExposureMode',
+                0xA403: 'WhiteBalance',
+                0xA406: 'SceneCaptureType',
+                0xA404: 'DigitalZoomRatio',
+                0xA408: 'Contrast',
+                0xA409: 'Saturation',
+                0xA40A: 'Sharpness'
+            },
+            gps : {
+                0x0000: 'GPSVersionID',
+                0x0001: 'GPSLatitudeRef',
+                0x0002: 'GPSLatitude',
+                0x0003: 'GPSLongitudeRef',
+                0x0004: 'GPSLongitude'
+            }
+        };
+
+        tagDescs = {
+            'ColorSpace': {
+                1: 'sRGB',
+                0: 'Uncalibrated'
+            },
+
+            'MeteringMode': {
+                0: 'Unknown',
+                1: 'Average',
+                2: 'CenterWeightedAverage',
+                3: 'Spot',
+                4: 'MultiSpot',
+                5: 'Pattern',
+                6: 'Partial',
+                255: 'Other'
+            },
+
+            'LightSource': {
+                1: 'Daylight',
+                2: 'Fliorescent',
+                3: 'Tungsten',
+                4: 'Flash',
+                9: 'Fine weather',
+                10: 'Cloudy weather',
+                11: 'Shade',
+                12: 'Daylight fluorescent (D 5700 - 7100K)',
+                13: 'Day white fluorescent (N 4600 -5400K)',
+                14: 'Cool white fluorescent (W 3900 - 4500K)',
+                15: 'White fluorescent (WW 3200 - 3700K)',
+                17: 'Standard light A',
+                18: 'Standard light B',
+                19: 'Standard light C',
+                20: 'D55',
+                21: 'D65',
+                22: 'D75',
+                23: 'D50',
+                24: 'ISO studio tungsten',
+                255: 'Other'
+            },
+
+            'Flash': {
+                0x0000: 'Flash did not fire.',
+                0x0001: 'Flash fired.',
+                0x0005: 'Strobe return light not detected.',
+                0x0007: 'Strobe return light detected.',
+                0x0009: 'Flash fired, compulsory flash mode',
+                0x000D: 'Flash fired, compulsory flash mode, return light not detected',
+                0x000F: 'Flash fired, compulsory flash mode, return light detected',
+                0x0010: 'Flash did not fire, compulsory flash mode',
+                0x0018: 'Flash did not fire, auto mode',
+                0x0019: 'Flash fired, auto mode',
+                0x001D: 'Flash fired, auto mode, return light not detected',
+                0x001F: 'Flash fired, auto mode, return light detected',
+                0x0020: 'No flash function',
+                0x0041: 'Flash fired, red-eye reduction mode',
+                0x0045: 'Flash fired, red-eye reduction mode, return light not detected',
+                0x0047: 'Flash fired, red-eye reduction mode, return light detected',
+                0x0049: 'Flash fired, compulsory flash mode, red-eye reduction mode',
+                0x004D: 'Flash fired, compulsory flash mode, red-eye reduction mode, return light not detected',
+                0x004F: 'Flash fired, compulsory flash mode, red-eye reduction mode, return light detected',
+                0x0059: 'Flash fired, auto mode, red-eye reduction mode',
+                0x005D: 'Flash fired, auto mode, return light not detected, red-eye reduction mode',
+                0x005F: 'Flash fired, auto mode, return light detected, red-eye reduction mode'
+            },
+
+            'ExposureMode': {
+                0: 'Auto exposure',
+                1: 'Manual exposure',
+                2: 'Auto bracket'
+            },
+
+            'WhiteBalance': {
+                0: 'Auto white balance',
+                1: 'Manual white balance'
+            },
+
+            'SceneCaptureType': {
+                0: 'Standard',
+                1: 'Landscape',
+                2: 'Portrait',
+                3: 'Night scene'
+            },
+
+            'Contrast': {
+                0: 'Normal',
+                1: 'Soft',
+                2: 'Hard'
+            },
+
+            'Saturation': {
+                0: 'Normal',
+                1: 'Low saturation',
+                2: 'High saturation'
+            },
+
+            'Sharpness': {
+                0: 'Normal',
+                1: 'Soft',
+                2: 'Hard'
+            },
+
+            // GPS related
+            'GPSLatitudeRef': {
+                N: 'North latitude',
+                S: 'South latitude'
+            },
+
+            'GPSLongitudeRef': {
+                E: 'East longitude',
+                W: 'West longitude'
+            }
+        };
+
+        function extractTags(IFD_offset, tags2extract) {
+            var length = data.SHORT(IFD_offset), i, ii,
+                tag, type, count, tagOffset, offset, value, values = [], hash = {};
+
+            for (i = 0; i < length; i++) {
+                // Set binary reader pointer to beginning of the next tag
+                offset = tagOffset = IFD_offset + 12 * i + 2;
+
+                tag = tags2extract[data.SHORT(offset)];
+
+                if (tag === undef) {
+                    continue; // Not the tag we requested
+                }
+
+                type = data.SHORT(offset+=2);
+                count = data.LONG(offset+=2);
+
+                offset += 4;
+                values = [];
+
+                switch (type) {
+                    case 1: // BYTE
+                    case 7: // UNDEFINED
+                        if (count > 4) {
+                            offset = data.LONG(offset) + offsets.tiffHeader;
+                        }
+
+                        for (ii = 0; ii < count; ii++) {
+                            values[ii] = data.BYTE(offset + ii);
+                        }
+
+                        break;
+
+                    case 2: // STRING
+                        if (count > 4) {
+                            offset = data.LONG(offset) + offsets.tiffHeader;
+                        }
+
+                        hash[tag] = data.STRING(offset, count - 1);
+
+                        continue;
+
+                    case 3: // SHORT
+                        if (count > 2) {
+                            offset = data.LONG(offset) + offsets.tiffHeader;
+                        }
+
+                        for (ii = 0; ii < count; ii++) {
+                            values[ii] = data.SHORT(offset + ii*2);
+                        }
+
+                        break;
+
+                    case 4: // LONG
+                        if (count > 1) {
+                            offset = data.LONG(offset) + offsets.tiffHeader;
+                        }
+
+                        for (ii = 0; ii < count; ii++) {
+                            values[ii] = data.LONG(offset + ii*4);
+                        }
+
+                        break;
+
+                    case 5: // RATIONAL
+                        offset = data.LONG(offset) + offsets.tiffHeader;
+
+                        for (ii = 0; ii < count; ii++) {
+                            values[ii] = data.LONG(offset + ii*4) / data.LONG(offset + ii*4 + 4);
+                        }
+
+                        break;
+
+                    case 9: // SLONG
+                        offset = data.LONG(offset) + offsets.tiffHeader;
+
+                        for (ii = 0; ii < count; ii++) {
+                            values[ii] = data.SLONG(offset + ii*4);
+                        }
+
+                        break;
+
+                    case 10: // SRATIONAL
+                        offset = data.LONG(offset) + offsets.tiffHeader;
+
+                        for (ii = 0; ii < count; ii++) {
+                            values[ii] = data.SLONG(offset + ii*4) / data.SLONG(offset + ii*4 + 4);
+                        }
+
+                        break;
+
+                    default:
+                        continue;
+                }
+
+                value = (count == 1 ? values[0] : values);
+
+                if (tagDescs.hasOwnProperty(tag) && typeof value != 'object') {
+                    hash[tag] = tagDescs[tag][value];
+                } else {
+                    hash[tag] = value;
+                }
+            }
+
+            return hash;
+        }
+
+        function getIFDOffsets() {
+            var Tiff = undef, idx = offsets.tiffHeader;
+
+            // Set read order of multi-byte data
+            data.II(data.SHORT(idx) == 0x4949);
+
+            // Check if always present bytes are indeed present
+            if (data.SHORT(idx+=2) !== 0x002A) {
+                return false;
+            }
+        
+            offsets['IFD0'] = offsets.tiffHeader + data.LONG(idx += 2);
+            Tiff = extractTags(offsets['IFD0'], tags.tiff);
+
+            offsets['exifIFD'] = ('ExifIFDPointer' in Tiff ? offsets.tiffHeader + Tiff.ExifIFDPointer : undef);
+            offsets['gpsIFD'] = ('GPSInfoIFDPointer' in Tiff ? offsets.tiffHeader + Tiff.GPSInfoIFDPointer : undef);
+
+            return true;
+        }
+        
+        // At the moment only setting of simple (LONG) values, that do not require offset recalculation, is supported
+        function setTag(ifd, tag, value) {
+            var offset, length, tagOffset, valueOffset = 0;
+            
+            // If tag name passed translate into hex key
+            if (typeof(tag) === 'string') {
+                var tmpTags = tags[ifd.toLowerCase()];
+                for (hex in tmpTags) {
+                    if (tmpTags[hex] === tag) {
+                        tag = hex;
+                        break;  
+                    }
+                }
+            }
+            offset = offsets[ifd.toLowerCase() + 'IFD'];
+            length = data.SHORT(offset);
+                        
+            for (i = 0; i < length; i++) {
+                tagOffset = offset + 12 * i + 2;
+
+                if (data.SHORT(tagOffset) == tag) {
+                    valueOffset = tagOffset + 8;
+                    break;
+                }
+            }
+            
+            if (!valueOffset) return false;
+
+            
+            data.LONG(valueOffset, value);
+            return true;
+        }
+        
+
+        // Public functions
+        return {
+            init: function(segment) {
+                // Reset internal data
+                offsets = {
+                    tiffHeader: 10
+                };
+                
+                if (segment === undef || !segment.length) {
+                    return false;
+                }
+
+                data.init(segment);
+
+                // Check if that's APP1 and that it has EXIF
+                if (data.SHORT(0) === 0xFFE1 && data.STRING(4, 5).toUpperCase() === "EXIF\0") {
+                    return getIFDOffsets();
+                }
+                return false;
+            },
+            
+            EXIF: function() {
+                var Exif;
+                
+                // Populate EXIF hash
+                Exif = extractTags(offsets.exifIFD, tags.exif);
+
+                // Fix formatting of some tags
+                if (Exif.ExifVersion && plupload.typeOf(Exif.ExifVersion) === 'array') {
+                    for (var i = 0, exifVersion = ''; i < Exif.ExifVersion.length; i++) {
+                        exifVersion += String.fromCharCode(Exif.ExifVersion[i]);    
+                    }
+                    Exif.ExifVersion = exifVersion;
+                }
+
+                return Exif;
+            },
+
+            GPS: function() {
+                var GPS;
+                
+                GPS = extractTags(offsets.gpsIFD, tags.gps);
+                
+                // iOS devices (and probably some others) do not put in GPSVersionID tag (why?..)
+                if (GPS.GPSVersionID) { 
+                    GPS.GPSVersionID = GPS.GPSVersionID.join('.');
+                }
+
+                return GPS;
+            },
+            
+            setExif: function(tag, value) {
+                // Right now only setting of width/height is possible
+                if (tag !== 'PixelXDimension' && tag !== 'PixelYDimension') return false;
+                
+                return setTag('exif', tag, value);
+            },
+
+
+            getBinary: function() {
+                return data.SEGMENT();
+            }
+        };
+    };
+})(window, document, plupload);
+
 });
+define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.html4-debug", [], function (require, exports) {
+
+/**
+ * plupload.html4.js
+ *
+ * Copyright 2010, Ryan Demmer
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under GPL License.
+ *
+ * License: http://www.plupload.com/license
+ * Contributing: http://www.plupload.com/contributing
+ */
+
+// JSLint defined globals
+/*global plupload:false, window:false */
+
+(function(window, document, plupload, undef) {
+    function getById(id) {
+        return document.getElementById(id);
+    }
+
+    /**
+     * HTML4 implementation. This runtime has no special features it uses an form that posts files into an hidden iframe.
+     *
+     * @static
+     * @class plupload.runtimes.Html4
+     * @extends plupload.Runtime
+     */
+    plupload.runtimes.Html4 = plupload.addRuntime("html4", {
+        /**
+         * Returns a list of supported features for the runtime.
+         *
+         * @return {Object} Name/value object with supported features.
+         */
+        getFeatures : function() {          
+            // Only multipart feature
+            return {
+                multipart: true,
+                
+                // WebKit and Gecko 2+ can trigger file dialog progrmmatically
+                triggerDialog: (plupload.ua.gecko && window.FormData || plupload.ua.webkit) 
+            };
+        },
+
+        /**
+         * Initializes the upload runtime.
+         *
+         * @method init
+         * @param {plupload.Uploader} uploader Uploader instance that needs to be initialized.
+         * @param {function} callback Callback to execute when the runtime initializes or fails to initialize. If it succeeds an object with a parameter name success will be set to true.
+         */
+        init : function(uploader, callback) {
+            uploader.bind("Init", function(up) {
+                var container = document.body, iframe, url = "javascript", currentFile,
+                    input, currentFileId, fileIds = [], IE = /MSIE/.test(navigator.userAgent), mimes = [],
+                    filters = up.settings.filters, i, ext, type, y;
+
+                // Convert extensions to mime types list
+                no_type_restriction:
+                for (i = 0; i < filters.length; i++) {
+                    ext = filters[i].extensions.split(/,/);
+
+                    for (y = 0; y < ext.length; y++) {
+                        
+                        // If there's an asterisk in the list, then accept attribute is not required
+                        if (ext[y] === '*') {
+                            mimes = [];
+                            break no_type_restriction;
+                        }
+                        
+                        type = plupload.mimeTypes[ext[y]];
+
+                        if (type && plupload.inArray(type, mimes) === -1) {
+                            mimes.push(type);
+                        }
+                    }
+                }
+                
+                mimes = mimes.join(',');
+
+                function createForm() {
+                    var form, input, bgcolor, browseButton;
+
+                    // Setup unique id for form
+                    currentFileId = plupload.guid();
+                    
+                    // Save id for Destroy handler
+                    fileIds.push(currentFileId);
+
+                    // Create form
+                    form = document.createElement('form');
+                    form.setAttribute('id', 'form_' + currentFileId);
+                    form.setAttribute('method', 'post');
+                    form.setAttribute('enctype', 'multipart/form-data');
+                    form.setAttribute('encoding', 'multipart/form-data');
+                    form.setAttribute("target", up.id + '_iframe');
+                    form.style.position = 'absolute';
+
+                    // Create input and set attributes
+                    input = document.createElement('input');
+                    input.setAttribute('id', 'input_' + currentFileId);
+                    input.setAttribute('type', 'file');
+                    input.setAttribute('accept', mimes);
+                    input.setAttribute('size', 1);
+                    
+                    browseButton = getById(up.settings.browse_button);
+                    
+                    // Route click event to input element programmatically, if possible
+                    if (up.features.triggerDialog && browseButton) {
+                        plupload.addEvent(getById(up.settings.browse_button), 'click', function(e) {
+                            if (!input.disabled) {
+                                input.click();
+                            }
+                            e.preventDefault();
+                        }, up.id);
+                    }
+
+                    // Set input styles
+                    plupload.extend(input.style, {
+                        width : '100%',
+                        height : '100%',
+                        opacity : 0,
+                        fontSize: '99px', // force input element to be bigger then needed to occupy whole space
+                        cursor: 'pointer'
+                    });
+                    
+                    plupload.extend(form.style, {
+                        overflow: 'hidden'
+                    });
+
+                    // Show the container if shim_bgcolor is specified
+                    bgcolor = up.settings.shim_bgcolor;
+                    if (bgcolor) {
+                        form.style.background = bgcolor;
+                    }
+
+                    // no opacity in IE
+                    if (IE) {
+                        plupload.extend(input.style, {
+                            filter : "alpha(opacity=0)"
+                        });
+                    }
+
+                    // add change event
+                    plupload.addEvent(input, 'change', function(e) {
+                        var element = e.target, name, files = [], topElement;
+
+                        if (element.value) {
+                            getById('form_' + currentFileId).style.top = -0xFFFFF + "px";
+
+                            // Get file name
+                            name = element.value.replace(/\\/g, '/');
+                            name = name.substring(name.length, name.lastIndexOf('/') + 1);
+
+                            // Push files
+                            files.push(new plupload.File(currentFileId, name));
+                            
+                            // Clean-up events - they won't be needed anymore
+                            if (!up.features.triggerDialog) {
+                                plupload.removeAllEvents(form, up.id);                              
+                            } else {
+                                plupload.removeEvent(browseButton, 'click', up.id); 
+                            }
+                            plupload.removeEvent(input, 'change', up.id);
+
+                            // Create and position next form
+                            createForm();
+
+                            // Fire FilesAdded event
+                            if (files.length) {
+                                uploader.trigger("FilesAdded", files);
+                            }                           
+                        }
+                    }, up.id);
+
+                    // append to container
+                    form.appendChild(input);
+                    container.appendChild(form);
+
+                    up.refresh();
+                }
+
+
+                function createIframe() {
+                    var temp = document.createElement('div');
+
+                    // Create iframe using a temp div since IE 6 won't be able to set the name using setAttribute or iframe.name
+                    temp.innerHTML = '<iframe id="' + up.id + '_iframe" name="' + up.id + '_iframe" src="' + url + ':&quot;&quot;" style="display:none"></iframe>';
+                    iframe = temp.firstChild;
+                    container.appendChild(iframe);
+
+                    // Add IFrame onload event
+                    plupload.addEvent(iframe, 'load', function(e) {
+                        var n = e.target, el, result;
+
+                        // Ignore load event if there is no file
+                        if (!currentFile) {
+                            return;
+                        }
+
+                        try {
+                            el = n.contentWindow.document || n.contentDocument || window.frames[n.id].document;
+                        } catch (ex) {
+                            // Probably a permission denied error
+                            up.trigger('Error', {
+                                code : plupload.SECURITY_ERROR,
+                                message : plupload.translate('Security error.'),
+                                file : currentFile
+                            });
+
+                            return;
+                        }
+
+                        // Get result
+                        result = el.body.innerHTML;
+                        
+                        // Assume no error
+                        if (result) {
+                            currentFile.status = plupload.DONE;
+                            currentFile.loaded = 1025;
+                            currentFile.percent = 100;
+
+                            up.trigger('UploadProgress', currentFile);
+                            up.trigger('FileUploaded', currentFile, {
+                                response : result
+                            });
+                        }
+                    }, up.id);
+                } // end createIframe
+                
+                if (up.settings.container) {
+                    container = getById(up.settings.container);
+                    if (plupload.getStyle(container, 'position') === 'static') {
+                        container.style.position = 'relative';
+                    }
+                }
+                
+                // Upload file
+                up.bind("UploadFile", function(up, file) {
+                    var form, input;
+                    
+                    // File upload finished
+                    if (file.status == plupload.DONE || file.status == plupload.FAILED || up.state == plupload.STOPPED) {
+                        return;
+                    }
+
+                    // Get the form and input elements
+                    form = getById('form_' + file.id);
+                    input = getById('input_' + file.id);
+
+                    // Set input element name attribute which allows it to be submitted
+                    input.setAttribute('name', up.settings.file_data_name);
+
+                    // Store action
+                    form.setAttribute("action", up.settings.url);
+
+                    // Append multipart parameters
+                    plupload.each(plupload.extend({name : file.target_name || file.name}, up.settings.multipart_params), function(value, name) {
+                        var hidden = document.createElement('input');
+
+                        plupload.extend(hidden, {
+                            type : 'hidden',
+                            name : name,
+                            value : value
+                        });
+
+                        form.insertBefore(hidden, form.firstChild);
+                    });
+
+                    currentFile = file;
+
+                    // Hide the current form
+                    getById('form_' + currentFileId).style.top = -0xFFFFF + "px";
+                    
+                    form.submit();
+                });
+                
+                
+                
+                up.bind('FileUploaded', function(up) {
+                    up.refresh(); // just to get the form back on top of browse_button
+                });             
+
+                up.bind('StateChanged', function(up) {
+                    if (up.state == plupload.STARTED) {
+                        createIframe();
+                    } else if (up.state == plupload.STOPPED) {
+                        window.setTimeout(function() {
+                            plupload.removeEvent(iframe, 'load', up.id);
+                            if (iframe.parentNode) { // #382
+                                iframe.parentNode.removeChild(iframe);
+                            }
+                        }, 0);
+                    }
+                    
+                    plupload.each(up.files, function(file, i) {
+                        if (file.status === plupload.DONE || file.status === plupload.FAILED) {
+                            var form = getById('form_' + file.id);
+
+                            if(form){
+                                form.parentNode.removeChild(form);
+                            }
+                        }
+                    });
+                });
+
+                // Refresh button, will reposition the input form
+                up.bind("Refresh", function(up) {
+                    var browseButton, topElement, hoverClass, activeClass, browsePos, browseSize, inputContainer, inputFile, zIndex;
+
+                    browseButton = getById(up.settings.browse_button);
+                    if (browseButton) {
+                        browsePos = plupload.getPos(browseButton, getById(up.settings.container));
+                        browseSize = plupload.getSize(browseButton);
+                        inputContainer = getById('form_' + currentFileId);
+                        inputFile = getById('input_' + currentFileId);
+    
+                        plupload.extend(inputContainer.style, {
+                            top : browsePos.y + 'px',
+                            left : browsePos.x + 'px',
+                            width : browseSize.w + 'px',
+                            height : browseSize.h + 'px'
+                        });
+                        
+                        // for IE and WebKit place input element underneath the browse button and route onclick event 
+                        // TODO: revise when browser support for this feature will change
+                        if (up.features.triggerDialog) {
+                            if (plupload.getStyle(browseButton, 'position') === 'static') {
+                                plupload.extend(browseButton.style, {
+                                    position : 'relative'
+                                });
+                            }
+                            
+                            zIndex = parseInt(browseButton.style.zIndex, 10);
+
+                            if (isNaN(zIndex)) {
+                                zIndex = 0;
+                            }
+
+                            plupload.extend(browseButton.style, {
+                                zIndex : zIndex
+                            });                         
+
+                            plupload.extend(inputContainer.style, {
+                                zIndex : zIndex - 1
+                            });
+                        }
+
+                        /* Since we have to place input[type=file] on top of the browse_button for some browsers (FF, Opera),
+                        browse_button loses interactivity, here we try to neutralize this issue highlighting browse_button
+                        with a special class
+                        TODO: needs to be revised as things will change */
+                        hoverClass = up.settings.browse_button_hover;
+                        activeClass = up.settings.browse_button_active;
+                        topElement = up.features.triggerDialog ? browseButton : inputContainer;
+                        
+                        if (hoverClass) {
+                            plupload.addEvent(topElement, 'mouseover', function() {
+                                plupload.addClass(browseButton, hoverClass);    
+                            }, up.id);
+                            plupload.addEvent(topElement, 'mouseout', function() {
+                                plupload.removeClass(browseButton, hoverClass);
+                            }, up.id);
+                        }
+                        
+                        if (activeClass) {
+                            plupload.addEvent(topElement, 'mousedown', function() {
+                                plupload.addClass(browseButton, activeClass);   
+                            }, up.id);
+                            plupload.addEvent(document.body, 'mouseup', function() {
+                                plupload.removeClass(browseButton, activeClass);    
+                            }, up.id);
+                        }
+                    }
+                });
+
+                // Remove files
+                uploader.bind("FilesRemoved", function(up, files) {
+                    var i, n;
+
+                    for (i = 0; i < files.length; i++) {
+                        n = getById('form_' + files[i].id);
+                        if (n) {
+                            n.parentNode.removeChild(n);
+                        }
+                    }
+                });
+                
+                uploader.bind("DisableBrowse", function(up, disabled) {
+                    var input = document.getElementById('input_' + currentFileId);
+                    if (input) {
+                        input.disabled = disabled;  
+                    }
+                });
+                
+                
+                // Completely destroy the runtime
+                uploader.bind("Destroy", function(up) {
+                    var name, element, form,
+                        elements = {
+                            inputContainer: 'form_' + currentFileId,
+                            inputFile: 'input_' + currentFileId,    
+                            browseButton: up.settings.browse_button
+                        };
+
+                    // Unbind event handlers
+                    for (name in elements) {
+                        element = getById(elements[name]);
+                        if (element) {
+                            plupload.removeAllEvents(element, up.id);
+                        }
+                    }
+                    plupload.removeAllEvents(document.body, up.id);
+                    
+                    // Remove mark-up
+                    plupload.each(fileIds, function(id, i) {
+                        form = getById('form_' + id);
+                        if (form) {
+                            container.removeChild(form);
+                        }
+                    });
+                    
+                });
+
+                // Create initial form
+                createForm();
+            });
+
+            callback({success : true});
+        }
+    });
+})(window, document, plupload);
+
+});
+define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.flash-debug", [], function (require, exports) {
+
+/**
+ * plupload.flash.js
+ *
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under GPL License.
+ *
+ * License: http://www.plupload.com/license
+ * Contributing: http://www.plupload.com/contributing
+ */
+
+// JSLint defined globals
+/*global window:false, document:false, plupload:false, ActiveXObject:false, escape:false */
+
+(function(window, document, plupload, undef) {
+    var uploadInstances = {}, initialized = {};
+
+    function getFlashVersion() {
+        var version;
+
+        try {
+            version = navigator.plugins['Shockwave Flash'];
+            version = version.description;
+        } catch (e1) {
+            try {
+                version = new ActiveXObject('ShockwaveFlash.ShockwaveFlash').GetVariable('$version');
+            } catch (e2) {
+                version = '0.0';
+            }
+        }
+
+        version = version.match(/\d+/g);
+
+        return parseFloat(version[0] + '.' + version[1]);
+    }
+
+    plupload.flash = {
+        /**
+         * Will be executed by the Flash runtime when it sends out events.
+         *
+         * @param {String} id If for the upload instance.
+         * @param {String} name Event name to trigger.
+         * @param {Object} obj Parameters to be passed with event.
+         */
+        trigger : function(id, name, obj) {
+                                
+            // Detach the call so that error handling in the browser is presented correctly
+            setTimeout(function() {
+                var uploader = uploadInstances[id], i, args;
+                
+                if (uploader) {             
+                    uploader.trigger('Flash:' + name, obj);
+                }
+            }, 0);
+        }
+    };
+
+    /**
+     * FlashRuntime implementation. This runtime supports these features: jpgresize, pngresize, chunks.
+     *
+     * @static
+     * @class plupload.runtimes.Flash
+     * @extends plupload.Runtime
+     */
+    plupload.runtimes.Flash = plupload.addRuntime("flash", {
+        
+        /**
+         * Returns a list of supported features for the runtime.
+         *
+         * @return {Object} Name/value object with supported features.
+         */
+        getFeatures : function() {
+            return {
+                jpgresize: true,
+                pngresize: true,
+                maxWidth: 8091,
+                maxHeight: 8091,
+                chunks: true,
+                progress: true,
+                multipart: true,
+                multi_selection: true
+            };
+        },
+
+        /**
+         * Initializes the upload runtime. This method should add necessary items to the DOM and register events needed for operation. 
+         *
+         * @method init
+         * @param {plupload.Uploader} uploader Uploader instance that needs to be initialized.
+         * @param {function} callback Callback to execute when the runtime initializes or fails to initialize. If it succeeds an object with a parameter name success will be set to true.
+         */
+        init : function(uploader, callback) {
+            var browseButton, flashContainer, waitCount = 0, container = document.body;
+
+            if (getFlashVersion() < 10) {
+                callback({success : false});
+                return;
+            }
+
+            initialized[uploader.id] = false;
+            uploadInstances[uploader.id] = uploader;
+
+            // Find browse button and set to to be relative
+            browseButton = document.getElementById(uploader.settings.browse_button);
+
+            // Create flash container and insert it at an absolute position within the browse button
+            flashContainer = document.createElement('div');
+            flashContainer.id = uploader.id + '_flash_container';
+
+            plupload.extend(flashContainer.style, {
+                position : 'absolute',
+                top : '0px',
+                background : uploader.settings.shim_bgcolor || 'transparent',
+                zIndex : 99999,
+                width : '100%',
+                height : '100%'
+            });
+
+            flashContainer.className = 'plupload flash';
+
+            if (uploader.settings.container) {
+                container = document.getElementById(uploader.settings.container);
+                if (plupload.getStyle(container, 'position') === 'static') {
+                    container.style.position = 'relative';
+                }
+            }
+
+            container.appendChild(flashContainer);
+            
+            // insert flash object
+            (function() {
+                var html, el;
+                
+                html = '<object id="' + uploader.id + '_flash" type="application/x-shockwave-flash" data="' + uploader.settings.flash_swf_url + '" ';
+                
+                if (plupload.ua.ie) {
+                    html += 'classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" ';
+                }
+
+                html += 'width="100%" height="100%" style="outline:0">'  +
+                    '<param name="movie" value="' + uploader.settings.flash_swf_url + '" />' +
+                    '<param name="flashvars" value="id=' + escape(uploader.id) + '" />' +
+                    '<param name="wmode" value="transparent" />' +
+                    '<param name="allowscriptaccess" value="always" />' +
+                '</object>';
+                    
+                if (plupload.ua.ie) {
+                    el = document.createElement('div');
+                    flashContainer.appendChild(el);
+                    el.outerHTML = html;
+                    el = null; // just in case
+                } else {
+                    flashContainer.innerHTML = html;
+                }
+            }());
+
+            function getFlashObj() {
+                return document.getElementById(uploader.id + '_flash');
+            }
+
+            function waitLoad() {
+                                
+                // Wait for 5 sec
+                if (waitCount++ > 5000) {
+                    callback({success : false});
+                    return;
+                }
+
+                if (initialized[uploader.id] === false) { // might also be undefined, if uploader was destroyed by that moment
+                    setTimeout(waitLoad, 1);
+                }
+            }
+
+            waitLoad();
+
+            // Fix IE memory leaks
+            browseButton = flashContainer = null;
+            
+            // destroy should always be available, after Flash:Init or before (#516)
+            uploader.bind("Destroy", function(up) {
+                var flashContainer;
+                
+                plupload.removeAllEvents(document.body, up.id);
+                
+                delete initialized[up.id];
+                delete uploadInstances[up.id];
+                
+                flashContainer = document.getElementById(up.id + '_flash_container');
+                if (flashContainer) {
+                    container.removeChild(flashContainer);
+                }
+            });
+
+            // Wait for Flash to send init event
+            uploader.bind("Flash:Init", function() {                
+                var lookup = {}, i;
+
+                try {
+                    getFlashObj().setFileFilters(uploader.settings.filters, uploader.settings.multi_selection);
+                } catch (ex) {
+                    callback({success : false});
+                    return;
+                }
+
+                // Prevent eventual reinitialization of the instance
+                if (initialized[uploader.id]) {
+                    return;
+                }
+                initialized[uploader.id] = true;
+
+                uploader.bind("UploadFile", function(up, file) {
+                    var settings = up.settings, resize = uploader.settings.resize || {};
+
+                    getFlashObj().uploadFile(lookup[file.id], settings.url, {
+                        name : file.target_name || file.name,
+                        mime : plupload.mimeTypes[file.name.replace(/^.+\.([^.]+)/, '$1').toLowerCase()] || 'application/octet-stream',
+                        chunk_size : settings.chunk_size,
+                        width : resize.width,
+                        height : resize.height,
+                        quality : resize.quality,
+                        multipart : settings.multipart,
+                        multipart_params : settings.multipart_params || {},
+                        file_data_name : settings.file_data_name,
+                        format : /\.(jpg|jpeg)$/i.test(file.name) ? 'jpg' : 'png',
+                        headers : settings.headers,
+                        urlstream_upload : settings.urlstream_upload
+                    });
+                });
+                
+                uploader.bind("CancelUpload", function() {
+                    getFlashObj().cancelUpload();
+                });
+
+
+                uploader.bind("Flash:UploadProcess", function(up, flash_file) {
+                    var file = up.getFile(lookup[flash_file.id]);
+
+                    if (file.status != plupload.FAILED) {
+                        file.loaded = flash_file.loaded;
+                        file.size = flash_file.size;
+
+                        up.trigger('UploadProgress', file);
+                    }
+                });
+
+                uploader.bind("Flash:UploadChunkComplete", function(up, info) {
+                    var chunkArgs, file = up.getFile(lookup[info.id]);
+
+                    chunkArgs = {
+                        chunk : info.chunk,
+                        chunks : info.chunks,
+                        response : info.text
+                    };
+
+                    up.trigger('ChunkUploaded', file, chunkArgs);
+
+                    // Stop upload if file is maked as failed
+                    if (file.status !== plupload.FAILED && up.state !== plupload.STOPPED) {
+                        getFlashObj().uploadNextChunk();
+                    }
+
+                    // Last chunk then dispatch FileUploaded event
+                    if (info.chunk == info.chunks - 1) {
+                        file.status = plupload.DONE;
+
+                        up.trigger('FileUploaded', file, {
+                            response : info.text
+                        });
+                    }
+                });
+
+                uploader.bind("Flash:SelectFiles", function(up, selected_files) {
+                    var file, i, files = [], id;
+
+                    // Add the selected files to the file queue
+                    for (i = 0; i < selected_files.length; i++) {
+                        file = selected_files[i];
+
+                        // Store away flash ref internally
+                        id = plupload.guid();
+                        lookup[id] = file.id;
+                        lookup[file.id] = id;
+
+                        files.push(new plupload.File(id, file.name, file.size));
+                    }
+
+                    // Trigger FilesAdded event if we added any
+                    if (files.length) {
+                        uploader.trigger("FilesAdded", files);
+                    }
+                });
+
+                uploader.bind("Flash:SecurityError", function(up, err) {
+                    uploader.trigger('Error', {
+                        code : plupload.SECURITY_ERROR,
+                        message : plupload.translate('Security error.'),
+                        details : err.message,
+                        file : uploader.getFile(lookup[err.id])
+                    });
+                });
+
+                uploader.bind("Flash:GenericError", function(up, err) {
+                    uploader.trigger('Error', {
+                        code : plupload.GENERIC_ERROR,
+                        message : plupload.translate('Generic error.'),
+                        details : err.message,
+                        file : uploader.getFile(lookup[err.id])
+                    });
+                });
+
+                uploader.bind("Flash:IOError", function(up, err) {
+                    uploader.trigger('Error', {
+                        code : plupload.IO_ERROR,
+                        message : plupload.translate('IO error.'),
+                        details : err.message,
+                        file : uploader.getFile(lookup[err.id])
+                    });
+                });
+                
+                uploader.bind("Flash:ImageError", function(up, err) {
+                    uploader.trigger('Error', {
+                        code : parseInt(err.code, 10),
+                        message : plupload.translate('Image error.'),
+                        file : uploader.getFile(lookup[err.id])
+                    });
+                });
+                
+                uploader.bind('Flash:StageEvent:rollOver', function(up) {
+                    var browseButton, hoverClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    hoverClass = up.settings.browse_button_hover;
+                    
+                    if (browseButton && hoverClass) {
+                        plupload.addClass(browseButton, hoverClass);
+                    }
+                });
+                
+                uploader.bind('Flash:StageEvent:rollOut', function(up) {
+                    var browseButton, hoverClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    hoverClass = up.settings.browse_button_hover;
+                    
+                    if (browseButton && hoverClass) {
+                        plupload.removeClass(browseButton, hoverClass);
+                    }
+                });
+                
+                uploader.bind('Flash:StageEvent:mouseDown', function(up) {
+                    var browseButton, activeClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    activeClass = up.settings.browse_button_active;
+                    
+                    if (browseButton && activeClass) {
+                        plupload.addClass(browseButton, activeClass);
+                        
+                        // Make sure that browse_button has active state removed from it
+                        plupload.addEvent(document.body, 'mouseup', function() {
+                            plupload.removeClass(browseButton, activeClass);    
+                        }, up.id);
+                    }
+                });
+                
+                uploader.bind('Flash:StageEvent:mouseUp', function(up) {
+                    var browseButton, activeClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    activeClass = up.settings.browse_button_active;
+                    
+                    if (browseButton && activeClass) {
+                        plupload.removeClass(browseButton, activeClass);
+                    }
+                });
+                
+                
+                uploader.bind('Flash:ExifData', function(up, obj) {
+                    uploader.trigger('ExifData', uploader.getFile(lookup[obj.id]), obj.data);
+                });
+                
+                
+                uploader.bind('Flash:GpsData', function(up, obj) {
+                    uploader.trigger('GpsData', uploader.getFile(lookup[obj.id]), obj.data);
+                });
+                
+
+                uploader.bind("QueueChanged", function(up) {
+                    uploader.refresh();
+                });
+
+                uploader.bind("FilesRemoved", function(up, files) {
+                    var i;
+
+                    for (i = 0; i < files.length; i++) {
+                        getFlashObj().removeFile(lookup[files[i].id]);
+                    }
+                });
+
+                uploader.bind("StateChanged", function(up) {
+                    uploader.refresh();
+                });
+
+                uploader.bind("Refresh", function(up) {
+                    var browseButton, browsePos, browseSize;
+
+                    // Set file filters incase it has been changed dynamically
+                    getFlashObj().setFileFilters(uploader.settings.filters, uploader.settings.multi_selection);
+
+                    browseButton = document.getElementById(up.settings.browse_button);
+                    if (browseButton) {
+                        browsePos = plupload.getPos(browseButton, document.getElementById(up.settings.container));
+                        browseSize = plupload.getSize(browseButton);
+    
+                        plupload.extend(document.getElementById(up.id + '_flash_container').style, {
+                            top : browsePos.y + 'px',
+                            left : browsePos.x + 'px',
+                            width : browseSize.w + 'px',
+                            height : browseSize.h + 'px'
+                        });
+                    }
+                });
+                
+                uploader.bind("DisableBrowse", function(up, disabled) {
+                    getFlashObj().disableBrowse(disabled);
+                });
+                            
+                callback({success : true});
+            });
+        }
+    });
+})(window, document, plupload);
+
+});
+define("product/guoqude/1.0.0/front_net/module/plupload/amd/plupload.silverlight-debug", [], function (require, exports) {
+
+/**
+ * plupload.silverlight.js
+ *
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under GPL License.
+ *
+ * License: http://www.plupload.com/license
+ * Contributing: http://www.plupload.com/contributing
+ */
+
+// JSLint defined globals
+/*global window:false, document:false, plupload:false, ActiveXObject:false */
+
+(function(window, document, plupload, undef) {
+    var uploadInstances = {}, initialized = {};
+
+    function jsonSerialize(obj) {
+        var value, type = typeof obj, isArray, i, key;
+
+        // Treat undefined as null
+        if (obj === undef || obj === null) {
+            return 'null';
+        }
+
+        // Encode strings
+        if (type === 'string') {
+            value = '\bb\tt\nn\ff\rr\""\'\'\\\\';
+
+            return '"' + obj.replace(/([\u0080-\uFFFF\x00-\x1f\"])/g, function(a, b) {
+                var idx = value.indexOf(b);
+
+                if (idx + 1) {
+                    return '\\' + value.charAt(idx + 1);
+                }
+
+                a = b.charCodeAt().toString(16);
+
+                return '\\u' + '0000'.substring(a.length) + a;
+            }) + '"';
+        }
+
+        // Loop objects/arrays
+        if (type == 'object') {
+            isArray = obj.length !== undef;
+            value = '';
+
+            if (isArray) {
+                for (i = 0; i < obj.length; i++) {
+                    if (value) {
+                        value += ',';
+                    }
+
+                    value += jsonSerialize(obj[i]);
+                }
+
+                value = '[' + value + ']';
+            } else {
+                for (key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        if (value) {
+                            value += ',';
+                        }
+
+                        value += jsonSerialize(key) + ':' + jsonSerialize(obj[key]);
+                    }
+                }
+
+                value = '{' + value + '}';
+            }
+
+            return value;
+        }
+
+        // Convert all other types to string
+        return '' + obj;
+    }
+
+    function isInstalled(version) {
+        var isVersionSupported = false, container = null, control = null, actualVer,
+            actualVerArray, reqVerArray, requiredVersionPart, actualVersionPart, index = 0;
+
+        try {
+            try {
+                control = new ActiveXObject('AgControl.AgControl');
+
+                if (control.IsVersionSupported(version)) {
+                    isVersionSupported = true;
+                }
+
+                control = null;
+            } catch (e) {
+                var plugin = navigator.plugins["Silverlight Plug-In"];
+
+                if (plugin) {
+                    actualVer = plugin.description;
+
+                    if (actualVer === "1.0.30226.2") {
+                        actualVer = "2.0.30226.2";
+                    }
+
+                    actualVerArray = actualVer.split(".");
+
+                    while (actualVerArray.length > 3) {
+                        actualVerArray.pop();
+                    }
+
+                    while ( actualVerArray.length < 4) {
+                        actualVerArray.push(0);
+                    }
+
+                    reqVerArray = version.split(".");
+
+                    while (reqVerArray.length > 4) {
+                        reqVerArray.pop();
+                    }
+
+                    do {
+                        requiredVersionPart = parseInt(reqVerArray[index], 10);
+                        actualVersionPart = parseInt(actualVerArray[index], 10);
+                        index++;
+                    } while (index < reqVerArray.length && requiredVersionPart === actualVersionPart);
+
+                    if (requiredVersionPart <= actualVersionPart && !isNaN(requiredVersionPart)) {
+                        isVersionSupported = true;
+                    }
+                }
+            }
+        } catch (e2) {
+            isVersionSupported = false;
+        }
+
+        return isVersionSupported;
+    }
+
+    plupload.silverlight = {
+        trigger : function(id, name) {
+            var uploader = uploadInstances[id], i, args;
+            
+            if (uploader) {
+                args = plupload.toArray(arguments).slice(1);
+                args[0] = 'Silverlight:' + name;
+
+                // Detach the call so that error handling in the browser is presented correctly
+                setTimeout(function() {
+                    uploader.trigger.apply(uploader, args);
+                }, 0);
+            }
+        }
+    };
+
+    /**
+     * Silverlight implementation. This runtime supports these features: jpgresize, pngresize, chunks.
+     *
+     * @static
+     * @class plupload.runtimes.Silverlight
+     * @extends plupload.Runtime
+     */
+    plupload.runtimes.Silverlight = plupload.addRuntime("silverlight", {
+        /**
+         * Returns a list of supported features for the runtime.
+         *
+         * @return {Object} Name/value object with supported features.
+         */
+        getFeatures : function() {
+            return {
+                jpgresize: true,
+                pngresize: true,
+                chunks: true,
+                progress: true,
+                multipart: true,
+                multi_selection: true
+            };
+        },
+
+        /**
+         * Initializes the upload runtime. This runtime supports these features: jpgresize, pngresize, chunks.
+         *
+         * @method init
+         * @param {plupload.Uploader} uploader Uploader instance that needs to be initialized.
+         * @param {function} callback Callback to execute when the runtime initializes or fails to initialize. If it succeeds an object with a parameter name success will be set to true.
+         */
+        init : function(uploader, callback) {
+            var silverlightContainer, filter = '', filters = uploader.settings.filters, i, container = document.body;
+
+            // Check if Silverlight is installed, Silverlight windowless parameter doesn't work correctly on Opera so we disable it for now
+            if (!isInstalled('2.0.31005.0') || (window.opera && window.opera.buildNumber)) {
+                callback({success : false});
+                return;
+            }
+            
+            initialized[uploader.id] = false;
+            uploadInstances[uploader.id] = uploader;
+
+            // Create silverlight container and insert it at an absolute position within the browse button
+            silverlightContainer = document.createElement('div');
+            silverlightContainer.id = uploader.id + '_silverlight_container';
+
+            plupload.extend(silverlightContainer.style, {
+                position : 'absolute',
+                top : '0px',
+                background : uploader.settings.shim_bgcolor || 'transparent',
+                zIndex : 99999,
+                width : '100px',
+                height : '100px',
+                overflow : 'hidden',
+                opacity : uploader.settings.shim_bgcolor || document.documentMode > 8 ? '' : 0.01 // Force transparent if bgcolor is undefined
+            });
+
+            silverlightContainer.className = 'plupload silverlight';
+
+            if (uploader.settings.container) {
+                container = document.getElementById(uploader.settings.container);
+                if (plupload.getStyle(container, 'position') === 'static') {
+                    container.style.position = 'relative';
+                }
+            }
+
+            container.appendChild(silverlightContainer);
+
+            for (i = 0; i < filters.length; i++) {
+                filter += (filter != '' ? '|' : '') + filters[i].title + " | *." + filters[i].extensions.replace(/,/g, ';*.');
+            }
+
+            // Insert the Silverlight object inide the Silverlight container
+            silverlightContainer.innerHTML = '<object id="' + uploader.id + '_silverlight" data="data:application/x-silverlight," type="application/x-silverlight-2" style="outline:none;" width="1024" height="1024">' +
+                '<param name="source" value="' + uploader.settings.silverlight_xap_url + '"/>' +
+                '<param name="background" value="Transparent"/>' +
+                '<param name="windowless" value="true"/>' +
+                '<param name="enablehtmlaccess" value="true"/>' +
+                '<param name="initParams" value="id=' + uploader.id + ',filter=' + filter + ',multiselect=' + uploader.settings.multi_selection + '"/>' +
+                '</object>';
+
+            function getSilverlightObj() {
+                return document.getElementById(uploader.id + '_silverlight').content.Upload;
+            }
+
+            uploader.bind("Silverlight:Init", function() {
+                var selectedFiles, lookup = {};
+                
+                // Prevent eventual reinitialization of the instance
+                if (initialized[uploader.id]) {
+                    return;
+                }
+                    
+                initialized[uploader.id] = true;
+
+                uploader.bind("Silverlight:StartSelectFiles", function(up) {
+                    selectedFiles = [];
+                });
+
+                uploader.bind("Silverlight:SelectFile", function(up, sl_id, name, size) {
+                    var id;
+
+                    // Store away silverlight ids
+                    id = plupload.guid();
+                    lookup[id] = sl_id;
+                    lookup[sl_id] = id;
+
+                    // Expose id, name and size
+                    selectedFiles.push(new plupload.File(id, name, size));
+                });
+
+                uploader.bind("Silverlight:SelectSuccessful", function() {
+                    // Trigger FilesAdded event if we added any
+                    if (selectedFiles.length) {
+                        uploader.trigger("FilesAdded", selectedFiles);
+                    }
+                });
+
+                uploader.bind("Silverlight:UploadChunkError", function(up, file_id, chunk, chunks, message) {
+                    uploader.trigger("Error", {
+                        code : plupload.IO_ERROR,
+                        message : 'IO Error.',
+                        details : message,
+                        file : up.getFile(lookup[file_id])
+                    });
+                });
+
+                uploader.bind("Silverlight:UploadFileProgress", function(up, sl_id, loaded, total) {
+                    var file = up.getFile(lookup[sl_id]);
+
+                    if (file.status != plupload.FAILED) {
+                        file.size = total;
+                        file.loaded = loaded;
+
+                        up.trigger('UploadProgress', file);
+                    }
+                });
+
+                uploader.bind("Refresh", function(up) {
+                    var browseButton, browsePos, browseSize;
+
+                    browseButton = document.getElementById(up.settings.browse_button);
+                    if (browseButton) {
+                        browsePos = plupload.getPos(browseButton, document.getElementById(up.settings.container));
+                        browseSize = plupload.getSize(browseButton);
+    
+                        plupload.extend(document.getElementById(up.id + '_silverlight_container').style, {
+                            top : browsePos.y + 'px',
+                            left : browsePos.x + 'px',
+                            width : browseSize.w + 'px',
+                            height : browseSize.h + 'px'
+                        });
+                    }
+                });
+
+                uploader.bind("Silverlight:UploadChunkSuccessful", function(up, sl_id, chunk, chunks, text) {
+                    var chunkArgs, file = up.getFile(lookup[sl_id]);
+
+                    chunkArgs = {
+                        chunk : chunk,
+                        chunks : chunks,
+                        response : text
+                    };
+
+                    up.trigger('ChunkUploaded', file, chunkArgs);
+
+                    // Stop upload if file is maked as failed
+                    if (file.status != plupload.FAILED && up.state !== plupload.STOPPED) {
+                        getSilverlightObj().UploadNextChunk();
+                    }
+
+                    // Last chunk then dispatch FileUploaded event
+                    if (chunk == chunks - 1) {
+                        file.status = plupload.DONE;
+
+                        up.trigger('FileUploaded', file, {
+                            response : text
+                        });
+                    }
+                });
+
+                uploader.bind("Silverlight:UploadSuccessful", function(up, sl_id, response) {
+                    var file = up.getFile(lookup[sl_id]);
+
+                    file.status = plupload.DONE;
+
+                    up.trigger('FileUploaded', file, {
+                        response : response
+                    });
+                });
+
+                uploader.bind("FilesRemoved", function(up, files) {
+                    var i;
+
+                    for (i = 0; i < files.length; i++) {
+                        getSilverlightObj().RemoveFile(lookup[files[i].id]);
+                    }
+                });
+
+                uploader.bind("UploadFile", function(up, file) {
+                    var settings = up.settings, resize = settings.resize || {};
+
+                    getSilverlightObj().UploadFile(
+                        lookup[file.id],
+                        up.settings.url,
+                        jsonSerialize({
+                            name : file.target_name || file.name,
+                            mime : plupload.mimeTypes[file.name.replace(/^.+\.([^.]+)/, '$1').toLowerCase()] || 'application/octet-stream',
+                            chunk_size : settings.chunk_size,
+                            image_width : resize.width,
+                            image_height : resize.height,
+                            image_quality : resize.quality || 90,
+                            multipart : !!settings.multipart,
+                            multipart_params : settings.multipart_params || {},
+                            file_data_name : settings.file_data_name,
+                            headers : settings.headers
+                        })
+                    );
+                });
+                
+                uploader.bind("CancelUpload", function() {
+                    getSilverlightObj().CancelUpload();
+                });
+
+                uploader.bind('Silverlight:MouseEnter', function(up) {
+                    var browseButton, hoverClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    hoverClass = up.settings.browse_button_hover;
+                    
+                    if (browseButton && hoverClass) {
+                        plupload.addClass(browseButton, hoverClass);
+                    }
+                });
+                
+                uploader.bind('Silverlight:MouseLeave', function(up) {
+                    var browseButton, hoverClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    hoverClass = up.settings.browse_button_hover;
+                    
+                    if (browseButton && hoverClass) {
+                        plupload.removeClass(browseButton, hoverClass);
+                    }
+                });
+                
+                uploader.bind('Silverlight:MouseLeftButtonDown', function(up) {
+                    var browseButton, activeClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    activeClass = up.settings.browse_button_active;
+                    
+                    if (browseButton && activeClass) {
+                        plupload.addClass(browseButton, activeClass);
+                        
+                        // Make sure that browse_button has active state removed from it
+                        plupload.addEvent(document.body, 'mouseup', function() {
+                            plupload.removeClass(browseButton, activeClass);    
+                        });
+                    }
+                });
+                
+                uploader.bind('Sliverlight:StartSelectFiles', function(up) {
+                    var browseButton, activeClass;
+                        
+                    browseButton = document.getElementById(uploader.settings.browse_button);
+                    activeClass = up.settings.browse_button_active;
+                    
+                    if (browseButton && activeClass) {
+                        plupload.removeClass(browseButton, activeClass);
+                    }
+                });
+                
+                uploader.bind("DisableBrowse", function(up, disabled) {
+                    getSilverlightObj().DisableBrowse(disabled);
+                });
+        
+                uploader.bind("Destroy", function(up) {
+                    var silverlightContainer;
+                    
+                    plupload.removeAllEvents(document.body, up.id);
+                    
+                    delete initialized[up.id];
+                    delete uploadInstances[up.id];
+                    
+                    silverlightContainer = document.getElementById(up.id + '_silverlight_container');
+                    if (silverlightContainer) {
+                        container.removeChild(silverlightContainer);
+                    }
+                });
+
+                callback({success : true});
+            });
+        }
+    });
+})(window, document, plupload);
+
+});
+define("product/guoqude/1.0.0/front_net/module/plupload/amd/jquery.plupload.queue-debug", [], function (require, exports) { return function (jQuery) {
+
+/**
+ * jquery.plupload.queue.js
+ *
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under GPL License.
+ *
+ * License: http://www.plupload.com/license
+ * Contributing: http://www.plupload.com/contributing
+ */
+
+// JSLint defined globals
+/*global plupload:false, jQuery:false, alert:false */
+
+(function($) {
+    var uploaders = {};
+
+    function _(str) {
+        return plupload.translate(str) || str;
+    }
+
+    function renderUI(id, target) {
+        // Remove all existing non plupload items
+        target.contents().each(function(i, node) {
+            node = $(node);
+
+            if (!node.is('.plupload')) {
+                node.remove();
+            }
+        });
+
+        target.prepend(
+            '<div class="plupload_wrapper plupload_scroll">' +
+                '<div id="' + id + '_container" class="plupload_container">' +
+                    '<div class="plupload">' +
+                        '<div class="plupload_header">' +
+                            '<div class="plupload_header_content">' +
+                                '<div class="plupload_header_title">' + _('Select files') + '</div>' +
+                                '<div class="plupload_header_text">' + _('Add files to the upload queue and click the start button.') + '</div>' +
+                            '</div>' +
+                        '</div>' +
+
+                        '<div class="plupload_content">' +
+                            '<div class="plupload_filelist_header">' +
+                                '<div class="plupload_file_name">' + _('Filename') + '</div>' +
+                                '<div class="plupload_file_action">&nbsp;</div>' +
+                                '<div class="plupload_file_status"><span>' + _('Status') + '</span></div>' +
+                                '<div class="plupload_file_size">' + _('Size') + '</div>' +
+                                '<div class="plupload_clearer">&nbsp;</div>' +
+                            '</div>' +
+
+                            '<ul id="' + id + '_filelist" class="plupload_filelist"></ul>' +
+
+                            '<div class="plupload_filelist_footer">' +
+                                '<div class="plupload_file_name">' +
+                                    '<div class="plupload_buttons">' +
+                                        '<a href="#" class="plupload_button plupload_add">' + _('Add files') + '</a>' +
+                                        '<a href="#" class="plupload_button plupload_start">' + _('Start upload') + '</a>' +
+                                    '</div>' +
+                                    '<span class="plupload_upload_status"></span>' +
+                                '</div>' +
+                                '<div class="plupload_file_action"></div>' +
+                                '<div class="plupload_file_status"><span class="plupload_total_status">0%</span></div>' +
+                                '<div class="plupload_file_size"><span class="plupload_total_file_size">0 b</span></div>' +
+                                '<div class="plupload_progress">' +
+                                    '<div class="plupload_progress_container">' +
+                                        '<div class="plupload_progress_bar"></div>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="plupload_clearer">&nbsp;</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<input type="hidden" id="' + id + '_count" name="' + id + '_count" value="0" />' +
+            '</div>'
+        );
+    }
+
+    $.fn.pluploadQueue = function(settings) {
+        if (settings) {
+            this.each(function() {
+                var uploader, target, id;
+
+                target = $(this);
+                id = target.attr('id');
+
+                if (!id) {
+                    id = plupload.guid();
+                    target.attr('id', id);
+                }
+
+                uploader = new plupload.Uploader($.extend({
+                    dragdrop : true,
+                    container : id
+                }, settings));
+
+                uploaders[id] = uploader;
+
+                function handleStatus(file) {
+                    var actionClass;
+
+                    if (file.status == plupload.DONE) {
+                        actionClass = 'plupload_done';
+                    }
+
+                    if (file.status == plupload.FAILED) {
+                        actionClass = 'plupload_failed';
+                    }
+
+                    if (file.status == plupload.QUEUED) {
+                        actionClass = 'plupload_delete';
+                    }
+
+                    if (file.status == plupload.UPLOADING) {
+                        actionClass = 'plupload_uploading';
+                    }
+
+                    var icon = $('#' + file.id).attr('class', actionClass).find('a').css('display', 'block');
+                    if (file.hint) {
+                        icon.attr('title', file.hint);  
+                    }
+                }
+
+                function updateTotalProgress() {
+                    $('span.plupload_total_status', target).html(uploader.total.percent + '%');
+                    $('div.plupload_progress_bar', target).css('width', uploader.total.percent + '%');
+                    $('span.plupload_upload_status', target).text(
+                        _('Uploaded %d/%d files').replace(/%d\/%d/, uploader.total.uploaded+'/'+uploader.files.length)
+                    );
+                }
+
+                function updateList() {
+                    var fileList = $('ul.plupload_filelist', target).html(''), inputCount = 0, inputHTML;
+
+                    $.each(uploader.files, function(i, file) {
+                        inputHTML = '';
+
+                        if (file.status == plupload.DONE) {
+                            if (file.target_name) {
+                                inputHTML += '<input type="hidden" name="' + id + '_' + inputCount + '_tmpname" value="' + plupload.xmlEncode(file.target_name) + '" />';
+                            }
+
+                            inputHTML += '<input type="hidden" name="' + id + '_' + inputCount + '_name" value="' + plupload.xmlEncode(file.name) + '" />';
+                            inputHTML += '<input type="hidden" name="' + id + '_' + inputCount + '_status" value="' + (file.status == plupload.DONE ? 'done' : 'failed') + '" />';
+    
+                            inputCount++;
+
+                            $('#' + id + '_count').val(inputCount);
+                        }
+
+                        fileList.append(
+                            '<li id="' + file.id + '">' +
+                                '<div class="plupload_file_name"><span>' + file.name + '</span></div>' +
+                                '<div class="plupload_file_action"><a href="#"></a></div>' +
+                                '<div class="plupload_file_status">' + file.percent + '%</div>' +
+                                '<div class="plupload_file_size">' + plupload.formatSize(file.size) + '</div>' +
+                                '<div class="plupload_clearer">&nbsp;</div>' +
+                                inputHTML +
+                            '</li>'
+                        );
+
+                        handleStatus(file);
+
+                        $('#' + file.id + '.plupload_delete a').click(function(e) {
+                            $('#' + file.id).remove();
+                            uploader.removeFile(file);
+
+                            e.preventDefault();
+                        });
+                    });
+
+                    $('span.plupload_total_file_size', target).html(plupload.formatSize(uploader.total.size));
+
+                    if (uploader.total.queued === 0) {
+                        $('span.plupload_add_text', target).text(_('Add files.'));
+                    } else {
+                        $('span.plupload_add_text', target).text(uploader.total.queued + ' files queued.');
+                    }
+
+                    $('a.plupload_start', target).toggleClass('plupload_disabled', uploader.files.length == (uploader.total.uploaded + uploader.total.failed));
+
+                    // Scroll to end of file list
+                    fileList[0].scrollTop = fileList[0].scrollHeight;
+
+                    updateTotalProgress();
+
+                    // Re-add drag message if there is no files
+                    if (!uploader.files.length && uploader.features.dragdrop && uploader.settings.dragdrop) {
+                        $('#' + id + '_filelist').append('<li class="plupload_droptext">' + _("Drag files here.") + '</li>');
+                    }
+                }
+
+                uploader.bind("UploadFile", function(up, file) {
+                    $('#' + file.id).addClass('plupload_current_file');
+                });
+
+                uploader.bind('Init', function(up, res) {
+                    renderUI(id, target);
+
+                    // Enable rename support
+                    if (!settings.unique_names && settings.rename) {
+                        $('#' + id + '_filelist div.plupload_file_name span', target).live('click', function(e) {
+                            var targetSpan = $(e.target), file, parts, name, ext = "";
+
+                            // Get file name and split out name and extension
+                            file = up.getFile(targetSpan.parents('li')[0].id);
+                            name = file.name;
+                            parts = /^(.+)(\.[^.]+)$/.exec(name);
+                            if (parts) {
+                                name = parts[1];
+                                ext = parts[2];
+                            }
+
+                            // Display input element
+                            targetSpan.hide().after('<input type="text" />');
+                            targetSpan.next().val(name).focus().blur(function() {
+                                targetSpan.show().next().remove();
+                            }).keydown(function(e) {
+                                var targetInput = $(this);
+
+                                if (e.keyCode == 13) {
+                                    e.preventDefault();
+
+                                    // Rename file and glue extension back on
+                                    file.name = targetInput.val() + ext;
+                                    targetSpan.text(file.name);
+                                    targetInput.blur();
+                                }
+                            });
+                        });
+                    }
+
+                    $('a.plupload_add', target).attr('id', id + '_browse');
+
+                    up.settings.browse_button = id + '_browse';
+
+                    // Enable drag/drop
+                    if (up.features.dragdrop && up.settings.dragdrop) {
+                        up.settings.drop_element = id + '_filelist';
+                        $('#' + id + '_filelist').append('<li class="plupload_droptext">' + _("Drag files here.") + '</li>');
+                    }
+
+                    $('#' + id + '_container').attr('title', 'Using runtime: ' + res.runtime);
+
+                    $('a.plupload_start', target).click(function(e) {
+                        if (!$(this).hasClass('plupload_disabled')) {
+                            uploader.start();
+                        }
+
+                        e.preventDefault();
+                    });
+
+                    $('a.plupload_stop', target).click(function(e) {
+                        e.preventDefault();
+                        uploader.stop();
+                    });
+
+                    $('a.plupload_start', target).addClass('plupload_disabled');
+                });
+
+                uploader.init();
+
+                uploader.bind("Error", function(up, err) {
+                    var file = err.file, message;
+
+                    if (file) {
+                        message = err.message;
+
+                        if (err.details) {
+                            message += " (" + err.details + ")";
+                        }
+
+                        if (err.code == plupload.FILE_SIZE_ERROR) {
+                            alert(_("Error: File too large: ") + file.name);
+                        }
+
+                        if (err.code == plupload.FILE_EXTENSION_ERROR) {
+                            alert(_("Error: Invalid file extension: ") + file.name);
+                        }
+                        
+                        file.hint = message;
+                        $('#' + file.id).attr('class', 'plupload_failed').find('a').css('display', 'block').attr('title', message);
+                    }
+                });
+
+                uploader.bind('StateChanged', function() {
+                    if (uploader.state === plupload.STARTED) {
+                        $('li.plupload_delete a,div.plupload_buttons', target).hide();
+                        $('span.plupload_upload_status,div.plupload_progress,a.plupload_stop', target).css('display', 'block');
+                        $('span.plupload_upload_status', target).text('Uploaded ' + uploader.total.uploaded + '/' + uploader.files.length + ' files');
+
+                        if (settings.multiple_queues) {
+                            $('span.plupload_total_status,span.plupload_total_file_size', target).show();
+                        }
+                    } else {
+                        updateList();
+                        $('a.plupload_stop,div.plupload_progress', target).hide();
+                        $('a.plupload_delete', target).css('display', 'block');
+                    }
+                });
+
+                uploader.bind('QueueChanged', updateList);
+
+                uploader.bind('FileUploaded', function(up, file) {
+                    handleStatus(file);
+                });
+
+                uploader.bind("UploadProgress", function(up, file) {
+                    // Set file specific progress
+                    $('#' + file.id + ' div.plupload_file_status', target).html(file.percent + '%');
+
+                    handleStatus(file);
+                    updateTotalProgress();
+
+                    if (settings.multiple_queues && uploader.total.uploaded + uploader.total.failed == uploader.files.length) {
+                        $(".plupload_buttons,.plupload_upload_status", target).css("display", "inline");
+                        $(".plupload_start", target).addClass("plupload_disabled");
+                        $('span.plupload_total_status,span.plupload_total_file_size', target).hide();
+                    }
+                });
+
+                // Call setup function
+                if (settings.setup) {
+                    settings.setup(uploader);
+                }
+            });
+
+            return this;
+        } else {
+            // Get uploader instance for specified element
+            return uploaders[$(this[0]).attr('id')];
+        }
+    };
+})(jQuery);
+
+}});
 define('gallery/mustache/0.5.0/mustache-debug', [], function() {
 
 /*!
@@ -10533,8 +16677,8 @@ return this.JSON = JSON;
 
 // Generated by CoffeeScript 1.4.0
 
-define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-debug", "./front_net/bootstrap/amd/bootstrap-dropdown-debug", "./front_net/bootstrap/amd/bootstrap-button-debug", "./front_net/bootstrap/amd/bootstrap-typeahead-zic-debug", "./front_net/bootstrap/amd/bootstrap-datepicker-debug", "./front_net/bootstrap/amd/bootstrap-alert-debug", "./front_net/module/jquery-ui/amd/jquery.ui.core-debug", "./front_net/module/jquery-ui/amd/jquery.ui.widget-debug", "./front_net/module/jquery-ui/amd/jquery.ui.mouse-debug", "./front_net/module/jquery-ui/amd/jquery.ui.sortable-debug", "./front_net/module/artDialog5/amd/artDialog5-debug", "./front_net/module/chosen/chosen-debug", "./front_net/module/masonry-debug", "./front_net/module/royalSlider/royalslider-debug", "./front_net/module/fineuploader/fineuploader-debug", "./front_net/module/validation-debug", "./front_net/module-zic/plus_anim-debug", "./front_net/module-zic/placeholder-debug", "./front_net/module-zic/returntop/returnTop-debug", "./front_net/module-zic/proto-debug", "./front_net/module-zic/area/area2-debug", "./front_net/module-zic/form_snippet-debug", "./front_net/module/plupload/amd/plupload-debug", "./front_net/module/plupload/amd/plupload.html5-debug", "./front_net/module/plupload/amd/plupload.html4-debug", "./front_net/module/plupload/amd/plupload.flash-debug", "./front_net/module/plupload/amd/plupload.cn-debug", "./front_net/module/plupload/amd/jquery.plupload.queue-debug", "gallery/mustache/0.5.0/mustache-debug", "gallery/json/1.0.2/json-debug", "gallery/underscore/1.4.2/underscore-debug", "gallery/jquery/1.8.3/jquery-debug"], function(require, exports, module) {
-  var $, JSON, PlaceHolder, artDialog, chosen, fineUploader, masonry, mc, plusAnim, royalSlider, _;
+define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-debug", "./front_net/bootstrap/amd/bootstrap-dropdown-debug", "./front_net/bootstrap/amd/bootstrap-button-debug", "./front_net/bootstrap/amd/bootstrap-typeahead-zic-debug", "./front_net/bootstrap/amd/bootstrap-datepicker-debug", "./front_net/bootstrap/amd/bootstrap-alert-debug", "./front_net/module/jquery-ui/amd/jquery.ui.core-debug", "./front_net/module/jquery-ui/amd/jquery.ui.widget-debug", "./front_net/module/jquery-ui/amd/jquery.ui.effect-debug", "./front_net/module/jquery-ui/amd/jquery.ui.mouse-debug", "./front_net/module/jquery-ui/amd/jquery.ui.sortable-debug", "./front_net/module/royalSlider/royalslider-debug", "./front_net/module/validation-debug", "./front_net/module/artDialog5/amd/artDialog5-debug", "./front_net/module/chosen/chosen-debug", "./front_net/module/overlabel/overlabel-debug", "./front_net/module/masonry-debug", "./front_net/module/fineuploader/fineuploader-debug", "./front_net/module-zic/plus_anim-debug", "./front_net/module-zic/placeholder-debug", "./front_net/module-zic/returntop/returnTop-debug", "./front_net/module-zic/proto-debug", "./front_net/module-zic/area/area2-debug", "./front_net/module-zic/form_snippet-debug", "./front_net/module/plupload/amd/plupload-debug", "./front_net/module/plupload/amd/plupload.cn-debug", "./front_net/module/plupload/amd/plupload.html5-debug", "./front_net/module/plupload/amd/plupload.html4-debug", "./front_net/module/plupload/amd/plupload.flash-debug", "./front_net/module/plupload/amd/plupload.silverlight-debug", "./front_net/module/plupload/amd/jquery.plupload.queue-debug", "gallery/mustache/0.5.0/mustache-debug", "gallery/json/1.0.2/json-debug", "gallery/underscore/1.4.2/underscore-debug", "gallery/jquery/1.8.3/jquery-debug"], function(require, exports, module) {
+  var $, JSON, PlaceHolder, artDialog, chosen, masonry, mc, overlabel, plusAnim, _;
   mc = exports.mc = require('gallery/mustache/0.5.0/mustache-debug');
   JSON = exports.JSON = require('gallery/json/1.0.2/json-debug');
   exports.jonHelp = require('./front_net/module-zic/jsonhelp-debug');
@@ -10553,14 +16697,16 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
   require('./front_net/bootstrap/amd/bootstrap-alert-debug')($);
   require('./front_net/module/jquery-ui/amd/jquery.ui.core')($);
   require('./front_net/module/jquery-ui/amd/jquery.ui.widget')($);
+  require('./front_net/module/jquery-ui/amd/jquery.ui.effect')($);
   require('./front_net/module/jquery-ui/amd/jquery.ui.mouse')($);
   require('./front_net/module/jquery-ui/amd/jquery.ui.sortable')($);
+  require('./front_net/module/royalSlider/royalslider-debug')($);
+  require('./front_net/module/validation-debug')($, _);
   artDialog = exports.artDialog = require('./front_net/module/artDialog5/amd/artDialog5-debug');
   chosen = exports.chosen = require('./front_net/module/chosen/chosen-debug');
+  overlabel = exports.overlabel = require('./front_net/module/overlabel/overlabel-debug');
   masonry = exports.masonry = require('./front_net/module/masonry-debug');
-  royalSlider = exports.royalSlider = require('./front_net/module/royalSlider/royalslider-debug');
-  fineUploader = exports.fineUploader = require('./front_net/module/fineuploader/fineuploader-debug');
-  require('./front_net/module/validation-debug')($, _);
+  exports.fup = require('./front_net/module/fineuploader/fineuploader-debug');
   plusAnim = require('./front_net/module-zic/plus_anim-debug');
   PlaceHolder = require('./front_net/module-zic/placeholder-debug');
   exports.ReturnTop = require('./front_net/module-zic/returntop/returnTop-debug');
@@ -10568,10 +16714,11 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
   exports.area = require('./front_net/module-zic/area/area2-debug');
   require('./front_net/module-zic/form_snippet-debug')($, _, JSON);
   require('./front_net/module/plupload/amd/plupload-debug');
+  require('./front_net/module/plupload/amd/plupload.cn');
   require('./front_net/module/plupload/amd/plupload.html5');
   require('./front_net/module/plupload/amd/plupload.html4');
   require('./front_net/module/plupload/amd/plupload.flash');
-  require('./front_net/module/plupload/amd/plupload.cn');
+  require('./front_net/module/plupload/amd/plupload.silverlight');
   require('./front_net/module/plupload/amd/jquery.plupload.queue')($);
   exports.ld_logo = function() {
     return $("#logo").hover(function() {
@@ -10603,6 +16750,13 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
       $("#main-alert").show().children("strong").text(e.warn);
     }
     return true;
+  };
+  exports.show_error = function(dom, txt, type) {
+    var error;
+    $("div.alert:not(.master)").remove();
+    error = $("#main-" + (type ? type : "error")).clone().show().removeClass("master");
+    $("strong", error).text(txt);
+    return error.insertBefore(dom);
   };
   exports.dialogin = function(prerequest) {
     var dialogin, dialogin_box;
@@ -10665,7 +16819,7 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
   };
   exports.fix_royalSlider = function(box) {
     var items, sliders;
-    items = royalSlider('div.item', box);
+    items = $('div.item', box);
     sliders = items.children('.royalSlider');
     sliders.royalSlider({
       fullscreen: {
@@ -10689,6 +16843,13 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
     });
     sliders.find("img.rsTmb").removeClass("fn-hide");
     sliders.find(".rsNavItem").addClass("fn-tac");
+    sliders.each(function() {
+      var _this;
+      _this = $(this);
+      if (_this.hasClass("deleted")) {
+        return _this.append("<b class='clock'></b>");
+      }
+    });
     $(".rsFullscreenBtn", sliders).on("click", function() {
       var container;
       container = $(this).siblings(".rsContainer");
@@ -10698,7 +16859,7 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
             return $(this).css("marginTop", 0);
           }
         });
-      }, 500);
+      }, 800);
     });
     if (!$('html').hasClass("generatedcontent")) {
       return items.each(function(i) {
@@ -10750,7 +16911,7 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
           var dia;
           dia = this;
           return $.ajax({
-            url: "album",
+            url: "/album",
             data: {
               'name': newAlbum_input.val()
             },
@@ -10777,11 +16938,12 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
       return;
     }
     editalbum.on("click", "a.changename", function() {
-      var input, span, _this;
+      var input, span, text, _this;
       _this = $(this).hide();
       input = _this.siblings("input").show();
       span = _this.siblings("span").hide();
-      input.val(span.text());
+      text = $("b", span);
+      input.val(text.text());
       _this.siblings("a.submit").show();
       return _this.siblings("a.delete").hide();
     });
@@ -10797,14 +16959,15 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
           'name': input.val()
         },
         success: function(e) {
-          var span;
+          var span, text;
           if (!exports.check_result(e, this)) {
             return;
           }
           _this.hide();
           input.hide();
           span = _this.siblings("span").show();
-          span.text(input.val());
+          text = $("b", span);
+          text.text(input.val());
           _this.siblings("a.changename").show();
           return _this.siblings("a.delete").show();
         }
@@ -10815,7 +16978,7 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
       _this = $(this);
       return artDialog.dialog({
         follow: _this[0],
-        content: "确定删除 '" + _this.siblings("span").text() + "'？",
+        content: "确定删除 \"" + (_this.siblings("span").children("b").text()) + "\"？",
         ok: function() {
           return $.ajax({
             context: _this,
@@ -10847,7 +17010,7 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
             if (!exports.check_result(e, this)) {
               return;
             }
-            editalbum.append("                            <li aid='" + e.id + "'>                                <span>" + ($('input.creat').val()) + "</span>                                <input type='text' />                                <a class='lk submit'>确定</a>                                <a class='lk changename'>重命名</a>                                <a class='lk delete'>删除</a>                            </li>");
+            editalbum.append("                            <li aid='" + e.id + "'>                                <span><b>" + ($('input.creat').val()) + "</b></span>                                <input type='text' />                                <a class='lk submit'>确定</a>                                <a class='lk changename'>重命名</a>                                <a class='lk delete'>删除</a>                            </li>");
             return intut_creat.val("");
           }
         });
@@ -10891,32 +17054,34 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
         });
       }
     });
-    return $("a.act_delete").on("click", function() {
+    return $("ul.editbtns").on("click", "a.act_private", function() {
       var _this;
       _this = $(this);
-      return artDialog.dialog({
-        follow: _this[0],
-        content: "确定删除？",
-        okValue: "确定",
-        ok: function() {
-          return $.ajax({
-            url: "/item/" + _this.attr('iid'),
-            data: {
-              '_method': 'delete'
-            },
-            success: function(e) {
-              var slideFocus;
-              if (!exports.check_result(e, this)) {
-                return;
-              }
-              slideFocus = _this.closest("li.slideFocus");
-              if (slideFocus.length) {
-                return slideFocus.slideUp();
-              } else {
-                return window.location = "/user/" + $("#userId").attr("uid");
-              }
-            }
-          });
+      return $.ajax({
+        url: "/item/private",
+        data: {
+          'id': _this.attr('iid')
+        },
+        success: function(e) {
+          if (!exports.check_result(e, this)) {
+            return;
+          }
+          return window.location.reload();
+        }
+      });
+    }).on("click", "a.act_public", function() {
+      var _this;
+      _this = $(this);
+      return $.ajax({
+        url: "/item/public",
+        data: {
+          'id': _this.attr('iid')
+        },
+        success: function(e) {
+          if (!exports.check_result(e, this)) {
+            return;
+          }
+          return window.location.reload();
         }
       });
     });
@@ -10928,7 +17093,7 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
         _this.prev("a.btn").remove();
         return _this.attr("title", "点击后关注他/她").html("<i class='icon-plus icon-white'></i> 加关注");
       } else {
-        _this.before("<a class='btn btn-mini `sabled'><i class='icon-ok'></i> 已关注</a>");
+        _this.before("<a class='btn btn-mini disabled'><i class='icon-ok'></i> 已关注</a>");
         return _this.attr("title", "点击后取消关注").html(" 取消");
       }
     };
@@ -10974,7 +17139,11 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
     var ValiFunc, commit_temp, script_commit;
     ValiFunc = function(o) {
       if (o.val().length > 200) {
-        alert("评论内容不能超过200个字符");
+        exports.show_error(o, "评论内容不能超过200个字符");
+        return false;
+      }
+      if (o.val().length < 5) {
+        exports.show_error(o, "评论内容不能低于5个字符");
         return false;
       }
       return true;
@@ -11085,35 +17254,94 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
     });
   };
   exports.app_avatar = function() {
-    var uploader;
-    return uploader = new qq.FineUploader({
-      element: $('#fine-uploader')[0],
-      request: {
-        endpoint: 'server/handleUploads'
+    var con_uploader, previewImg;
+    previewImg = $('#avatar_preview>img');
+    $("#delete").on("click", function() {
+      return $.ajax({
+        url: "/image/user",
+        data: {
+          '_method': 'delete'
+        },
+        success: function(e) {
+          if (!exports.check_result(e, this)) {
+            return;
+          }
+          return previewImg.attr({
+            src: glo_staticUrl + "/Images/face-100.jpg"
+          });
+        }
+      });
+    });
+    con_uploader = $("#avatar");
+    return con_uploader.pluploadQueue({
+      runtimes: 'html5,flash,html4',
+      url: '/image/user',
+      max_file_size: '2mb',
+      max_file_count: 1,
+      unique_names: true,
+      flash_swf_url: glo_serverName + '/front_net/module/plupload/plupload.flash.swf',
+      multiple_queues: true,
+      filters: [
+        {
+          title: "Image",
+          extensions: "jpg,jpeg,gif,png"
+        }
+      ],
+      preinit: {
+        Init: function(up, info) {
+          $("#uploader_container").removeAttr("title");
+          return $("div.plupload_header,                       div.plupload_filelist_header,                       a.plupload_start,                       .plupload_filelist_footer>div:not('.plupload_file_name'),                       .plupload_upload_status", con_uploader).remove();
+        }
+      },
+      init: {
+        FilesAdded: function(up, files) {
+          if (up.state === 2 || files.length < 1) {
+            return;
+          }
+          if (files.length > 1) {
+            _.each(files, function(file) {
+              return up.removeFile(file);
+            });
+            alert("抱歉，图片数量不能超过1张。");
+            return;
+          }
+          return up.start();
+        },
+        FileUploaded: function(up, file, info) {
+          var fileInfo;
+          fileInfo = JSON.parse(info.response)[0];
+          if (fileInfo.error) {
+            alert(fileInfo.error);
+            return;
+          }
+          return previewImg.attr({
+            src: glo_imageUserUrl + '/' + glo_cookieUserId + '_100.jpg?' + Math.random() * 999999
+          });
+        },
+        Error: function(up, args) {
+          up.removeFile(args.file);
+          return alert("上传失败...");
+        }
       }
     });
   };
   exports.app_manageimg = function() {
-    var con_uploader, imagesform, imgList, img_temp, injectList, injectListReverse, listBox, uploader;
+    var con_uploader, imagesform, imgList, img_temp, injectList, listBox, tips, uploader;
     con_uploader = $("#uploader");
-    if (!con_uploader.length) {
-      return;
-    }
-    listBox = {};
     imagesform = $("#images_id");
+    listBox = {};
+    tips = {};
     img_temp = '<li iid="{{image_id}}" sort="{{sort}}" class="exist{{exist}}" title="拖动排序">\
             <img src="{{url}}" class="thumb"><a href="javascript:;" class="remove" title="移除"></a></li>';
     imgList = [];
-    if (imagesform.hasClass("withexist")) {
-      $("option", imagesform).each(function(i) {
-        return imgList.push({
-          exist: true,
-          image_id: $(this).attr("value"),
-          url: $(this).attr("url"),
-          sort: i
-        });
+    $("option", imagesform).each(function(i) {
+      return imgList.push({
+        exist: true,
+        image_id: $(this).attr("value"),
+        url: $(this).attr("url"),
+        sort: i
       });
-    }
+    });
     injectList = function() {
       listBox.empty();
       imgList = _.sortBy(imgList, function(item) {
@@ -11147,44 +17375,55 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
           });
         });
       });
-      return listBox.sortable({
+      listBox.sortable({
         stop: function(event, ui) {
-          return injectListReverse();
+          imgList = [];
+          return $("li", listBox).each(function(i) {
+            var _this;
+            _this = $(this).attr("sort", i);
+            return imgList.push({
+              exist: _this.hasClass("existtrue"),
+              image_id: _this.attr("iid"),
+              url: $("img", _this).attr("src"),
+              sort: i
+            });
+          });
         }
       }).disableSelection();
-    };
-    injectListReverse = function() {
-      imgList = [];
-      return $("li", listBox).each(function(i) {
-        var _this;
-        _this = $(this).attr("sort", i);
-        return imgList.push({
-          exist: _this.hasClass("existtrue"),
-          image_id: _this.attr("iid"),
-          url: $("img", _this).attr("src"),
-          sort: i
-        });
-      });
+      if (con_uploader.hasClass("runtime_html5")) {
+        if ($("li", listBox).length) {
+          return tips.hide();
+        } else {
+          return tips.show();
+        }
+      }
     };
     con_uploader.pluploadQueue({
-      runtimes: 'html5,flash,html4',
+      runtimes: 'flash,html4',
       url: '/image/item',
-      max_file_size: '10mb',
+      max_file_size: '5mb',
       max_file_count: 20,
       unique_names: true,
-      flash_swf_url: glo_staticUrl + '/front_net/resource/plupload/plupload.flash.swf',
+      flash_swf_url: glo_serverName + '/front_net/module/plupload/plupload.flash.swf',
       multiple_queues: true,
       filters: [
         {
           title: "Image",
-          extensions: "jpg,gif,png"
+          extensions: "jpg,jpeg,gif,png"
         }
       ],
       preinit: {
         Init: function(up, info) {
+          $("#uploader_container").removeAttr("title");
           $("div.plupload_header, div.plupload_filelist_header, a.plupload_start", con_uploader).remove();
           $("span.plupload_total_status, span.plupload_total_file_size", con_uploader).text("");
-          $("#uploader_container").removeAttr("title");
+          if (up.runtime === "html5") {
+            con_uploader.addClass("runtime_html5");
+            tips = $("<i>", {
+              "class": 'tips',
+              text: '拖拽图片至此'
+            }).appendTo($(".plupload_content", con_uploader));
+          }
           listBox = $("#uploader_filelist", con_uploader);
           return injectList();
         }
@@ -11205,10 +17444,11 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
         },
         FileUploaded: function(up, file, info) {
           var fileInfo;
-          if (info.status !== 200) {
-            alert("上传失败...");
-          }
           fileInfo = JSON.parse(info.response)[0];
+          if (fileInfo.error) {
+            alert(fileInfo.error);
+            return;
+          }
           file.iid = fileInfo.image_id;
           return imgList.push({
             exist: false,
@@ -11216,6 +17456,10 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
             url: fileInfo.url,
             sort: imgList.length
           });
+        },
+        Error: function(up, args) {
+          up.removeFile(args.file);
+          return alert("上传失败...");
         },
         UploadComplete: function(up, files) {
           return injectList();
@@ -11227,13 +17471,13 @@ define("product/guoqude/1.0.0/main-debug", ["./front_net/module-zic/jsonhelp-deb
     });
     uploader = con_uploader.pluploadQueue();
     return $("form:first").on('submit', function(e) {
-      if (!uploader.files.length) {
+      if (!imgList.length) {
         alert("请至少上传一张图片");
         return false;
       }
       imagesform.empty();
-      return $("li[iid]", listBox).each(function() {
-        return imagesform.append('<option selected="selected" value="' + $(this).attr('iid') + '">.</option>');
+      return _.each(imgList, function(item) {
+        return imagesform.append("<option selected='selected' value='" + item.image_id + "'>.</option>");
       });
     });
   };

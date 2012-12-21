@@ -1,1 +1,0 @@
-spm deploy --src=../../init.js --gobal-config=./seajs-config.json --to=../../init.min.js

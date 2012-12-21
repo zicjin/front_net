@@ -568,12 +568,14 @@
                     methods._showPrompt(field, promptText, "", false, options);
                     field.data("promptText", promptText);
                 } else {
-                    if (!isAjaxValidator && options.showPassText) {
-                        methods._showPrompt(field, options.showPassText, "pass", true, options);
+                    if (!isAjaxValidator) {
+                        methods._closePrompt(field);
+                        if (options.showPassText) {
+                            methods._showPrompt(field, options.showPassText, "pass", true, options);
+                        }
                     }
                     field.data("promptText", "");
                 }
-
 
                 if (!isAjaxValidator)
                     field.trigger("jqv.field.result", [field, options.isError, promptText]);
