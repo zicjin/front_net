@@ -11,7 +11,8 @@ $.fn.area2 = function (options) {
     }
 
     var opts = $.extend({
-        valueDom: ".hfarea"
+        valueDom: ".hfarea",
+        valueDefault: "请选择省市"
     }, options || {});
 
     //IE7中，Popup内部的A标签无法使用href属性，否则出现自动close的bug，原因未知。
@@ -22,17 +23,21 @@ $.fn.area2 = function (options) {
 
     this.each(function () {
         var _this = $(this);
-        _this.empty().text("请选择省市");
+        _this.empty().text(opts.valueDefault);
         
         var valueDom = _this.siblings(opts.valueDom);
         var SetValue = function () {
-            _this.text(CacheObj.Prov + (CacheObj.City? "，" + CacheObj.City:"" ));
-            valueDom.val(CacheObj.Prov + (CacheObj.City? "," + CacheObj.City:"" ));
+            _this.text("");
+            valueDom.val(opts.valueDefault);
+            if(!CacheObj.Prov) return;
+            var value = CacheObj.Prov + (CacheObj.City? "，" + CacheObj.City:"" );
+            _this.text(value);
+            valueDom.val(value);
         }
 
         var CacheObj = {};
         if (valueDom.val()) {
-            var cache = valueDom.val().split(',');
+            var cache = valueDom.val().split('，');
             CacheObj.Prov = cache[0];
             if (cache.length > 1) CacheObj.City = cache[1];
             SetValue();
