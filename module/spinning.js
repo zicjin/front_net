@@ -9,10 +9,11 @@ define(function(require, exports, module) {
   function random(x) { return Math.random() * x }
 
 
-  function Spinning(container) {
+  function Spinning(container, opacity) {
     this.container = $(container)
     this.icons = this.container.children()
     this.spinnings = []
+    this.opacity = opacity? opacity : .6
   }
 
   Spinning.prototype.render = function() {
@@ -23,7 +24,7 @@ define(function(require, exports, module) {
 
   Spinning.prototype._init = function() {
     var spinnings = this.spinnings
-
+    var opacity = this.opacity
     $(this.icons).each(function(n) {
       var startDeg = random(360)
       var node = $(this)
@@ -41,7 +42,7 @@ define(function(require, exports, module) {
 
           },
           function() {
-            node.fadeTo(250, .6).css('zIndex', 1000)
+            node.fadeTo(250, opacity).css('zIndex', 1000)
             timer && clearTimeout(timer)
             timer = setTimeout(spin, Math.ceil(random(10000)))
           }
