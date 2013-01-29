@@ -1,13 +1,9 @@
 @charset "utf-8";
 
 $front_net_path: '/front_net/' !default;
-$fontAwesomePath: $front_net_path + 'bootstrap/fortawesome/font/fontawesome-webfont';
+$fontAwesomePath: $front_net_path + 'bootstrap/fortawesome/font';
 
 // MIXIN -------------------------
-@mixin clearfix {*zoom: 1;
-  &:before, &:after {display: table;content: "";}
-  &:after {clear: both;}
-}
 @mixin none_sty{list-style: none;padding:0;margin:0;background:none;float:none;width:auto;height:auto;position:static;display:inline;line-height:auto;}
 @mixin in_bk {display:inline-block;zoom:1;*display:inline;position:relative;}
 @mixin ellipsis{overflow: hidden; white-space: nowrap; width: 360px; text-overflow:ellipsis;}
@@ -40,7 +36,17 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#{ie-hex-str($
     vertical-align: top;
     @include in_bk;
 }
+@mixin background-image-retina($file, $type, $width, $height) {
+  background-image: url($file + '.' + $type);
+  @media (-webkit-min-device-pixel-ratio: 2), (-moz-min-device-pixel-ratio: 2) {
+    & {
+      background-image: url($file + '_@2x.' + $type);
+      background-size: $width $height;
+    }
+  }
+}
 
+$viewweight: 600px;
 // Bootstrap Var -------------------------
 $iconSpritePath:          $front_net_path + "bootstrap/img/glyphicons-halflings.png";
 $iconWhiteSpritePath:     $front_net_path + "bootstrap/img/glyphicons-halflings-white.png";
