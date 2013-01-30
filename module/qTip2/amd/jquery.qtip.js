@@ -1,5 +1,5 @@
 define(function (require, exports, module) {
-var jQuery = require('jquery').sub();
+    var jQuery = require('jquery');
 
 /*! qTip2 - Pretty powerful tooltips - v2.0.0pre - 2012-12-20
 * http://craigsworks.com/projects/qtip2/
@@ -3391,6 +3391,6 @@ PLUGINS.ie6.initialize = 'render';
 
 })(jQuery);
 
-module.exports = jQuery;
+//module.exports = jQuery;
 
 });

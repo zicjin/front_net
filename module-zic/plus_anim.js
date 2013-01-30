@@ -1,5 +1,5 @@
 define(function (require, exports, module) {
-var $ = require('jquery').sub();
+var $ = require('jquery');
 
 $.fn.plusAnim = function (options) {
     var opts = $.extend({
@@ -27,7 +27,5 @@ $.fn.plusAnim = function (options) {
         );
     })
 }
-
-module.exports = $;
 
 });

@@ -1,5 +1,5 @@
 define(function (require, exports, module) {
-var jQuery = require('jquery').sub();
+var jQuery = require('jquery');
 
 (function($) {
   $.eb = $.eb || {};
@@ -417,7 +417,5 @@ var jQuery = require('jquery').sub();
   });
 
 })(jQuery);
-
-module.exports = jQuery;
 
 });

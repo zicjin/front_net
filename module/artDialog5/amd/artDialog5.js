@@ -1,6 +1,6 @@
 ﻿define(function (require, exports, module) {
 
-var $ = require('jquery').sub();
+var $ = require('jquery');
 
 /*!
 * artDialog 5.0.1
@@ -965,7 +965,5 @@ this.artDialog = $.dialog = $.artDialog = artDialog;
 31. 修正设定了follow后再使用content()方法导致其居中的问题
 
 */
-
-module.exports = $;
 
 });

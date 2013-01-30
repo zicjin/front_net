@@ -1,5 +1,5 @@
-define("gallery/jquery/jquery-migrate", ["front_net/gallery/jquery/1.9.0/jquery"], function (require) {
-var jQuery = require('front_net/gallery/jquery/1.9.0/jquery');
+define(function (require) {
+var jQuery = require('jquery');
  /*!
  * jQuery Migrate - v1.0.0 - 2013-01-14
  * https://github.com/jquery/jquery-migrate
