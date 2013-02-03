@@ -1,5 +1,5 @@
 define(function (require, exports, module) {
-    var jQuery = window.jQuery || require('jquery');
+    var jQuery = window.jQuery || require('jquery'); //require < 1.9 ver
 
 /*! qTip2 - Pretty powerful tooltips - v2.0.0pre - 2012-12-20
 * http://craigsworks.com/projects/qtip2/
