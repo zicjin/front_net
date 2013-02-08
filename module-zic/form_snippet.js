@@ -78,14 +78,17 @@ $.fn.clearinput = function () {
 };
 
 $.fn.oncesubmit = function () {
-    $("form", this).on('submit', function(){
-        form = $(this)
-        if(form.data('onceclick')) return false;
-        form.data({'onceclick': true});
-        setTimeout(function(){
-            form.data({'onceclick': false});
-        }, 500)
-    });
+    form = $(this)
+    if(form.data("oncesub_init")) return
+    form.on('submit', function(e){
+        if(form.data('onceclick'))
+            e.preventDefault()
+        else
+            form.data({'onceclick': true});
+            setTimeout(function(){
+                form.data({'onceclick': false});
+            }, 500)
+    }).data("oncesub_init", true)
 }
 
 }});
