@@ -32,6 +32,7 @@
 .fn-f12{font-size:12px}
 .fn-f14{font-size:14px}
 .fn-f14va input[type='radio'], .fn-f14va input[type='checkbox']{vertical-align:-1px\9;} /*font-size:14时，单复选框对齐良好*/
+.fn-f13va input[type='radio'], .fn-f13va input[type='checkbox']{vertical-align:0;}
 .fn-f12va input[type='radio'], .fn-f12va input[type='checkbox']{vertical-align:-3px;}
 .fn-zmax{z-index:999;}
 .fn-clear { @include clearfix; }
