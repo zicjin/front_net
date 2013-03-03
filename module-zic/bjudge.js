@@ -42,6 +42,7 @@ define(function (require, exports, module) {
     exports.IeVerClass = function () {
         if (!browser["msie"]) return;
         var classVal = "ie" + browser.version;
+        var html = document.getElementsByTagName("html")[0];
         if (!html.className) {
             html.className = classVal;
         } else {
