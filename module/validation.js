@@ -7,8 +7,8 @@
     //validate[func[functionname]] 可以自定义验证函数
     //valiarr[topLeft] 可以指定提示框位置
     //添加_unFieldEvent事件，默认用作焦点进入input时关闭错误提示
-	//345（updatePromptsPosition）行bug，修改为 var form = $(this).closest('form');
-	//$.validationEngineLanguage.allRules["card_adult"] = { "func": exports.cerd.checkAdult }; //扩展验证方法，而不是内嵌在jq_validation文件
+    //345（updatePromptsPosition）行bug，修改为 var form = $(this).closest('form');
+    //$.validationEngineLanguage.allRules["card_adult"] = { "func": exports.cerd.checkAdult }; //扩展验证方法，而不是内嵌在jq_validation文件
     //_ajax 事件更新，完全自定义回调处理
     //判断 usePlaceholder，为placeholder做Hack
     // 返回 methods 对象给调用者
@@ -372,8 +372,16 @@
             },
             _onSubmitEvent: function (event) {
                 var form = $(this).closest('form');
-                if($(this).hasClass('.vali_skip'))
-                    form.submit();
+                if($(this).hasClass('.vali_skip')) return;
+
+                if(!form.data('submit_queue_arry')){
+                    var submit_queue_arry = [];
+                    $.extend(true, submit_queue_arry, form.queue('submit'));
+                    form.data('submit_queue_arry', submit_queue_arry);
+                }
+                form.dequeue('submit');
+                form.queue('submit', form.data('submit_queue_arry'));
+
                 var options = form.data('jqv');
                 var btntgt = "";
                 if ($(event.target).is('[class*=valitarget]'))
@@ -393,7 +401,7 @@
                 var options = form.data('jqv');
                 var errorFound = false;
                 form.trigger("jqv.form.validating");
-                var fields = form.find('[class*=validate]').not(':hidden');
+                var fields = form.find('[class*=validate]');
                 if (btntgt)
                     fields = fields.filter('.valitarget_' + btntgt);
                 fields.each(function () {
