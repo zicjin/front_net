@@ -1,9 +1,9 @@
-define("arale/overlay/1.0.0/overlay-debug", [ "$-debug", "arale/position/1.0.0/position-debug", "arale/iframe-shim/1.0.0/iframe-shim-debug", "arale/widget/1.0.2/widget-debug", "arale/base/1.0.1/base-debug", "arale/class/1.0.0/class-debug", "arale/events/1.0.0/events-debug" ], function(require, exports, module) {
-    var $ = require("$-debug"), Position = require("arale/position/1.0.0/position-debug"), Shim = require("arale/iframe-shim/1.0.0/iframe-shim-debug"), Widget = require("arale/widget/1.0.2/widget-debug");
+define("arale/overlay/1.0.0/overlay-debug", [ "$-debug", "arale/position/1.0.0/position-debug", "arale/iframe-shim/1.0.0/iframe-shim-debug", "arale/widget/1.0.3/widget-debug", "arale/base/1.0.1/base-debug", "arale/class/1.0.0/class-debug", "arale/events/1.0.0/events-debug" ], function(require, exports, module) {
+    var $ = require("$-debug"), Position = require("arale/position/1.0.0/position-debug"), Shim = require("arale/iframe-shim/1.0.0/iframe-shim-debug"), Widget = require("arale/widget/1.0.3/widget-debug");
     // Overlay
     // -------
-    // Overlay 组件的核心特点是可定位（Positionable）和可层叠（Stackable），是一切悬浮类
-    // UI 组件的基类。
+    // Overlay 组件的核心特点是可定位（Positionable）和可层叠（Stackable）
+    // 是一切悬浮类 UI 组件的基类
     var Overlay = Widget.extend({
         attrs: {
             // 基本属性
@@ -29,7 +29,6 @@ define("arale/overlay/1.0.0/overlay-debug", [ "$-debug", "arale/position/1.0.0/p
                 this.render();
             }
             this.set("visible", true);
-            this._setPosition();
             return this;
         },
         hide: function() {
@@ -37,10 +36,15 @@ define("arale/overlay/1.0.0/overlay-debug", [ "$-debug", "arale/position/1.0.0/p
             return this;
         },
         setup: function() {
+            var that = this;
             // 加载 iframe 遮罩层并与 overlay 保持同步
             this._setupShim();
             // 窗口resize时，重新定位浮层
             this._setupResize();
+            // 
+            this.after("show", function() {
+                that._setPosition();
+            });
         },
         destroy: function() {
             // 销毁两个静态数组中的实例
@@ -82,15 +86,18 @@ define("arale/overlay/1.0.0/overlay-debug", [ "$-debug", "arale/position/1.0.0/p
         // 加载 iframe 遮罩层并与 overlay 保持同步
         _setupShim: function() {
             var shim = new Shim(this.element);
-            this.after("show hide", shim.sync, shim);
+            // 在隐藏和设置位置后，要重新定位
+            // 显示后会设置位置，所以不用绑定 shim.sync
+            this.after("hide _setPosition", shim.sync, shim);
             // 除了 parentNode 之外的其他属性发生变化时，都触发 shim 同步
-            var attrs = Overlay.prototype.attrs;
+            var attrs = [ "width", "height" ];
             for (var attr in attrs) {
                 if (attrs.hasOwnProperty(attr)) {
-                    if (attr === "parentNode") continue;
                     this.on("change:" + attr, shim.sync, shim);
                 }
             }
+            // 在销魂自身前要销毁 shim
+            this.before("destroy", shim.destroy, shim);
         },
         // resize窗口时重新定位浮层，用这个方法收集所有浮层实例
         _setupResize: function() {
@@ -147,7 +154,7 @@ define("arale/overlay/1.0.0/overlay-debug", [ "$-debug", "arale/position/1.0.0/p
         return $.contains(document.documentElement, element);
     }
     function hideBlurOverlays(e) {
-        $(Overlay.blurOverlays).each(function(i, item) {
+        $(Overlay.blurOverlays).each(function(index, item) {
             // 当实例为空或隐藏时，不处理
             if (!item || !item.get("visible")) {
                 return;

@@ -1,5 +1,5 @@
-define("arale/dialog/1.0.0/dialog-debug", [ "$-debug", "arale/overlay/0.9.13/overlay-debug", "arale/position/1.0.0/position-debug", "arale/iframe-shim/1.0.0/iframe-shim-debug", "arale/widget/1.0.2/widget-debug", "arale/base/1.0.1/base-debug", "arale/class/1.0.0/class-debug", "arale/events/1.0.0/events-debug", "arale/overlay/0.9.13/mask-debug", "arale/widget/1.0.2/templatable-debug", "gallery/handlebars/1.0.0/handlebars-debug" ], function(require, exports, module) {
-    var $ = require("$-debug"), Overlay = require("arale/overlay/0.9.13/overlay-debug"), mask = require("arale/overlay/0.9.13/mask-debug"), Events = require("arale/events/1.0.0/events-debug"), Templatable = require("arale/widget/1.0.2/templatable-debug"), EVENT_NS = ".dialog", DEFAULT_HEIGHT = "300px";
+define("arale/dialog/1.0.0/dialog-debug", [ "$-debug", "arale/overlay/1.0.0/overlay-debug", "arale/position/1.0.0/position-debug", "arale/iframe-shim/1.0.0/iframe-shim-debug", "arale/widget/1.0.3/widget-debug", "arale/base/1.0.1/base-debug", "arale/class/1.0.0/class-debug", "arale/events/1.0.0/events-debug", "arale/overlay/1.0.0/mask-debug", "arale/widget/1.0.3/templatable-debug", "gallery/handlebars/1.0.0/handlebars-debug" ], function(require, exports, module) {
+    var $ = require("$-debug"), Overlay = require("arale/overlay/1.0.0/overlay-debug"), mask = require("arale/overlay/1.0.0/mask-debug"), Events = require("arale/events/1.0.0/events-debug"), Templatable = require("arale/widget/1.0.3/templatable-debug"), EVENT_NS = ".dialog", DEFAULT_HEIGHT = "300px";
     // Dialog
     // ---
     // Dialog 是通用对话框组件，提供显隐关闭、遮罩层、内嵌iframe、内容区域自定义功能。
@@ -98,8 +98,9 @@ define("arale/dialog/1.0.0/dialog-debug", [ "$-debug", "arale/overlay/0.9.13/ove
             return this;
         },
         destroy: function() {
-            this.hide();
-            this.get("trigger").off("click" + EVENT_NS + this.cid);
+            if (this.get("trigger")) {
+                this.get("trigger").off("click" + EVENT_NS + this.cid);
+            }
             $(document).off("keyup." + EVENT_NS + this.cid);
             this.element.remove();
             mask.hide();
@@ -154,6 +155,10 @@ define("arale/dialog/1.0.0/dialog-debug", [ "$-debug", "arale/overlay/0.9.13/ove
             } else {
                 this.element.hide();
             }
+        },
+        _onRenderZIndex: function(val) {
+            mask.set("zIndex", parseInt(val, 10) - 1);
+            return Dialog.superclass._onRenderZIndex.call(this, val);
         },
         // 私有方法
         // ---
@@ -261,13 +266,18 @@ define("arale/dialog/1.0.0/dialog-debug", [ "$-debug", "arale/overlay/0.9.13/ove
             // 如果未传 height，才会自动获取
             if (!this.get("height")) {
                 try {
+                    this._errCount = 0;
                     h = getIframeHeight(this.iframe) + "px";
                 } catch (err) {
-                    // 获取失败则给默认高度 300px
-                    // 跨域会抛错进入这个流程
-                    h = DEFAULT_HEIGHT;
-                    clearInterval(this._interval);
-                    delete this._interval;
+                    // 页面跳转也会抛错，最多失败6次
+                    this._errCount = (this._errCount || 0) + 1;
+                    if (this._errCount >= 6) {
+                        // 获取失败则给默认高度 300px
+                        // 跨域会抛错进入这个流程
+                        h = DEFAULT_HEIGHT;
+                        clearInterval(this._interval);
+                        delete this._interval;
+                    }
                 }
                 this.element.css("height", h);
             } else {
