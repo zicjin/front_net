@@ -1,0 +1,24 @@
+﻿@mixin arrow-left($backColor: #fff, $borderColor: rgba(78,68,60,0.1)) {
+    background: $backColor;
+    position: relative;
+    border:1px solid $borderColor;
+    box-shadow:0 0 6px $borderColor;
+  &:after {
+    content: ' ';
+    border-color: transparent $backColor transparent transparent;
+    border-style: solid;
+    border-width: 13px;
+    position: absolute;
+    left: -26px;
+    top: 20px;
+  }
+  &:before {
+    content: ' ';
+    border-color: transparent lighten($borderColor, 40%) transparent transparent;
+    border-style: solid;
+    border-width: 15px;
+    position: absolute;
+    left: -31px;
+    top: 18px;
+  }
+}
