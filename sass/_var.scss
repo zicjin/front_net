@@ -46,6 +46,13 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#{ie-hex-str($
   }
 }
 
+//http://drublic.de/blog/rem-fallback-sass-less/
+$main-font-size: 16px;
+@mixin x-rem ($property, $value) {
+  #{$property}: $value * $main-font-size;
+  #{$property}: #{$value}rem;
+}
+
 $viewweight: 600px;
 // Bootstrap Var -------------------------
 $iconSpritePath:          $front_net_path + "bootstrap/img/glyphicons-halflings.png";
