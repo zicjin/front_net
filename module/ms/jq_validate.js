@@ -1,6 +1,4 @@
 define(function (require, exports, module) {
-    var jQuery = require('jquery');
-
     /**
      * jQuery Validation Plugin 1.9.0
      *
