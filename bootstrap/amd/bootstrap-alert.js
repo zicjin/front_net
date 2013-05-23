@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /* ==========================================================
- * bootstrap-alert.js v2.2.2
+ * bootstrap-alert.js v2.3.2
  * http://twitter.github.com/bootstrap/javascript.html#alerts
  * ==========================================================
  * Copyright 2012 Twitter, Inc.
@@ -97,5 +97,5 @@
 
   $(document).on('click.alert.data-api', dismiss, Alert.prototype.close)
 
-}(jQuery);
-}});
+}(window.jQuery);
+});

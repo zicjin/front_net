@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-var jQuery = require('jquery').sub();
 
 /**
  * http://github.com/Valums-File-Uploader/file-uploader
@@ -2125,7 +2124,5 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
     };
 
 }(jQuery));
-
-module.exports = jQuery;
 
 });

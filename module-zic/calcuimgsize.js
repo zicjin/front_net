@@ -1,11 +1,11 @@
 define(function (require, exports, module) {
-var $ = require('jquery').sub();
-var mc = require('mustache');
+
+//_ = require('underscore');
 
 $.fn.calcuimgsize = function (options) {
 
     var opts = $.extend({
-        temp: "<img src='/img/{{id}}_{{size}}.jpg' />",
+        temp: "<img src='/img/<%= id %>_<%= size %>.jpg' />",
         widthAttr: "imgWidth",
         heightAttr: "imgHeigth"
     }, options);
@@ -22,9 +22,9 @@ $.fn.calcuimgsize = function (options) {
         var imgDom;
         if(rangeWidth > 0 && rangeHeight > 0){
             if (rangeWidth > rangeHeight) {
-                imgDom = $(mc.html(opts.temp, {size:boxWidth, id:iid}));
+                imgDom = $(_.template(opts.temp, { size: boxWidth, id: iid }));
             } else {
-                imgDom = $(mc.html(opts.temp, {size:boxHeight, id:iid}));
+                imgDom = $(_.template(opts.temp, { size: boxHeight, id: iid }));
             }
         } else if(rangeWidth > 0){
             _this.html(mc.html(opts.temp, {size:boxWidth, id:iid}));
@@ -42,7 +42,5 @@ $.fn.calcuimgsize = function (options) {
     });
 
 }
-
-module.exports = $;
 
 });

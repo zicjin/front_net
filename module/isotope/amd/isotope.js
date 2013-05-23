@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-    var jQuery = require('jquery');
 
 /**
  * Isotope v1.5.25

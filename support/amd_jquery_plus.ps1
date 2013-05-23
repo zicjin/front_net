@@ -2,10 +2,10 @@ Param($Path)
 $newLine = [System.Environment]::NewLine
 Get-ChildItem -Path $Path -Include *.js -Recurse | % { 
 	$lines = Get-Content -Path $_.FullName -Encoding UTF8
-	$content = "define(function (require, exports, module) { return function (jQuery) {"
+	$content = "define(function (require, exports, module) {"
 	$content += $newLine
 	$content += [String]::Join($newLine,$lines)
 	$content += $newLine	
-	$content += "}});"
+	$content += "});"
 	Set-Content -Value $content -Path $_.FullName -Encoding UTF8
 }

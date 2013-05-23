@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /* ==========================================================
- * bootstrap-affix.js v2.2.2
+ * bootstrap-affix.js v2.3.2
  * http://twitter.github.com/bootstrap/javascript.html#affix
  * ==========================================================
  * Copyright 2012 Twitter, Inc.
@@ -115,5 +115,5 @@
   })
 
 
-}(jQuery);
-}});
+}(window.jQuery);
+});

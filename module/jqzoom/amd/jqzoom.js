@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-var jQuery = require('jquery').sub();
 
 /*!
  * jQzoom Evolution Library v2.3  - Javascript Image magnifier
@@ -734,7 +733,5 @@ var jQuery = require('jquery').sub();
         }
     };
 })(jQuery);
-
-module.exports = jQuery;
 
 });

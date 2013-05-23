@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-var $ = require('jquery').sub();
 
 // Cloud Zoom V1.0.3
 
@@ -405,7 +404,5 @@ $.fn.CloudZoom.defaults = {
     adjustX: 0,
     adjustY: 0
 };
-
-module.exports = $;
 
 });

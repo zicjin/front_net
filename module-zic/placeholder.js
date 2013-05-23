@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-var $ = require('jquery');
 
 var hasPlaceholderSupport = function() {
     var input = document.createElement('input');

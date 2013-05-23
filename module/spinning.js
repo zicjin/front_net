@@ -1,6 +1,5 @@
 define(function (require, exports, module) {
 
-    var $ = require('jquery')
     var bjudge = require('../module-zic/bjudge')
 
     var TRANSFORM = bjudge.browser.webkit ? '-webkit-transform' :

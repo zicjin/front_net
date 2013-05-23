@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /* ========================================================
- * bootstrap-tab.js v2.2.2
+ * bootstrap-tab.js v2.3.2
  * http://twitter.github.com/bootstrap/javascript.html#tabs
  * ========================================================
  * Copyright 2012 Twitter, Inc.
@@ -142,5 +142,5 @@
     $(this).tab('show')
   })
 
-}(jQuery);
-}});
+}(window.jQuery);
+});

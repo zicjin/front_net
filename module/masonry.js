@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-var jQuery = require('jquery').sub();
 
 /**
  * jQuery Masonry v2.1.03
@@ -501,7 +500,5 @@ var jQuery = require('jquery').sub();
   };
 
 })( window, jQuery );
-
-module.exports = jQuery;
 
 });

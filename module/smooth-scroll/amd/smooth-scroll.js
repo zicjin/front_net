@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-var $ = require('jquery').sub();
 
 /*! Smooth Scroll - v1.4.7 - 2012-10-29
 * Copyright (c) 2012 Karl Swedberg; Licensed MIT, GPL */
@@ -212,7 +211,5 @@ $.fn.smoothScroll.defaults = defaults;
 function escapeSelector (str) {
   return str.replace(/(:|\.)/g,'\\$1');
 }
-
-module.exports = $;
 
 });

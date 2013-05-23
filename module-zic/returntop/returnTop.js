@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-var $ = require('jquery').sub();
 
 $.fn.returnTop = function (options) {
     var b = this.click(function () {
@@ -27,7 +26,5 @@ $.fn.returnTop = function (options) {
         }, 1E3), b.css("top", d + e - 125))
     })
 }
-
-module.exports = $;
 
 });

@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /* =============================================================
- * bootstrap-collapse.js v2.2.2
+ * bootstrap-collapse.js v2.3.2
  * http://twitter.github.com/bootstrap/javascript.html#collapse
  * =============================================================
  * Copyright 2012 Twitter, Inc.
@@ -53,7 +53,7 @@
         , actives
         , hasData
 
-      if (this.transitioning) return
+      if (this.transitioning || this.$element.hasClass('in')) return
 
       dimension = this.dimension()
       scroll = $.camelCase(['scroll', dimension].join('-'))
@@ -73,7 +73,7 @@
 
   , hide: function () {
       var dimension
-      if (this.transitioning) return
+      if (this.transitioning || !this.$element.hasClass('in')) return
       dimension = this.dimension()
       this.reset(this.$element[dimension]())
       this.transition('removeClass', $.Event('hide'), 'hidden')
@@ -130,7 +130,7 @@
     return this.each(function () {
       var $this = $(this)
         , data = $this.data('collapse')
-        , options = typeof option == 'object' && option
+        , options = $.extend({}, $.fn.collapse.defaults, $this.data(), typeof option == 'object' && option)
       if (!data) $this.data('collapse', (data = new Collapse(this, options)))
       if (typeof option == 'string') data[option]()
     })
@@ -165,5 +165,5 @@
     $(target).collapse(option)
   })
 
-}(jQuery);
-}});
+}(window.jQuery);
+});

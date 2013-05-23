@@ -1,7 +1,5 @@
 ﻿define(function (require, exports, module) {
 
-var $ = require('jquery');
-
 /*!
 * artDialog 5.0.1
 * Date: 2012-07-16

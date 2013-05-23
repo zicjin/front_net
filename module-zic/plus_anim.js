@@ -1,5 +1,4 @@
 define(function (require, exports, module) {
-    window.$ = require('jquery')
 
     $.fn.plusAnim = function (options) {
         var opts = $.extend({

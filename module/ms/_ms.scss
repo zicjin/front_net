@@ -2,22 +2,9 @@
 
 /* Styles for validation helpers
 -----------------------------------------------------------*/
-.field-validation-error {color: $red;}
+.field-validation-error {color: $red;font-weight: bold;}
 .field-validation-valid {display: none;}
-.input-validation-error {border: 1px solid darken($red, 15);background-color: #ffeeee;}
+input.input-validation-error {border: 1px solid $red;}
+input[type="checkbox"].input-validation-error {border: 0 none;}
+.validation-summary-errors {color: $red;font-weight: bold;font-size: 1.1em;}
 .validation-summary-valid {display: none;}
-
-/* Styles for editor and display helpers
-----------------------------------------------------------*/
-.display-label, 
-.editor-label {margin: 1em 0 0 0;}
-.display-field, 
-.editor-field {margin: 0.5em 0 0 0;}
-.text-box {width: 30em;}
-.text-box.multi-line {height: 6.5em;}
-.tri-state {width: 6em;}
-
-table.mctable td,table.mctable th{padding:8px;}
-.pager table td,.pager table th{padding:0 8px;}
-a{cursor:pointer;}
-a:hover{text-decoration:underline;}
