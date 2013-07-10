@@ -60,8 +60,8 @@ $iconWhiteSpritePath:     $front_net_path + "bootstrap/img/glyphicons-halflings-
 $iconRedSpritePath:       $front_net_path + "bootstrap/img/glyphicons-halflings-red.png";
 
 $textColor:        #111 !default;
-$linkColor:        #4D5731 !default;
-$linkColorHover:   #B82E39 !default;
+$linkColor:        #4787ed !default;
+$linkColorHover:   darken($linkColor, 15%) !default;
 
 $bodyBackground: #FFF !default;
 $sansFontFamily:        "微软雅黑", "Helvetica Neue", Helvetica, Arial, sans-serif !default;
