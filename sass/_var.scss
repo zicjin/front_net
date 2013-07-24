@@ -1,6 +1,6 @@
 @charset "utf-8";
 
-$front_net_path: '/front_net/' !default;
+$front_net_path: '../src/front_net/' !default;
 $fontAwesomePath: $front_net_path + 'bootstrap/fortawesome/font';
 
 // MIXIN -------------------------
