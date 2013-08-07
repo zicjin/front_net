@@ -9,11 +9,12 @@ define(function (require, exports, module) {
     function random(x) { return Math.random() * x }
 
 
-    function Spinning(container, opacity) {
+    function Spinning(container, opacity, rendomPosition) {
         this.container = $(container)
         this.icons = this.container.children()
         this.spinnings = []
         this.opacity = opacity ? opacity : .6
+        this.rendomPosition = rendomPosition
     }
 
     Spinning.prototype.render = function () {
@@ -22,17 +23,20 @@ define(function (require, exports, module) {
         this._spin()
     }
 
-    Spinning.prototype._init = function () {
+    Spinning.prototype._init = function (rendomPosition) {
         var spinnings = this.spinnings
         var opacity = this.opacity
         $(this.icons).each(function (n) {
             var startDeg = random(360)
             var node = $(this)
             var timer
-
+            if (this.rendomPosition) {
+                node.css({
+                    top: random(40),
+                    left: n * 50 + random(10)
+                })
+            }
             node.css({
-                top: random(40),
-                left: n * 50 + random(10),
                 zIndex: 1000
             }).hover(
                 function () {

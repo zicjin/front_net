@@ -1,5 +1,4 @@
-﻿/*#region text */
-@mixin text {
+﻿@mixin text {
     margin:1px;
 	padding:2px;
 	vertical-align:middle;
@@ -13,8 +12,5 @@
 }
 input.text{@include text;}
 textarea.text{@include text; overflow:auto;}
-
-input.txtholding,textarea.txtholding{color:#999;}
-
-input.text:focus,textarea.text:focus{margin:0px!important;border:2px solid #5485BD!important;}
-/*#endregion text */
+input.txtholding,textarea.txtholding{color:$gray;}
+input.text:focus,textarea.text:focus{margin:0px!important;border:2px solid $blue!important;}

@@ -1,8 +1,7 @@
-define(function (require, exports, module) { return function (jQuery) {
-
+ define(function (require, exports, module) {
  /*!
  * Thumbnail helper for fancyBox
- * version: 1.0.6
+ * version: 1.0.7 (Mon, 01 Oct 2012)
  * @requires fancyBox v2.0 or later
  *
  * Usage:
@@ -15,12 +14,6 @@ define(function (require, exports, module) { return function (jQuery) {
  *         }
  *     });
  *
- * Options:
- *     width - thumbnail width
- *     height - thumbnail height
- *     source - function to obtain the URL of the thumbnail image
- *     position - 'top' or 'bottom'
- *
  */
 (function ($) {
 	//Shortcut for fancyBox object
@@ -28,46 +21,45 @@ define(function (require, exports, module) { return function (jQuery) {
 
 	//Add helper object
 	F.helpers.thumbs = {
+		defaults : {
+			width    : 50,       // thumbnail width
+			height   : 50,       // thumbnail height
+			position : 'bottom', // 'top' or 'bottom'
+			source   : function ( item ) {  // function to obtain the URL of the thumbnail image
+				var href;
+
+				if (item.element) {
+					href = $(item.element).find('img').attr('src');
+				}
+
+				if (!href && item.type === 'image' && item.href) {
+					href = item.href;
+				}
+
+				return href;
+			}
+		},
+
 		wrap  : null,
 		list  : null,
 		width : 0,
 
-		//Default function to obtain the URL of the thumbnail image
-		source: function ( item ) {
-			var href;
-
-			if (item.element) {
-				href = $(item.element).find('img').attr('src');
-			}
-
-			if (!href && item.type === 'image' && item.href) {
-				href = item.href;
-			}
-
-			return href;
-		},
-
 		init: function (opts, obj) {
 			var that = this,
 				list,
-				thumbWidth  = opts.width  || 50,
-				thumbHeight = opts.height || 50,
-				thumbSource = opts.source || this.source;
+				thumbWidth  = opts.width,
+				thumbHeight = opts.height,
+				thumbSource = opts.source;
 
-			this.wrap = $('<div id="fancybox-thumbs"></div>').addClass(opts.position || 'bottom').appendTo('body');
-			
 			//Build list structure
-			this.list = $("<ul>");
+			list = '';
+
 			for (var n = 0; n < obj.group.length; n++) {
-				var atag = $("<a>", {
-					style : "width:" + thumbWidth + "px;height:" + thumbHeight + "px;",
-					index: n
-				}).on("click", function(){
-					$.fancybox.jumpto($(this).attr("index"));
-				});
-				$("<li>").append(atag).appendTo(this.list);
+				list += '<li><a style="width:' + thumbWidth + 'px;height:' + thumbHeight + 'px;" href="javascript:jQuery.fancybox.jumpto(' + n + ');"></a></li>';
 			}
-			this.list.appendTo(this.wrap);
+
+			this.wrap = $('<div id="fancybox-thumbs"></div>').addClass(opts.position).appendTo('body');
+			this.list = $('<ul>' + list + '</ul>').appendTo(this.wrap);
 
 			//Load each thumbnail
 			$.each(obj.group, function (i) {
@@ -132,7 +124,7 @@ define(function (require, exports, module) { return function (jQuery) {
 			}
 
 			//Increase bottom margin to give space for thumbs
-			obj.margin[ opts.position === 'top' ? 0 : 2 ] += ((opts.height || 50) + 15);
+			obj.margin[ opts.position === 'top' ? 0 : 2 ] += ((opts.height) + 15);
 		},
 
 		afterShow: function (opts, obj) {
@@ -170,4 +162,4 @@ define(function (require, exports, module) { return function (jQuery) {
 
 }(jQuery));
 
-} });
+});

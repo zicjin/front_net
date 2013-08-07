@@ -170,7 +170,7 @@ define(function (require, exports, module) {
 		var float_container = $('#' + containerId);
 		float_container.css({
 			'min-height': panel.outerHeight(),
-			'width': panel.outerWidth()
+			'width': panel.outerWidth() ? panel.outerWidth() : '100%'
 		});
 		
 		// calculate the upper scrolling boundary
@@ -190,7 +190,7 @@ define(function (require, exports, module) {
 		
 		if (isMSIE) {
 			ieFix = getScrollerWidth() + 4;
-		} 
+		}
 						
 		// ---------------------------------------------------------------------------------------------------
 		
