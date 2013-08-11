@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /*!
- * jQuery UI Progressbar 1.10.2
+ * jQuery UI Progressbar 1.10.3
  * http://jqueryui.com
  *
  * Copyright 2013 jQuery Foundation and other contributors
@@ -16,7 +16,7 @@
 (function( $, undefined ) {
 
 $.widget( "ui.progressbar", {
-	version: "1.10.2",
+	version: "1.10.3",
 	options: {
 		max: 100,
 		value: 0,
@@ -144,4 +144,4 @@ $.widget( "ui.progressbar", {
 });
 
 })( jQuery );
-}});
+});

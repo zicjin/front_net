@@ -1,4 +1,4 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /* Chinese initialisation for the jQuery UI date picker plugin. */
 /* Written by Cloudream (cloudream@gmail.com). */
 jQuery(function($){
@@ -22,4 +22,4 @@ jQuery(function($){
 		yearSuffix: '年'};
 	$.datepicker.setDefaults($.datepicker.regional['zh-CN']);
 });
-}});
+});

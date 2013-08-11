@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /*!
- * jQuery UI Selectable 1.10.2
+ * jQuery UI Selectable 1.10.3
  * http://jqueryui.com
  *
  * Copyright 2013 jQuery Foundation and other contributors
@@ -17,7 +17,7 @@
 (function( $, undefined ) {
 
 $.widget("ui.selectable", $.ui.mouse, {
-	version: "1.10.2",
+	version: "1.10.3",
 	options: {
 		appendTo: "body",
 		autoRefresh: true,
@@ -276,4 +276,4 @@ $.widget("ui.selectable", $.ui.mouse, {
 });
 
 })(jQuery);
-}});
+});

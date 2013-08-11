@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /*!
- * jQuery UI Tabs 1.10.2
+ * jQuery UI Tabs 1.10.3
  * http://jqueryui.com
  *
  * Copyright 2013 jQuery Foundation and other contributors
@@ -29,7 +29,7 @@ function isLocal( anchor ) {
 }
 
 $.widget( "ui.tabs", {
-	version: "1.10.2",
+	version: "1.10.3",
 	delay: 300,
 	options: {
 		active: null,
@@ -845,4 +845,4 @@ $.widget( "ui.tabs", {
 });
 
 })( jQuery );
-}});
+});

@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+﻿define(function (require, exports, module) {
 /*!
- * jQuery UI Effects Slide 1.10.2
+ * jQuery UI Effects Slide 1.10.3
  * http://jqueryui.com
  *
  * Copyright 2013 jQuery Foundation and other contributors
@@ -63,4 +63,4 @@ $.effects.effect.slide = function( o, done ) {
 };
 
 })(jQuery);
-}});
+});
