@@ -8,7 +8,7 @@ define(function (require, exports, module) {
  */
 (function($) {
 
-  jQuery.fn.extend({
+  $.fn.extend({
     slimScroll: function(options) {
 
       var defaults = {
@@ -450,8 +450,8 @@ define(function (require, exports, module) {
     }
   });
 
-  jQuery.fn.extend({
-    slimscroll: jQuery.fn.slimScroll
+  $.fn.extend({
+    slimscroll: $.fn.slimScroll
   });
 
 })(jQuery);

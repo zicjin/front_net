@@ -22,3 +22,28 @@
     top: 18px;
   }
 }
+@mixin arrow-top($borderColor: #dadada, $boxShadowColor:rgba(68,68,68,0.1), $backColor: #fff, $left: 10px) {
+    //$borderColor equal rgba(68,68,68,0.2)
+    background: $backColor;
+    position: relative;
+    border:1px solid $borderColor;
+    box-shadow: 0 0 6px $boxShadowColor;
+  &:after {
+    content: ' ';
+    border-color: transparent transparent $backColor transparent;
+    border-style: solid;
+    border-width: 13px;
+    position: absolute;
+    left: $left;
+    top: -26px;
+  }
+  &:before {
+    content: ' ';
+    border-color: transparent transparent $boxShadowColor transparent;
+    border-style: solid;
+    border-width: 15px;
+    position: absolute;
+    left: $left - 2;
+    top: -30px;
+  }
+}

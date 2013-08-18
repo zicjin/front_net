@@ -46,12 +46,27 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#{ie-hex-str($
   }
 }
 
-//http://drublic.de/blog/rem-fallback-sass-less/
-$main-font-size: 16px;
-@mixin x-rem ($property, $value) {
-  #{$property}: $value * $main-font-size;
-  #{$property}: #{$value}rem;
+$baseFontSize: 100%;
+$baseFontSizePx: 16px;
+//改变HTML默认fontSize：$baseFontSizePx:14px;$baseFontSize:87.5%(14/16);html{font-size:$baseFontSize}
+@mixin remCalc($property, $values...) {
+  $pxValues: '';
+  $remValues: '';
+  $baseFontSizePx: $baseFontSizePx / ($baseFontSizePx * 0 + 1); //去除单位字符‘px’
+
+  @each $value in $values {
+    $pxValues: #{$pxValues + ' ' + $value * $baseFontSizePx}px;
+    $remValues: #{$remValues + ' ' + $value}rem;
+  }
+
+  #{$property}: $pxValues;
+  #{$property}: $remValues;
 }
+
+// .wrapper {
+//     @include remCalc(font-size, 1.2);
+//     @include remCalc(margin, 1, .5, 2, 3);
+// }
 
 $viewweight: 600px;
 // Bootstrap Var -------------------------
@@ -67,9 +82,6 @@ $bodyBackground: #FFF !default;
 $sansFontFamily:        "微软雅黑", "Helvetica Neue", Helvetica, Arial, sans-serif !default;
 $serifFontFamily:       "黑体", Georgia, "Times New Roman", Times, serif !default;
 $baseFontFamily:        $sansFontFamily !default;
-$baseFontSize:  12px !default;
-$baseLineHeight:  1.5 !default;
-$baseLineHeightPx:      $baseFontSize*$baseLineHeight;
 
 // Grays
 $black:                 #000 !default;
