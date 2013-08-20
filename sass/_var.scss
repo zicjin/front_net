@@ -49,13 +49,13 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#{ie-hex-str($
 $baseFontSize: 100%;
 $baseFontSizePx: 16px;
 //改变HTML默认fontSize：$baseFontSizePx:14px;$baseFontSize:87.5%(14/16);html{font-size:$baseFontSize}
-@mixin remCalc($property, $values...) {
+@mixin rem($property, $values...) {
   $pxValues: '';
   $remValues: '';
-  $baseFontSizePx: $baseFontSizePx / ($baseFontSizePx * 0 + 1); //去除单位字符‘px’
+  $baseFontSize: $baseFontSizePx / ($baseFontSizePx * 0 + 1); //去除单位字符‘px’
 
   @each $value in $values {
-    $pxValues: #{$pxValues + ' ' + $value * $baseFontSizePx}px;
+    $pxValues: #{$pxValues + ' ' + $value * $baseFontSize}px;
     $remValues: #{$remValues + ' ' + $value}rem;
   }
 
