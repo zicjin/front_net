@@ -16,10 +16,6 @@ define(function (require, exports, module) {
 /*jshint asi: true, browser: true, curly: true, eqeqeq: true, forin: false, immed: false, newcap: true, noempty: true, strict: true, undef: true */
 /*global jQuery: false */
 
-(function( window, $, undefined ){
-
-  'use strict';
-
   // get global vars
   var document = window.document;
   var Modernizr = window.Modernizr;
@@ -1407,7 +1403,5 @@ define(function (require, exports, module) {
     // so plugin methods do not have to
     return this;
   };
-
-})( window, jQuery );
 
 });
