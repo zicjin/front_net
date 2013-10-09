@@ -8,6 +8,8 @@ $fontAwesomePath: $front_net_path + 'bootstrap/fortawesome/font';
 @mixin in_bk {display:inline-block;zoom:1;*display:inline;position:relative;}
 @mixin ellipsis{overflow: hidden; white-space: nowrap; width: 360px; text-overflow:ellipsis;}
 @mixin onelineh($size) {line-height:$size;height:$size;}
+@mixin maxWidth($width) {max-width:$width;_width:$width; overflow:visible;}
+@mixin maxHeight($height) {max-height:$height;_height:$height; overflow:visible;}
 @mixin hide-text {font: 0/0 a;color: transparent;text-shadow: none;background-color: transparent;border: 0;}
 @mixin gradient-v($startColor: #555, $startColorPos: 0, $endColor: #333, $endColorPos: 100%) {
 background-color: mix($startColor, $endColor, 62.5%);

@@ -77,9 +77,7 @@ define(function (require, exports, module) {
         borderRadius: '7px',
 
         // sets border radius of the rail
-        railBorderRadius: '7px',
-
-        parentIsWapper: false
+        railBorderRadius: '7px'
       };
 
       var o = $.extend(defaults, options);
@@ -149,21 +147,10 @@ define(function (require, exports, module) {
         // optionally set height to the parent's height
         o.height = (o.height == 'auto') ? me.parent().height() : o.height;
 
-        if(o.parentIsWapper){
-          wrapper = me.parent().addClass(o.wrapperClass)
-            .css({
-              overflow: 'hidden'
-            });
-        } else {
-          wrapper = $(divS)
-            .addClass(o.wrapperClass)
-            .css({
-              position: 'relative',
-              overflow: 'hidden',
-              width: o.width,
-              height: o.height
-            });
-        }
+        wrapper = me.parent().addClass(o.wrapperClass)
+          .css({
+            overflow: 'hidden'
+          });
 
         // update style for the div
         me.css({
@@ -206,11 +193,6 @@ define(function (require, exports, module) {
         var posCss = (o.position == 'right') ? { right: o.distance } : { left: o.distance };
         rail.css(posCss);
         bar.css(posCss);
-
-        // wrap it
-        if(!o.parentIsWapper){
-          me.wrap(wrapper);
-        }
 
         // append to parent div
         wrapper.append(bar);

@@ -49,25 +49,6 @@
 .green{color:$green;}
 .red{color:$red;}
 
-// CubeSize -------------------------
-.w80{width:80px;}
-.w100{width:100px;}
-.w120{width:120px;}
-.w250{width:250px;}
-.wh24{width:24px;height:24px;}
-.wh48{width:48px;height:48px;}
-.wh64{width:64px;height:64px;}
-.wh128{width:128px;height:128px;}
-
-.max_h100{max-height:100px;_height:100px; overflow:visible;}
-.max_w120{max-width:120px;_width:120px; overflow:visible;}
-.max_w160{max-width:160px;_width:160px; overflow:visible;}
-.max_w320{max-width:320px;_width:320px; overflow:visible;}
-.max_200{max-width:200px;max-height:200px;_width:200px; _height:200px; overflow:visible;}
-.max_320{max-width:320px;max-height:320px;_width:320px; _height:320px; overflow:visible;}
-.max_680{max-width:680px;max-height:680px;_width:680px; _height:680px; overflow:visible;}
-
-.min_h100{min-height:100px; _height:100px; overflow:visible;}
 // Margin -------------------------
 .m0{margin:0!important;}
 .m20{margin:20px;}
