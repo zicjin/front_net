@@ -1,10 +1,9 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.layouts.center = {
 		name: 'center',
 		options: { // overrides options
-			
+
 		},
 		container: {
 			object: '<ul id="noty_center_layout_container" />',
@@ -39,7 +38,7 @@
 						top: ($(window).height() - actual_height) / 2 + 'px'
 					}, 500);
 				}
-				
+
 			}
 		},
 		parent: {
@@ -54,5 +53,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
-}});
+});

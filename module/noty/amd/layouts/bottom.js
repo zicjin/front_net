@@ -1,15 +1,14 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
-;(function($) {
+define(function (require, exports, module) {
 
-	$.noty.layouts.top = {
-		name: 'top',
+	$.noty.layouts.bottom = {
+		name: 'bottom',
 		options: {},
 		container: {
-			object: '<ul id="noty_top_layout_container" />',
-			selector: 'ul#noty_top_layout_container',
+			object: '<ul id="noty_bottom_layout_container" />',
+			selector: 'ul#noty_bottom_layout_container',
 			style: function() {
 				$(this).css({
-					top: 0,
+					bottom: 0,
 					left: '5%',
 					position: 'fixed',
 					width: '90%',
@@ -32,5 +31,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
-}});
+});

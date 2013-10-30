@@ -66,8 +66,8 @@ $baseFontSizePx: 16px;
 }
 
 // .wrapper {
-//     @include remCalc(font-size, 1.2);
-//     @include remCalc(margin, 1, .5, 2, 3);
+//     @include rem(font-size, 1.2);
+//     @include rem(margin, 1, .5, 2, 3);
 // }
 
 $viewweight: 600px;

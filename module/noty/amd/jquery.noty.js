@@ -1,6 +1,6 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
+define(function (require, exports, module) {
 /**
- * noty - jQuery Notification Plugin v2.0.3
+ * noty - jQuery Notification Plugin v2.1.0
  * Contributors: https://github.com/needim/noty/graphs/contributors
  *
  * Examples and Documentation - http://needim.github.com/noty/
@@ -10,14 +10,18 @@
  *
  **/
 
-if (typeof Object.create !== 'function') {
-    Object.create = function (o) {
-        function F() {
-        }
-
-        F.prototype = o;
-        return new F();
-    };
+function createObject(proto) {
+    var o;
+    if (Object.create) {
+      o = Object.create(proto);
+    }
+    else {
+      /** @constructor */
+      function F() {}
+      F.prototype = proto;
+      o = new F();
+    }
+    return o;
 }
 
 (function ($) {
@@ -105,7 +109,11 @@ if (typeof Object.create !== 'function') {
             self.options.theme.callback.onShow.apply(this);
 
             if ($.inArray('click', self.options.closeWith) > -1)
-                self.$bar.css('cursor', 'pointer').one('click', function () {
+                self.$bar.css('cursor', 'pointer').one('click', function (evt) {
+                    self.stopPropagation(evt);
+                    if (self.options.callback.onCloseClick) {
+                        self.options.callback.onCloseClick.apply(self);
+                    }
                     self.close();
                 });
 
@@ -115,7 +123,8 @@ if (typeof Object.create !== 'function') {
                 });
 
             if ($.inArray('button', self.options.closeWith) > -1)
-                self.$closeButton.one('click', function () {
+                self.$closeButton.one('click', function (evt) {
+                    self.stopPropagation(evt);
                     self.close();
                 });
 
@@ -147,6 +156,7 @@ if (typeof Object.create !== 'function') {
         close:function () {
 
             if (this.closed) return;
+            if (this.$bar && this.$bar.hasClass('i-am-closing-now')) return;
 
             var self = this;
 
@@ -206,7 +216,10 @@ if (typeof Object.create !== 'function') {
                         $.notyRenderer.render();
                     }
 
-                });
+					if (self.options.maxVisible > 0 && self.options.dismissQueue) {
+						$.notyRenderer.render();
+					}
+                })
 
         }, // end close
 
@@ -238,6 +251,15 @@ if (typeof Object.create !== 'function') {
             return this;
         },
 
+        stopPropagation:function (evt) {
+            evt = evt || window.event;
+            if (typeof evt.stopPropagation !== "undefined") {
+                evt.stopPropagation();
+            } else {
+                evt.cancelBubble = true;
+            }
+        },
+
         closed:false,
         shown:false
 
@@ -248,7 +270,7 @@ if (typeof Object.create !== 'function') {
     $.notyRenderer.init = function (options) {
 
         // Renderer creates a new noty
-        var notification = Object.create(NotyObject).init(options);
+        var notification = createObject(NotyObject).init(options);
 
         (notification.options.force) ? $.noty.queue.unshift(notification) : $.noty.queue.push(notification);
 
@@ -263,7 +285,15 @@ if (typeof Object.create !== 'function') {
 
         if ($.type(instance) === 'object') {
             if (instance.options.dismissQueue) {
-                $.notyRenderer.show($.noty.queue.shift());
+				if (instance.options.maxVisible > 0) {
+					if ($(instance.options.layout.container.selector + ' li').length < instance.options.maxVisible) {
+						$.notyRenderer.show($.noty.queue.shift());
+					} else {
+
+					}
+				} else {
+					$.notyRenderer.show($.noty.queue.shift());
+				}
             } else {
                 if ($.noty.ontap) {
                     $.notyRenderer.show($.noty.queue.shift());
@@ -394,6 +424,7 @@ if (typeof Object.create !== 'function') {
         timeout:false,
         force:false,
         modal:false,
+        maxVisible:5,
         closeWith:['click'],
         callback:{
             onShow:function () {
@@ -403,6 +434,8 @@ if (typeof Object.create !== 'function') {
             onClose:function () {
             },
             afterClose:function () {
+            },
+            onCloseClick:function () {
             }
         },
         buttons:false
@@ -416,4 +449,106 @@ if (typeof Object.create !== 'function') {
 
 })(jQuery);
 
-}});
+// Helpers
+window.noty = function noty(options) {
+
+    // This is for BC  -  Will be deleted on v2.2.0
+    var using_old = 0
+        , old_to_new = {
+            'animateOpen':'animation.open',
+            'animateClose':'animation.close',
+            'easing':'animation.easing',
+            'speed':'animation.speed',
+            'onShow':'callback.onShow',
+            'onShown':'callback.afterShow',
+            'onClose':'callback.onClose',
+            'onCloseClick':'callback.onCloseClick',
+            'onClosed':'callback.afterClose'
+        };
+
+    jQuery.each(options, function (key, value) {
+        if (old_to_new[key]) {
+            using_old++;
+            var _new = old_to_new[key].split('.');
+
+            if (!options[_new[0]]) options[_new[0]] = {};
+
+            options[_new[0]][_new[1]] = (value) ? value : function () {
+            };
+            delete options[key];
+        }
+    });
+
+    if (!options.closeWith) {
+        options.closeWith = jQuery.noty.defaults.closeWith;
+    }
+
+    if (options.hasOwnProperty('closeButton')) {
+        using_old++;
+        if (options.closeButton) options.closeWith.push('button');
+        delete options.closeButton;
+    }
+
+    if (options.hasOwnProperty('closeOnSelfClick')) {
+        using_old++;
+        if (options.closeOnSelfClick) options.closeWith.push('click');
+        delete options.closeOnSelfClick;
+    }
+
+    if (options.hasOwnProperty('closeOnSelfOver')) {
+        using_old++;
+        if (options.closeOnSelfOver) options.closeWith.push('hover');
+        delete options.closeOnSelfOver;
+    }
+
+    if (options.hasOwnProperty('custom')) {
+        using_old++;
+        if (options.custom.container != 'null') options.custom = options.custom.container;
+    }
+
+    if (options.hasOwnProperty('cssPrefix')) {
+        using_old++;
+        delete options.cssPrefix;
+    }
+
+    if (options.theme == 'noty_theme_default') {
+        using_old++;
+        options.theme = 'defaultTheme';
+    }
+
+    if (!options.hasOwnProperty('dismissQueue')) {
+        options.dismissQueue = jQuery.noty.defaults.dismissQueue;
+    }
+
+    if (!options.hasOwnProperty('maxVisible')) {
+        options.maxVisible = jQuery.noty.defaults.maxVisible;
+    }
+
+    if (options.buttons) {
+        jQuery.each(options.buttons, function (i, button) {
+            if (button.click) {
+                using_old++;
+                button.onClick = button.click;
+                delete button.click;
+            }
+            if (button.type) {
+                using_old++;
+                button.addClass = button.type;
+                delete button.type;
+            }
+        });
+    }
+
+    if (using_old) {
+        if (typeof console !== "undefined" && console.warn) {
+            console.warn('You are using noty v2 with v1.x.x options. @deprecated until v2.2.0 - Please update your options.');
+        }
+    }
+
+    // console.log(options);
+    // End of the BC
+
+    return jQuery.notyRenderer.init(options);
+}
+
+});

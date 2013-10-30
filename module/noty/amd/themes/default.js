@@ -1,5 +1,4 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.themes.defaultTheme = {
 		name: 'defaultTheme',
@@ -79,8 +78,8 @@
 			});
 
 			this.$bar.bind({
-				mouseenter: function() { $(this).find('.noty_close').fadeIn(); },
-				mouseleave: function() { $(this).find('.noty_close').fadeOut(); }
+				mouseenter: function() { $(this).find('.noty_close').stop().fadeTo('normal',1); },
+				mouseleave: function() { $(this).find('.noty_close').stop().fadeTo('normal',0); }
 			});
 
 			switch (this.options.layout.name) {
@@ -135,7 +134,7 @@
 					this.$bar.css({backgroundColor: '#FFEAA8', borderColor: '#FFC237', color: '#826200'});
 					this.$buttons.css({borderTop: '1px solid #FFC237'}); break;
 				case 'error':
-					this.$bar.css({backgroundColor: '#bf303c', borderColor: 'darkred', color: '#FFF'});
+					this.$bar.css({backgroundColor: 'red', borderColor: 'darkred', color: '#FFF'});
 					this.$message.css({fontWeight: 'bold'});
 					this.$buttons.css({borderTop: '1px solid darkred'}); break;
 				case 'information':
@@ -154,5 +153,4 @@
 		}
 	};
 
-})(jQuery);
-}});
+});

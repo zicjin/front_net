@@ -1,18 +1,17 @@
-﻿define(function (require, exports, module) { return function (jQuery) {
-;(function($) {
+define(function (require, exports, module) {
 
-	$.noty.layouts.bottomRight = {
-		name: 'bottomRight',
+	$.noty.layouts.topCenter = {
+		name: 'topCenter',
 		options: { // overrides options
-			
+
 		},
 		container: {
-			object: '<ul id="noty_bottomRight_layout_container" />',
-			selector: 'ul#noty_bottomRight_layout_container',
+			object: '<ul id="noty_topCenter_layout_container" />',
+			selector: 'ul#noty_topCenter_layout_container',
 			style: function() {
 				$(this).css({
-					bottom: 20,
-					right: 20,
+					top: 20,
+					left: 0,
 					position: 'fixed',
 					width: '310px',
 					height: 'auto',
@@ -22,11 +21,9 @@
 					zIndex: 10000000
 				});
 
-				if (window.innerWidth < 600) {
-					$(this).css({
-						right: 5
-					});
-				}
+				$(this).css({
+					left: ($(window).width() - $(this).outerWidth(false)) / 2 + 'px'
+				});
 			}
 		},
 		parent: {
@@ -41,5 +38,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
-}});
+});
