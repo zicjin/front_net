@@ -6,7 +6,7 @@ var hasPlaceholderSupport = function() {
 }
 
 $.fn.placeholder = function (options) {
-    if (hasPlaceholderSupport()) return;
+    if (hasPlaceholderSupport()) return this;
 
     var opts = $.extend({
         holdClass: "txtholding"
@@ -14,7 +14,7 @@ $.fn.placeholder = function (options) {
 
     this.each(function () {
         var o = $(this);
-        if (o.attr("type") == "password") return;
+        if (o.attr("type") == "password") return this;
 
         o.data("text", $.trim(o.attr("placeholder")));
 
@@ -37,6 +37,8 @@ $.fn.placeholder = function (options) {
             }
         });
     });
+
+    return this;
 }
 
 });
