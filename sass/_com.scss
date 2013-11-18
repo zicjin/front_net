@@ -23,6 +23,9 @@
 .fn-show-im{display:block!important;}
 .fn-rel{position:relative;}
 .fn-cs{cursor: pointer;}
+.fn-du{cursor: pointer;
+    &:hover{text-decoration: underline;}
+}
 .fn-fw{font-weight:700!important;}
 .fn-tal{text-align:left!important;}
 .fn-tar{text-align:right!important;}
