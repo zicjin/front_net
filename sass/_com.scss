@@ -1,6 +1,4 @@
-﻿@charset "utf-8";
-
-@import "var";
+﻿@import "var";
 @import "solutions/select-mask";
 @import "solutions/remove-outline";
 @import "solutions/position-fixed";
@@ -46,11 +44,21 @@
 @media screen and (-webkit-min-device-pixel-ratio:0){ /* firefox 中 letter-spacing 会导致脱离普通流的元素水平位移 */
     .fn-dibwrap{letter-spacing:-5px;/* Safari 等不支持字体大小为 0 的浏览器, N 根据父级字体调节*/}
 }
+.graylink{color:$gray;
+    &:hover{color:$linkColorHover;}
+}
 
 // Color -------------------------
 .gray{color:$gray;}
 .green{color:$green;}
 .red{color:$red;}
+.bnaka{background-color:$naka}
+.bred{background-color:$red}
+.bred-act{background-color:$red-act}
+.byellow{background-color:$yellow}
+.borange{background-color:$orange}
+.bblue{background-color:$blue}
+.bblue-act{background-color:$blue-act}
 
 // Margin -------------------------
 .m0{margin:0!important;}

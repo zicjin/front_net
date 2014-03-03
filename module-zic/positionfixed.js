@@ -14,14 +14,18 @@ define(function (require, exports, module) {
         }, options)
 
         _this = $(this)
+        _this.css({
+            'width': _this.width(),
+            'top': opts.margin
+        });
         win = $(window)
         var top = _this.offset().top - parseFloat(_this.css('marginTop').replace(/auto/, 0))
 
         var func = function (event) {
             if (win.scrollTop() >= top - opts.margin) {
-                _this.addClass('fixed')
+                _this.css('position', 'fixed')
             } else {
-                _this.removeClass('fixed')
+                _this.css('position', 'static')
             }
             if (opts.callBack) opts.callBack()
         }
