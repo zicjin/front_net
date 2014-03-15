@@ -14,7 +14,7 @@ define(function (require, exports, module) {
             var _this = $(this);
             if (_this.hasClass(opts.statusClass)) return;
             var r = _this.offset();
-            var i = $('<div>', { class: opts.itemClass, style: 'font-size:10px;z-index:1000', text: opts.animationChar });
+            var i = $('<div>', { 'class': opts.itemClass, style: 'font-size:10px;z-index:1000', text: opts.animationChar });
             i.appendTo("body");
             r.top += opts.offsetTop;
             r.left += opts.offsetLeft;

@@ -24,13 +24,9 @@ $fontAwesomePath: $front_net_path + 'bootstrap/fortawesome/font';
 $sansFontFamily: "微软雅黑", "Helvetica Neue", Helvetica, Arial, sans-serif !default;
 $serifFontFamily:"黑体", Georgia, "Times New Roman", Times, serif !default;
 $font-size-base:          14px !default;
-//改变HTML默认fontSize(16px) —— $baseFontSizePx:14px;$baseFontSize:87.5%(14/16);html{font-size:$baseFontSize}
+$baseLineHeight: 20px;
 $baseFontSize: 100%;
 $baseFontSizePx: 16px;
-// .wrapper {
-//     @include rem(font-size, 1.2);
-//     @include rem(margin, 1, .5, 2, 3);
-// } //暂时不建议使用rem
 $iconSpritePath:          $front_net_path + "bootstrap/img/glyphicons-halflings.png";
 $iconWhiteSpritePath:     $front_net_path + "bootstrap/img/glyphicons-halflings-white.png";
 $iconRedSpritePath:       $front_net_path + "bootstrap/img/glyphicons-halflings-red.png";
@@ -64,8 +60,17 @@ $gray-dark:              $grayDark !default;
 $gray:                   $gray !default;
 $gray-light:             $grayLight !default;
 $gray-lighter:           $grayLighter !default;
+@mixin border-radius($radius) {
+  -webkit-border-radius: $radius;
+     -moz-border-radius: $radius;
+          border-radius: $radius;
+}
 
 // MIXIN -------------------------
+@mixin clearfix {*zoom:1;
+    &:before, &:after {content: "\0020"; display: block; height: 0; overflow: hidden; }
+    &:after {clear: both;}
+}
 @mixin none_sty{list-style: none;padding:0;margin:0;background:none;float:none;width:auto;height:auto;position:static;display:inline;line-height:auto;}
 @mixin in_bk {display:inline-block;zoom:1;*display:inline;position:relative;}
 @mixin ellipsis{overflow: hidden; white-space: nowrap; width: 360px; text-overflow:ellipsis;}
@@ -109,14 +114,32 @@ $gray-lighter:           $grayLighter !default;
 		}
 	}
 }
+
+// rem相对于根元素<html>的font-size
+// 改变默认fontSize(16px),便于rem对其使用整数 —— $baseFontSizePx:10px;$baseFontSize:62.5%(10/16);html{font-size:$baseFontSize}
+// FontSize Rem:
+//|  px  |     rem        |
+//-------------------------
+//|  12  | 12/10 = 1.2    |
+//|  14  | 14/10 = 1.4    |
+//|  16  | 16/10 = 1.6    |
+//|  18  | 18/10 = 1.8    |
+//|  20  | 20/10 = 2.0    |
+//|  24  | 24/10 = 2.4    |
+//|  30  | 30/10 = 3.0    |
+//|  36  | 36/10 = 3.6    |
 @mixin rem($property, $values...) {
 	$pxValues: '';
 	$remValues: '';
-	$baseFontSize: $baseFontSizePx / ($baseFontSizePx * 0 + 1); //去除单位字符‘px’
+	$fontSize: $baseFontSizePx / ($baseFontSizePx * 0 + 1); //去除单位字符‘px’
 	@each $value in $values {
-		$pxValues: #{$pxValues + ' ' + $value * $baseFontSize}px;
+		$pxValues: #{$pxValues + ' ' + $value * $fontSize}px;
 		$remValues: #{$remValues + ' ' + $value}rem;
 	}
 	#{$property}: $pxValues;
 	#{$property}: $remValues;
 }
+// .wrapper {
+//     @include rem(font-size, 1.2);
+//     @include rem(margin, 1, .5, 2, 3);
+// } //暂不建议使用rem
