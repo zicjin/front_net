@@ -3,15 +3,16 @@ a.area2{background:url(#{$front_net_path}sass/images/new_window.gif) no-repeat r
   cursor: pointer;padding-right:15px;
   &:hover{border-color:#ccc;}
 }
-div.provhint{width:412px;background:#fff; font-size:12px; padding:10px;line-height:22px;_line-height: 20px;display:none;
+div.provhint{width:432px;background:#fff; font-size:12px; padding:10px;display:none;
   dl{margin:0;}
-  dt{display: inline-block; float: left; font-weight: bold; padding-right: 8px;text-align: right;width: 40px; color:#4d4d4d;}
+  dt{display: inline-block; float: left; font-weight: bold; padding-right: 8px;text-align: right;width: 50px; color:#4d4d4d;}
   a.prov{display:inline-block;outline: medium none;
     padding: 0 6px; text-decoration: none; white-space: nowrap;cursor: pointer;
     &:hover,&.current{background:#42719f;color: #fff;text-decoration: none;}
   }
   a.close_prov{background:url(#{$front_net_path}sass/images/close.png) no-repeat; width:16px; height:16px;
     display:block; position: absolute; top:10px; right:10px; cursor: pointer;}
+  dt, dd {line-height:22px;_line-height: 20px;}
 }
 ul.cityhint{line-height:22px;background:#fff;border-top:1px solid #ddd;display:none;margin:0;padding:0;
   *zoom: 1;&:before,&:after {display: table;content: "";}&:after {clear: both;}
