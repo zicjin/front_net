@@ -17,10 +17,9 @@ define(function (require, exports, module) {
         }, options)
 
         this.each(function () {
-            var _this = $(this)
-            _this.css({
+            var _this = $(this).css({
                 'top': opts.margin
-            });
+            })
 
             var top = _this.offset().top - parseFloat(_this.css('marginTop').replace(/auto/, 0))
 
