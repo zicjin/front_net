@@ -51,6 +51,7 @@ body { _margin:0; _height:100%; }/*IE6 BUG*/
 .d-close { padding:0; top:2px; right:5px; width:21px; height:21px; line-height:21px; font-size:18px; text-align:center; color:#EBEBEB; font-family: Helvetica, STHeiti; _font-family: Tahoma, '\u9ed1\u4f53', 'Book Antiqua', Palatino; border:1px solid transparent; _border:0 none; background:#000; border-radius:15px;  }
 .d-close:hover { color:#FFF; background:#C72015; border:1px solid #000; _border:0 none; box-shadow: 0 1px 0 rgba(255, 255, 255, .3), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .d-close:active { box-shadow: none; }
+.d-close:focus { color:#EBEBEB; }
 .d-state-noTitle { }
 .d-content { color:#666; }
 .d-state-noTitle .d-nw, .d-state-noTitle .d-ne { height:5px; }
