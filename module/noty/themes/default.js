@@ -1,4 +1,4 @@
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.themes.defaultTheme = {
 		name: 'defaultTheme',
@@ -153,4 +153,4 @@
 		}
 	};
 
-})(jQuery);
+});

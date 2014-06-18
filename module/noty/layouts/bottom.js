@@ -1,4 +1,4 @@
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.layouts.bottom = {
 		name: 'bottom',
@@ -31,4 +31,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
+});

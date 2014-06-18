@@ -1,3 +1,4 @@
+define(function (require, exports) {
 /**
  * plupload.silverlight.js
  *
@@ -445,3 +446,5 @@
 		}
 	});
 })(window, document, plupload);
+
+});

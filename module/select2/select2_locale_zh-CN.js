@@ -1,3 +1,4 @@
+define(function (require, exports, module) {
 /**
  * Select2 Chinese translation
  */
@@ -12,3 +13,4 @@
         formatSearching: function () { return "搜索中..."; }
     });
 })(jQuery);
+});

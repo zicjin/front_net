@@ -1,4 +1,4 @@
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.layouts.inline = {
 		name: 'inline',
@@ -28,4 +28,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
+});

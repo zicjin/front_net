@@ -1,4 +1,4 @@
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.layouts.centerRight = {
 		name: 'centerRight',
@@ -58,4 +58,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
+});

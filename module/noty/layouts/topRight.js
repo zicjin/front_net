@@ -1,9 +1,9 @@
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.layouts.topRight = {
 		name: 'topRight',
 		options: { // overrides options
-			
+
 		},
 		container: {
 			object: '<ul id="noty_topRight_layout_container" />',
@@ -40,4 +40,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
+});

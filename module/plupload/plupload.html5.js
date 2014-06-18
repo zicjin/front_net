@@ -1,3 +1,4 @@
+define(function (require, exports) {
 /**
  * plupload.html5.js
  *
@@ -1523,3 +1524,5 @@
 		};
 	};
 })(window, document, plupload);
+
+});

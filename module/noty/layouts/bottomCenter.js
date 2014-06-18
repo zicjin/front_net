@@ -1,4 +1,4 @@
-;(function($) {
+define(function (require, exports, module) {
 
 	$.noty.layouts.bottomCenter = {
 		name: 'bottomCenter',
@@ -38,4 +38,4 @@
 		addClass: ''
 	};
 
-})(jQuery);
+});

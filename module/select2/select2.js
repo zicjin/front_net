@@ -1,3 +1,4 @@
+define(function (require, exports, module) {
 /*
 Copyright 2012 Igor Vaynberg
 
@@ -3249,3 +3250,4 @@ the specific language governing permissions and limitations under the Apache Lic
     };
 
 }(jQuery));
+});

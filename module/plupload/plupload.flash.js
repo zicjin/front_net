@@ -1,3 +1,4 @@
+define(function (require, exports) {
 /**
  * plupload.flash.js
  *
@@ -429,3 +430,5 @@
 		}
 	});
 })(window, document, plupload);
+
+});
