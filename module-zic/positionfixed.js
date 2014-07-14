@@ -1,5 +1,5 @@
 define(function (require, exports, module) {
-    _ = require('underscore')
+    //_ = require('underscore')
 
     // http://jqueryfordesigners.com/fixed-floating-elements/
     // not support ie6
@@ -13,7 +13,8 @@ define(function (require, exports, module) {
             lazy: 16, //eye critical point
             callBack: false,
             minWidth: 0,
-            adaptWidth: false
+            adaptWidth: false,
+            namespace: ""
         }, options)
 
         this.each(function () {
@@ -38,14 +39,14 @@ define(function (require, exports, module) {
                 if (opts.callBack) opts.callBack()
             }
 
+            namespace = 'scroll' + (opts.namespace ? '.' + opts.namespace : '');
             if (opts.lazy) {
                 var lazyFunc = _.debounce(func, opts.lazy)
-                win.on('scroll', lazyFunc)
+                win.on(namespace, lazyFunc)
             } else {
-                win.on('scroll', func)
+                win.on(namespace, func)
             }
         });
-
     }
 
 });
