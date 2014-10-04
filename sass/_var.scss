@@ -116,7 +116,7 @@ $gray-lighter:           $grayLighter !default;
 }
 
 // rem相对于根元素<html>的font-size
-// 改变默认fontSize(16px),便于rem对其使用整数 —— $baseFontSizePx:10px;$baseFontSize:62.5%(10/16);html{font-size:$baseFontSize}
+// 改变默认fontSize:16px,便于rem对其使用整数 —— $baseFontSize:62.5%(10/16,等于10px);
 // FontSize Rem:
 //|  px  |     rem        |
 //-------------------------
