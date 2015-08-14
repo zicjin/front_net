@@ -10,7 +10,6 @@
 
 .daterangepicker.dropdown-menu {
   max-width: none;
-  z-index: 3000;
 }
 
 .daterangepicker.opensleft .ranges, .daterangepicker.opensleft .calendar {
@@ -39,10 +38,6 @@
 .daterangepicker .calendar {
   display: none;
   max-width: 250px;
-}
-
-.daterangepicker .calendar.single .calendar-date {
-  border: none;
 }
 
 .daterangepicker .calendar th, .daterangepicker .calendar td {
@@ -236,17 +231,4 @@
 .daterangepicker select.hourselect, .daterangepicker select.minuteselect, .daterangepicker select.ampmselect {
   width: 60px;
   margin-bottom: 0;
-}
-
-.daterangepicker_start_input {
-  float: left;
-}
-
-.daterangepicker_end_input {
-  float: left; 
-  padding-left: 11px
-}
-
-.daterangepicker th.month {
-  width: auto;
 }

@@ -1,4 +1,3 @@
-define(function (require, exports, module) {
 /**
  * noty - jQuery Notification Plugin v2.1.0
  * Contributors: https://github.com/needim/noty/graphs/contributors
@@ -10,18 +9,14 @@ define(function (require, exports, module) {
  *
  **/
 
-function createObject(proto) {
-    var o;
-    if (Object.create) {
-      o = Object.create(proto);
-    }
-    else {
-      /** @constructor */
-      function F() {}
-      F.prototype = proto;
-      o = new F();
-    }
-    return o;
+if (typeof Object.create !== 'function') {
+    Object.create = function (o) {
+        function F() {
+        }
+
+        F.prototype = o;
+        return new F();
+    };
 }
 
 (function ($) {
@@ -270,7 +265,7 @@ function createObject(proto) {
     $.notyRenderer.init = function (options) {
 
         // Renderer creates a new noty
-        var notification = createObject(NotyObject).init(options);
+        var notification = Object.create(NotyObject).init(options);
 
         (notification.options.force) ? $.noty.queue.unshift(notification) : $.noty.queue.push(notification);
 
@@ -550,5 +545,3 @@ window.noty = function noty(options) {
 
     return jQuery.notyRenderer.init(options);
 }
-
-});

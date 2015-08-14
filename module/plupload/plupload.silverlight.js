@@ -1,4 +1,3 @@
-define(function (require, exports) {
 /**
  * plupload.silverlight.js
  *
@@ -446,5 +445,3 @@ define(function (require, exports) {
 		}
 	});
 })(window, document, plupload);
-
-});

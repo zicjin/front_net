@@ -1,41 +1,41 @@
-define(function (require, exports, module) {
+define(function(require, exports) {
     bjudge = require('../../module-zic/bjudge');
 
     /*!
-     * 
-     * Portamento  v1.1.1 - 2011-09-02
-     * http://simianstudios.com/portamento
-     *   
-     * Copyright 2011 Kris Noble except where noted.
-     * 
-     * Dual-licensed under the GPLv3 and Apache 2.0 licenses: 
-     * http://www.gnu.org/licenses/gpl-3.0.html
-     * http://www.apache.org/licenses/LICENSE-2.0
-     * 
-     */
+        * 
+        * Portamento  v1.1.1 - 2011-09-02
+        * http://simianstudios.com/portamento
+        *   
+        * Copyright 2011 Kris Noble except where noted.
+        * 
+        * Dual-licensed under the GPLv3 and Apache 2.0 licenses: 
+        * http://www.gnu.org/licenses/gpl-3.0.html
+        * http://www.apache.org/licenses/LICENSE-2.0
+        * 
+        */
     /**
-     * 
-     * Creates a sliding panel that respects the boundaries of
-     * a given wrapper, and also has sensible behaviour if the
-     * viewport is too small to display the whole panel.
-     * 
-     * Full documentation at http://simianstudios.com/portamento
-     * 
-     * ----
-     * 
-     * Uses the viewportOffset plugin by Ben Alman aka Cowboy:
-     * http://benalman.com/projects/jquery-misc-plugins/#viewportoffset
-     * 
-     * Uses a portion of CFT by Juriy Zaytsev aka Kangax:
-     * http://kangax.github.com/cft/#IS_POSITION_FIXED_SUPPORTED
-     * 
-     * Uses code by Matthew Eernisse:
-     * http://www.fleegix.org/articles/2006-05-30-getting-the-scrollbar-width-in-pixels
-     * 
-     * Builds on work by Remy Sharp:
-     * http://jqueryfordesigners.com/fixed-floating-elements/
-     * 
-     */
+        * 
+        * Creates a sliding panel that respects the boundaries of
+        * a given wrapper, and also has sensible behaviour if the
+        * viewport is too small to display the whole panel.
+        * 
+        * Full documentation at http://simianstudios.com/portamento
+        * 
+        * ----
+        * 
+        * Uses the viewportOffset plugin by Ben Alman aka Cowboy:
+        * http://benalman.com/projects/jquery-misc-plugins/#viewportoffset
+        * 
+        * Uses a portion of CFT by Juriy Zaytsev aka Kangax:
+        * http://kangax.github.com/cft/#IS_POSITION_FIXED_SUPPORTED
+        * 
+        * Uses code by Matthew Eernisse:
+        * http://www.fleegix.org/articles/2006-05-30-getting-the-scrollbar-width-in-pixels
+        * 
+        * Builds on work by Remy Sharp:
+        * http://jqueryfordesigners.com/fixed-floating-elements/
+        * 
+        */
     (function ($) {
 
         $.fn.portamento = function (options) {
@@ -46,15 +46,15 @@ define(function (require, exports, module) {
             var thisDocument = $(document);
 
             /**
-             * NOTE by Kris - included here so as to avoid namespace clashes.
-             * 
-             * jQuery viewportOffset - v0.3 - 2/3/2010
-             * http://benalman.com/projects/jquery-misc-plugins/
-             * 
-             * Copyright (c) 2010 "Cowboy" Ben Alman
-             * Dual licensed under the MIT and GPL licenses.
-             * http://benalman.com/about/license/
-             */
+                * NOTE by Kris - included here so as to avoid namespace clashes.
+                * 
+                * jQuery viewportOffset - v0.3 - 2/3/2010
+                * http://benalman.com/projects/jquery-misc-plugins/
+                * 
+                * Copyright (c) 2010 "Cowboy" Ben Alman
+                * Dual licensed under the MIT and GPL licenses.
+                * http://benalman.com/about/license/
+                */
             $.fn.viewportOffset = function () {
                 var win = $(window);
                 var offset = $(this).offset();
@@ -187,4 +187,4 @@ define(function (require, exports, module) {
 
     })(jQuery);
 
-});
+})

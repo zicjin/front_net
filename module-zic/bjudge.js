@@ -1,4 +1,4 @@
-define(function (require, exports, module) {
+define(function(require, exports) {
 
     var uaMatch = function (ua) {
         ua = ua.toLowerCase();
@@ -51,4 +51,4 @@ define(function (require, exports, module) {
         }
     }
 
-});
+})

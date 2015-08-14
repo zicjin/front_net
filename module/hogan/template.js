@@ -16,16 +16,13 @@ define(function (require, exports, module) {
 
 var Hogan = {};
 
-(function (Hogan) {
-  Hogan.Template = function (codeObj, text, compiler, options) {
-    codeObj = codeObj || {};
-    this.r = codeObj.code || this.r;
+(function (Hogan, useArrayBuffer) {
+  Hogan.Template = function (renderFunc, text, compiler, options) {
+    this.r = renderFunc || this.r;
     this.c = compiler;
-    this.options = options || {};
+    this.options = options;
     this.text = text || '';
-    this.partials = codeObj.partials || {};
-    this.subs = codeObj.subs || {};
-    this.buf = '';
+    this.buf = (useArrayBuffer) ? [] : '';
   }
 
   Hogan.Template.prototype = {
@@ -47,51 +44,16 @@ var Hogan = {};
       return this.r(context, partials, indent);
     },
 
-    // ensurePartial
-    ep: function(symbol, partials) {
-      var partial = this.partials[symbol];
+    // tries to find a partial in the curent scope and render it
+    rp: function(name, context, partials, indent) {
+      var partial = partials[name];
 
-      // check to see that if we've instantiated this partial before
-      var template = partials[partial.name];
-      if (partial.instance && partial.base == template) {
-        return partial.instance;
-      }
-
-      if (typeof template == 'string') {
-        if (!this.c) {
-          throw new Error("No compiler available.");
-        }
-        template = this.c.compile(template, this.options);
-      }
-
-      if (!template) {
-        return null;
-      }
-
-      // We use this to check whether the partials dictionary has changed
-      this.partials[symbol].base = template;
-
-      if (partial.subs) {
-        // Make sure we consider parent template now
-        if (!partials.stackText) partials.stackText = {};
-        for (key in partial.subs) {
-          if (!partials.stackText[key]) {
-            partials.stackText[key] = (this.activeSub !== undefined && partials.stackText[this.activeSub]) ? partials.stackText[this.activeSub] : this.text;
-          }
-        }
-        template = createSpecializedPartial(template, partial.subs, partial.partials,
-          this.stackSubs, this.stackPartials, partials.stackText);
-      }
-      this.partials[symbol].instance = template;
-
-      return template;
-    },
-
-    // tries to find a partial in the current scope and render it
-    rp: function(symbol, context, partials, indent) {
-      var partial = this.ep(symbol, partials);
       if (!partial) {
         return '';
+      }
+
+      if (this.c && typeof partial == 'string') {
+        partial = this.c.compile(partial, this.options);
       }
 
       return partial.ri(context, partials, indent);
@@ -122,10 +84,10 @@ var Hogan = {};
       }
 
       if (typeof val == 'function') {
-        val = this.ms(val, ctx, partials, inverted, start, end, tags);
+        val = this.ls(val, ctx, partials, inverted, start, end, tags);
       }
 
-      pass = !!val;
+      pass = (val === '') || !!val;
 
       if (!inverted && pass && ctx) {
         ctx.push((typeof val == 'object') ? val : ctx[ctx.length - 1]);
@@ -136,23 +98,20 @@ var Hogan = {};
 
     // find values with dotted names
     d: function(key, ctx, partials, returnFound) {
-      var found,
-          names = key.split('.'),
+      var names = key.split('.'),
           val = this.f(names[0], ctx, partials, returnFound),
-          doModelGet = this.options.modelGet,
           cx = null;
 
       if (key === '.' && isArray(ctx[ctx.length - 2])) {
-        val = ctx[ctx.length - 1];
-      } else {
-        for (var i = 1; i < names.length; i++) {
-          found = findInScope(names[i], val, doModelGet);
-          if (found != null) {
-            cx = val;
-            val = found;
-          } else {
-            val = '';
-          }
+        return ctx[ctx.length - 1];
+      }
+
+      for (var i = 1; i < names.length; i++) {
+        if (val && typeof val == 'object' && names[i] in val) {
+          cx = val;
+          val = val[names[i]];
+        } else {
+          val = '';
         }
       }
 
@@ -162,7 +121,7 @@ var Hogan = {};
 
       if (!returnFound && typeof val == 'function') {
         ctx.push(cx);
-        val = this.mv(val, ctx, partials);
+        val = this.lv(val, ctx, partials);
         ctx.pop();
       }
 
@@ -173,13 +132,12 @@ var Hogan = {};
     f: function(key, ctx, partials, returnFound) {
       var val = false,
           v = null,
-          found = false,
-          doModelGet = this.options.modelGet;
+          found = false;
 
       for (var i = ctx.length - 1; i >= 0; i--) {
         v = ctx[i];
-        val = findInScope(key, v, doModelGet);
-        if (val != null) {
+        if (v && typeof v == 'object' && key in v) {
+          val = v[key];
           found = true;
           break;
         }
@@ -190,134 +148,75 @@ var Hogan = {};
       }
 
       if (!returnFound && typeof val == 'function') {
-        val = this.mv(val, ctx, partials);
+        val = this.lv(val, ctx, partials);
       }
 
       return val;
     },
 
     // higher order templates
-    ls: function(func, cx, partials, text, tags) {
-      var oldTags = this.options.delimiters;
-
-      this.options.delimiters = tags;
-      this.b(this.ct(coerceToString(func.call(cx, text)), cx, partials));
-      this.options.delimiters = oldTags;
-
+    ho: function(val, cx, partials, text, tags) {
+      var compiler = this.c;
+      var options = this.options;
+      options.delimiters = tags;
+      var text = val.call(cx, text);
+      text = (text == null) ? String(text) : text.toString();
+      this.b(compiler.compile(text, options).render(cx, partials));
       return false;
     },
 
-    // compile text
-    ct: function(text, cx, partials) {
-      if (this.options.disableLambda) {
-        throw new Error('Lambda features disabled.');
-      }
-      return this.c.compile(text, this.options).render(cx, partials);
-    },
-
     // template result buffering
-    b: function(s) { this.buf += s; },
+    b: (useArrayBuffer) ? function(s) { this.buf.push(s); } :
+                          function(s) { this.buf += s; },
+    fl: (useArrayBuffer) ? function() { var r = this.buf.join(''); this.buf = []; return r; } :
+                           function() { var r = this.buf; this.buf = ''; return r; },
 
-    fl: function() { var r = this.buf; this.buf = ''; return r; },
+    // lambda replace section
+    ls: function(val, ctx, partials, inverted, start, end, tags) {
+      var cx = ctx[ctx.length - 1],
+          t = null;
 
-    // method replace section
-    ms: function(func, ctx, partials, inverted, start, end, tags) {
-      var textSource,
-          cx = ctx[ctx.length - 1],
-          result = func.call(cx);
+      if (!inverted && this.c && val.length > 0) {
+        return this.ho(val, cx, partials, this.text.substring(start, end), tags);
+      }
 
-      if (typeof result == 'function') {
+      t = val.call(cx);
+
+      if (typeof t == 'function') {
         if (inverted) {
           return true;
-        } else {
-          textSource = (this.activeSub && this.subsText && this.subsText[this.activeSub]) ? this.subsText[this.activeSub] : this.text;
-          return this.ls(result, cx, partials, textSource.substring(start, end), tags);
+        } else if (this.c) {
+          return this.ho(t, cx, partials, this.text.substring(start, end), tags);
         }
       }
 
-      return result;
+      return t;
     },
 
-    // method replace variable
-    mv: function(func, ctx, partials) {
+    // lambda replace variable
+    lv: function(val, ctx, partials) {
       var cx = ctx[ctx.length - 1];
-      var result = func.call(cx);
+      var result = val.call(cx);
 
       if (typeof result == 'function') {
-        return this.ct(coerceToString(result.call(cx)), cx, partials);
+        result = coerceToString(result.call(cx));
+        if (this.c && ~result.indexOf("{\u007B")) {
+          return this.c.compile(result, this.options).render(cx, partials);
+        }
       }
 
-      return result;
-    },
-
-    sub: function(name, context, partials, indent) {
-      var f = this.subs[name];
-      if (f) {
-        this.activeSub = name;
-        f(context, partials, this, indent);
-        this.activeSub = false;
-      }
+      return coerceToString(result);
     }
 
   };
 
-  //Find a key in an object
-  function findInScope(key, scope, doModelGet) {
-    var val, checkVal;
-
-    if (scope && typeof scope == 'object') {
-
-      if (scope[key] != null) {
-        val = scope[key];
-
-      // try lookup with get for backbone or similar model data
-      } else if (doModelGet && scope.get && typeof scope.get == 'function') {
-        val = scope.get(key);
-      }
-    }
-
-    return val;
-  }
-
-  function createSpecializedPartial(instance, subs, partials, stackSubs, stackPartials, stackText) {
-    function PartialTemplate() {};
-    PartialTemplate.prototype = instance;
-    function Substitutions() {};
-    Substitutions.prototype = instance.subs;
-    var key;
-    var partial = new PartialTemplate();
-    partial.subs = new Substitutions();
-    partial.subsText = {};  //hehe. substext.
-    partial.buf = '';
-
-    stackSubs = stackSubs || {};
-    partial.stackSubs = stackSubs;
-    partial.subsText = stackText;
-    for (key in subs) {
-      if (!stackSubs[key]) stackSubs[key] = subs[key];
-    }
-    for (key in stackSubs) {
-      partial.subs[key] = stackSubs[key];
-    }
-
-    stackPartials = stackPartials || {};
-    partial.stackPartials = stackPartials;
-    for (key in partials) {
-      if (!stackPartials[key]) stackPartials[key] = partials[key];
-    }
-    for (key in stackPartials) {
-      partial.partials[key] = stackPartials[key];
-    }
-
-    return partial;
-  }
-
   var rAmp = /&/g,
       rLt = /</g,
       rGt = />/g,
-      rApos = /\'/g,
+      rApos =/\'/g,
       rQuot = /\"/g,
-      hChars = /[&<>\"\']/;
+      hChars =/[&<>\"\']/;
+
 
   function coerceToString(val) {
     return String((val === null || val === undefined) ? '' : val);
@@ -327,10 +226,10 @@ var Hogan = {};
     str = coerceToString(str);
     return hChars.test(str) ?
       str
-        .replace(rAmp, '&amp;')
-        .replace(rLt, '&lt;')
-        .replace(rGt, '&gt;')
-        .replace(rApos, '&#39;')
+        .replace(rAmp,'&amp;')
+        .replace(rLt,'&lt;')
+        .replace(rGt,'&gt;')
+        .replace(rApos,'&#39;')
         .replace(rQuot, '&quot;') :
       str;
   }

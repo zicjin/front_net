@@ -1,4 +1,3 @@
-define(function (require, exports) {
 /**
  * plupload.html4.js
  *
@@ -429,5 +428,3 @@ define(function (require, exports) {
 		}
 	});
 })(window, document, plupload);
-
-});

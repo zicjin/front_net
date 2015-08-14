@@ -1,9 +1,9 @@
-define(function (require, exports, module) {
+;(function($) {
 
 	$.noty.layouts.bottomLeft = {
 		name: 'bottomLeft',
 		options: { // overrides options
-
+			
 		},
 		container: {
 			object: '<ul id="noty_bottomLeft_layout_container" />',
@@ -40,4 +40,4 @@ define(function (require, exports, module) {
 		addClass: ''
 	};
 
-});
+})(jQuery);

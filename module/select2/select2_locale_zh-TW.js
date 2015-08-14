@@ -1,4 +1,3 @@
-define(function (require, exports, module) {
 /**
  * Select2 Traditional Chinese translation
  */
@@ -13,4 +12,3 @@ define(function (require, exports, module) {
         formatSearching: function () { return "搜尋中..."; }
     });
 })(jQuery);
-});

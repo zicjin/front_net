@@ -1,9 +1,9 @@
-define(function (require, exports, module) {
+;(function($) {
 
 	$.noty.layouts.center = {
 		name: 'center',
 		options: { // overrides options
-
+			
 		},
 		container: {
 			object: '<ul id="noty_center_layout_container" />',
@@ -38,7 +38,7 @@ define(function (require, exports, module) {
 						top: ($(window).height() - actual_height) / 2 + 'px'
 					}, 500);
 				}
-
+				
 			}
 		},
 		parent: {
@@ -53,4 +53,4 @@ define(function (require, exports, module) {
 		addClass: ''
 	};
 
-});
+})(jQuery);

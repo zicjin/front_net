@@ -1,4 +1,3 @@
-define(function (require, exports) {
 /**
  * plupload.js
  *
@@ -1773,5 +1772,3 @@ define(function (require, exports) {
 	// Expose plupload namespace
 	window.plupload = plupload;
 })();
-
-});

@@ -18,7 +18,6 @@ define(function (require, exports, module) {
 
 var Hogan = require('./compiler');
 Hogan.Template = require('./template').Template;
-Hogan.template = Hogan.Template;
 module.exports = Hogan;
 
 });

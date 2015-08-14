@@ -92,7 +92,6 @@ $.fn.areaSmall = function (options) {
                 });
                 $("div.d-state-focus").addClass("popup");
             },
-            title: opts.defaultText,
             fixed: true,
             lock: true,
             follow: _this[0]

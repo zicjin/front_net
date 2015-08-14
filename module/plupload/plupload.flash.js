@@ -1,4 +1,3 @@
-define(function (require, exports) {
 /**
  * plupload.flash.js
  *
@@ -430,5 +429,3 @@ define(function (require, exports) {
 		}
 	});
 })(window, document, plupload);
-
-});
