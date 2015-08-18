@@ -1,4 +1,4 @@
-$.fn.plusAnim = function (options) {
+$.fn.plus_anim = function (options) {
     var opts = $.extend({
         statusClass: "actived",
         itemClass: "plusanim",
@@ -17,9 +17,9 @@ $.fn.plusAnim = function (options) {
         r.top += opts.offsetTop;
         r.left += opts.offsetLeft;
         i.offset(r).css("display", "block").animate({
-                "font-size": opts.fontSize,
-                opacity: 0
-            },
+            "font-size": opts.fontSize,
+            opacity: 0
+        },
             350,
             "linear",
             function () { i.remove() }

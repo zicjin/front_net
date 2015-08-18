@@ -1,5 +1,3 @@
-define(function (require, exports, module) {
-
 var hasPlaceholderSupport = function() {
     var input = document.createElement('input');
     return ('placeholder' in input);
@@ -40,5 +38,3 @@ $.fn.placeholder = function (options) {
 
     return this;
 }
-
-});
