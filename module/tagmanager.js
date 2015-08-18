@@ -1,4 +1,3 @@
-define(function (require, exports, module) { return function (jQuery) {
 /*
 https://github.com/max-favilli/tagmanager
 */
@@ -428,5 +427,3 @@ https://github.com/max-favilli/tagmanager
 
    }
 })(jQuery);
-
-} }); 

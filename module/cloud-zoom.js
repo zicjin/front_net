@@ -1,5 +1,3 @@
-define(function (require, exports, module) {
-
 // Cloud Zoom V1.0.3
 
 // Get the path of executing script.
@@ -405,4 +403,3 @@ $.fn.CloudZoom.defaults = {
     adjustY: 0
 };
 
-});

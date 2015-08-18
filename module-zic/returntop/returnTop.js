@@ -1,5 +1,3 @@
-define(function (require, exports, module) {
-
 $.fn.returnTop = function (options) {
     var b = this.click(function () {
         $("html, body").animate({
@@ -26,5 +24,3 @@ $.fn.returnTop = function (options) {
         }, 1E3), b.css("top", d + e - 125))
     })
 }
-
-});

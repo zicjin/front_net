@@ -1,5 +1,3 @@
-define(function (require, exports, module) { return function (jQuery) {
-
 /**
  * PowerTip
  *
@@ -796,5 +794,3 @@ define(function (require, exports, module) { return function (jQuery) {
     }
 
 }(jQuery));
-
-}});

@@ -1,5 +1,4 @@
-﻿define(function (require, exports) {
-    exports.text = [
+﻿module.exports.text = [
 "微笑",
 "撇嘴",
 "色",
@@ -82,5 +81,3 @@
 "月亮",
 "太阳"
     ]
-});
-

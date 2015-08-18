@@ -1,6 +1,4 @@
-define(function (require, exports, module) {
-
-    // Chosen, a Select Box Enhancer for jQuery and Protoype
+// Chosen, a Select Box Enhancer for jQuery and Protoype
 // by Patrick Filler for Harvest, http://getharvest.com
 // 
 // Version 0.9.8
@@ -1003,5 +1001,3 @@ Copyright (c) 2011 by Harvest
   root.get_side_border_padding = get_side_border_padding;
 
 }).call(this);
-
-});

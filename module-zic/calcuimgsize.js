@@ -1,5 +1,3 @@
-define(function (require, exports, module) {
-
 //_ = require('underscore');
 
 $.fn.calcuimgsize = function (options) {
@@ -42,5 +40,3 @@ $.fn.calcuimgsize = function (options) {
     });
 
 }
-
-});

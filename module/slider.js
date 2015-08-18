@@ -1,6 +1,3 @@
-define(function (require, exports, module) {
-return function($){
-
 /* jQuery 'Slidey' plug-in v.1.1
  * http://www.jcwd.com.au
  * @john0514
@@ -334,5 +331,3 @@ $.fn.slidey = function(options) {
 	return this; // KTHXBYE
 	
 }
-
-}});

@@ -1,5 +1,3 @@
-define(function (require, exports, module) {
-
 jQuery.extend({
 
     createUploadIframe: function(id, uri){
@@ -159,4 +157,3 @@ jQuery.extend({
     }
 });
 
-});
