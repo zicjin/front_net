@@ -114,19 +114,12 @@ $gray-lighter:           $grayLighter !default;
 	}
 }
 
-// rem相对于根元素<html>的font-size
-// 改变默认fontSize:16px,便于rem对其使用整数 —— $baseFontSize:62.5%(10/16,等于10px);
-// FontSize Rem:
-//|  px  |     rem        |
-//-------------------------
-//|  12  | 12/10 = 1.2    |
-//|  14  | 14/10 = 1.4    |
-//|  16  | 16/10 = 1.6    |
-//|  18  | 18/10 = 1.8    |
-//|  20  | 20/10 = 2.0    |
-//|  24  | 24/10 = 2.4    |
-//|  30  | 30/10 = 3.0    |
-//|  36  | 36/10 = 3.6    |
+// rem:相对于根元素<html>的font-size
+// 改变默认的 $baseFontSize 16px 为 62.5%(即10px)，便于rem使用整数，原12px即可以使用1.2rem
+// .rem_simple {
+//     @include rem(font-size, 1.2);
+//     @include rem(margin, 1, .5, 2, 3);
+// }
 @mixin rem($property, $values...) {
 	$pxValues: '';
 	$remValues: '';
@@ -138,7 +131,3 @@ $gray-lighter:           $grayLighter !default;
 	#{$property}: $pxValues;
 	#{$property}: $remValues;
 }
-// .wrapper {
-//     @include rem(font-size, 1.2);
-//     @include rem(margin, 1, .5, 2, 3);
-// } //暂不建议使用rem
